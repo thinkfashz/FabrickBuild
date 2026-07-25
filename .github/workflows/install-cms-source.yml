@@ -5,7 +5,7 @@ on:
     branches:
       - agent/payload-cms
     paths:
-      - cms-source.tar.gz.b64
+      - cms-source.ready
 
 permissions:
   contents: write
@@ -23,11 +23,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode cms-source.tar.gz.b64 > /tmp/fabrickbuild-cms.tar.gz
+          cat .cms-source/chunk-* > /tmp/fabrickbuild-cms.tar.gz.b64
+          base64 --decode /tmp/fabrickbuild-cms.tar.gz.b64 > /tmp/fabrickbuild-cms.tar.gz
           echo "edb21c22bfeb7a50936c921a5339af5aa92e0b852c02ce9af91a338ed45fc007  /tmp/fabrickbuild-cms.tar.gz" | sha256sum --check
-          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name cms-source.tar.gz.b64 -exec rm -rf {} +
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name .cms-source ! -name cms-source.ready -exec rm -rf {} +
           tar -xzf /tmp/fabrickbuild-cms.tar.gz -C .
-          rm -f cms-source.tar.gz.b64
+          rm -rf .cms-source cms-source.ready
 
       - name: Commit complete CMS
         shell: bash
