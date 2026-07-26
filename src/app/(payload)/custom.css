@@ -1,0 +1,38 @@
+:root {
+  --style-radius-s: 8px;
+  --style-radius-m: 12px;
+  --style-radius-l: 18px;
+}
+
+.template-default {
+  --theme-success-500: #e4a400;
+}
+
+.nav {
+  border-right: 1px solid var(--theme-elevation-100);
+}
+
+.nav__brand {
+  letter-spacing: -0.03em;
+}
+
+.step-nav__home {
+  color: #e4a400;
+}
+
+.btn--style-primary {
+  background: #e4a400;
+  border-color: #e4a400;
+  color: #17140e;
+}
+
+.btn--style-primary:hover {
+  background: #f6bd19;
+  border-color: #f6bd19;
+}
+
+.collection-list__wrap,
+.doc-controls,
+.card {
+  border-radius: 14px;
+}
