@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "next dev --no-server-fast-refresh",
+    "dev": "next dev",
     "build": "payload build",
     "start": "next start",
     "lint": "eslint .",
