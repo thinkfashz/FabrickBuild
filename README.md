@@ -89,6 +89,8 @@ ADMIN_PASSWORD=replace-with-a-strong-password
 También se reconoce el nombre generado por algunas instalaciones de Blob:
 `BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN`.
 
+Las claves de proveedores se guardan desde `/studio/integraciones`; no se escriben en `.env`.
+
 ## Base de datos y despliegue
 
 Cada build de Vercel ejecuta una sincronización aditiva del esquema. Solo aplica cambios cuando Drizzle no detecta advertencias ni pérdida de datos. Si una modificación fuera destructiva, el deployment se detiene antes de publicar.
@@ -104,6 +106,15 @@ La conexión PostgreSQL normaliza `sslmode=prefer`, `require` o `verify-ca` a `s
 - Hay bloqueo automático después de cinco intentos fallidos.
 - Los tokens no se devuelven en las respuestas de autenticación.
 - La instalación usa comparación de secreto en tiempo constante, verificación de origen, limitación de intentos y bloqueo advisory de PostgreSQL.
+
+## Validación en Vercel
+
+- Sincronización aditiva de Neon completada sin pérdida de datos.
+- Advertencia heredada de `sslmode` eliminada.
+- TypeScript y compilación de Next.js completados.
+- Rutas del chat, propuestas, aplicar, deshacer e integraciones incluidas en el build.
+- Rutas `/studio/ia` y `/studio/integraciones` incluidas y protegidas.
+- Preview de la rama marcado `READY`.
 
 ## Desarrollo local
 
