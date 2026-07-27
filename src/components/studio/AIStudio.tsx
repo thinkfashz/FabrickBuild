@@ -21,9 +21,8 @@ import {
   WandSparkles,
   X,
 } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, KeyboardEvent } from 'react'
+import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react'
 
 type Model = { id: string; name?: string; contextLength?: number; capabilities?: string[] }
 type Integration = {
@@ -35,7 +34,6 @@ type Integration = {
   status?: string
   defaultModel?: string
   models?: Model[]
-  usage?: Record<string, number>
 }
 type PageDoc = { id: string | number; title: string; slug: string; _status?: string }
 type Message = { id: string; role: 'assistant' | 'user'; content: string }
@@ -48,14 +46,13 @@ type Proposal = {
   layout: Record<string, unknown>[]
 }
 type Usage = {
-  requests?: number
   promptTokens?: number
   completionTokens?: number
   totalTokens?: number
   activeMilliseconds?: number
 }
 type CommandSuggestion = {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   description: string
   prefix: string
@@ -96,12 +93,7 @@ function formatDuration(milliseconds?: number) {
 }
 
 function previewDocument(proposal: Proposal) {
-  return `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f6f1;color:#111}button,a{font:inherit}.ai-page{min-height:100vh;overflow:hidden}.ai-page img{max-width:100%;display:block}
-${proposal.css}
-</style></head><body><main class="ai-page">${proposal.html}</main></body></html>`
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f6f1;color:#111}button,a{font:inherit}.ai-page{min-height:100vh;overflow:hidden}.ai-page img{max-width:100%;display:block}${proposal.css}</style></head><body><main class="ai-page">${proposal.html}</main></body></html>`
 }
 
 function parseSSEChunk(chunk: string) {
@@ -118,7 +110,7 @@ export default function AIStudio() {
   const [integrations, setIntegrations] = useState<Integration[]>([])
   const [pages, setPages] = useState<PageDoc[]>([])
   const [loading, setLoading] = useState(true)
-  const [integrationId, setIntegrationId] = useState<string>('')
+  const [integrationId, setIntegrationId] = useState('')
   const [model, setModel] = useState('')
   const [mode, setMode] = useState<'chat' | 'design'>('chat')
   const [messages, setMessages] = useState<Message[]>([])
@@ -130,7 +122,7 @@ export default function AIStudio() {
   const [error, setError] = useState('')
   const [showPalette, setShowPalette] = useState(false)
   const [activeCommand, setActiveCommand] = useState(0)
-  const [targetPageId, setTargetPageId] = useState<string>('')
+  const [targetPageId, setTargetPageId] = useState('')
   const [designPrompt, setDesignPrompt] = useState('')
   const [generating, setGenerating] = useState(false)
   const [proposals, setProposals] = useState<Proposal[]>([])
@@ -153,7 +145,7 @@ export default function AIStudio() {
     [selectedIntegration],
   )
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -163,31 +155,34 @@ export default function AIStudio() {
       ])
       const integrationsData = await integrationsResponse.json()
       const pagesData = await pagesResponse.json()
-      if (!integrationsResponse.ok || !integrationsData.ok) throw new Error(integrationsData.error || 'No se pudieron cargar los proveedores.')
+      if (!integrationsResponse.ok || !integrationsData.ok) {
+        throw new Error(integrationsData.error || 'No se pudieron cargar los proveedores.')
+      }
 
       const aiIntegrations = (integrationsData.integrations || [])
         .filter((item: Integration) => !['resend', 'cloudinary'].includes(item.provider) && item.enabled !== false)
         .sort((a: Integration, b: Integration) => Number(a.priority || 100) - Number(b.priority || 100))
+      const pageDocuments = Array.isArray(pagesData.docs) ? pagesData.docs as PageDoc[] : []
       setIntegrations(aiIntegrations)
-      setPages(Array.isArray(pagesData.docs) ? pagesData.docs : [])
+      setPages(pageDocuments)
 
       const preferred = aiIntegrations.find((item: Integration) => item.provider === 'ollama' && item.status === 'connected') || aiIntegrations[0]
       if (preferred) {
         setIntegrationId(String(preferred.id))
         setModel(preferred.defaultModel || preferred.models?.[0]?.id || '')
       }
-      const home = (Array.isArray(pagesData.docs) ? pagesData.docs : []).find((item: PageDoc) => item.slug === 'home') || pagesData.docs?.[0]
+      const home = pageDocuments.find((item) => item.slug === 'home') || pageDocuments[0]
       if (home) setTargetPageId(String(home.id))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo iniciar AI Studio.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     void loadData()
-  }, [])
+  }, [loadData])
 
   useEffect(() => {
     if (!selectedIntegration) return
@@ -275,8 +270,7 @@ export default function AIStudio() {
           messages: [
             {
               role: 'system',
-              content:
-                'Eres FabrickBuild AI Studio. Responde en español. Ayuda a crear aplicaciones y páginas seguras, modernas y responsivas. Explica decisiones sin revelar secretos. Usa bloques de código completos cuando corresponda.',
+              content: 'Eres FabrickBuild AI Studio. Responde en español. Ayuda a crear aplicaciones y páginas seguras, modernas y responsivas. Explica decisiones sin revelar secretos. Usa bloques de código completos cuando corresponda.',
             },
             ...history,
           ],
@@ -299,13 +293,13 @@ export default function AIStudio() {
           if (!chunk.trim()) continue
           const event = parseSSEChunk(chunk)
           if (!event.data) continue
-          const value = JSON.parse(event.data)
-          if (event.event === 'reasoning') setReasoning((current) => current + String(value))
+          const eventValue = JSON.parse(event.data)
+          if (event.event === 'reasoning') setReasoning((current) => current + String(eventValue))
           if (event.event === 'token') {
-            setMessages((current) => current.map((message) => message.id === assistantID ? { ...message, content: message.content + String(value) } : message))
+            setMessages((current) => current.map((message) => message.id === assistantID ? { ...message, content: message.content + String(eventValue) } : message))
           }
-          if (event.event === 'usage') setLastUsage(value as Usage)
-          if (event.event === 'error') throw new Error(String(value))
+          if (event.event === 'usage') setLastUsage(eventValue as Usage)
+          if (event.event === 'error') throw new Error(String(eventValue))
         }
         if (done) break
       }
@@ -439,47 +433,47 @@ export default function AIStudio() {
 
           <div className="ai-messages">
             {!messages.length && (
-              <motion.div className="ai-empty" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="ai-empty studio-enter">
                 <div className="ai-empty-mark"><Bot size={29} /></div>
                 <h2>¿Qué vamos a construir?</h2>
                 <p>Escribe una instrucción o utiliza una orden rápida. En modo Diseño recibirás dos propuestas con preview, código y aplicación reversible.</p>
                 <div className="ai-command-row">
                   {commands.map((command) => <button className="ai-command" key={command.prefix} onClick={() => selectCommand(command)}>{command.icon} {command.label}</button>)}
                 </div>
-              </motion.div>
+              </div>
             )}
-            <AnimatePresence initial={false}>
-              {messages.map((message) => (
-                <motion.div key={message.id} className={`ai-message ai-message-${message.role}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                  <span className="ai-message-label">{message.role === 'user' ? 'Tú' : 'FabrickBuild IA'}</span>
-                  {message.content || (streaming && message.role === 'assistant' ? <span className="ai-thinking-line">Generando <span className="ai-thinking-dots"><i /><i /><i /></span></span> : '')}
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            {messages.map((message) => (
+              <div key={message.id} className={`ai-message ai-message-${message.role} studio-enter`}>
+                <span className="ai-message-label">{message.role === 'user' ? 'Tú' : 'FabrickBuild IA'}</span>
+                {message.content || (streaming && message.role === 'assistant' ? <span className="ai-thinking-line">Generando <span className="ai-thinking-dots"><i /><i /><i /></span></span> : '')}
+              </div>
+            ))}
           </div>
 
           <div className="ai-composer">
             <div className="ai-composer-box">
-              <AnimatePresence>
-                {showPalette && (
-                  <motion.div className="ai-palette" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}>
-                    {commands.map((command, index) => (
-                      <button key={command.prefix} className={activeCommand === index ? 'active' : ''} onMouseDown={(event) => event.preventDefault()} onClick={() => selectCommand(command)}>
-                        {command.icon}<span><strong>{command.label}</strong><small style={{ display: 'block' }}>{command.description}</small></span><small>{command.prefix}</small>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {showPalette && (
+                <div className="ai-palette studio-enter">
+                  {commands.map((command, index) => (
+                    <button key={command.prefix} className={activeCommand === index ? 'active' : ''} onMouseDown={(event) => event.preventDefault()} onClick={() => selectCommand(command)}>
+                      {command.icon}<span><strong>{command.label}</strong><small style={{ display: 'block' }}>{command.description}</small></span><small>{command.prefix}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
               <textarea ref={textareaRef} value={input} onChange={(event) => { setInput(event.target.value); adjustHeight() }} onKeyDown={handleKeyDown} placeholder="Escribe / para ver comandos o pide una mejora..." />
-              {attachments.length > 0 && <div className="studio-toolbar" style={{ padding: '0 10px 7px' }}>{attachments.map((file, index) => <span className="studio-pill" key={`${file.name}-${index}`}><FileCode2 size={12} />{file.name}<button className="ai-icon-button" style={{ width: 20, height: 20 }} onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={12} /></button></span>)}</div>}
+              {attachments.length > 0 && (
+                <div className="studio-toolbar" style={{ padding: '0 10px 7px' }}>
+                  {attachments.map((file, index) => <span className="studio-pill" key={`${file.name}-${index}`}><FileCode2 size={12} />{file.name}<button type="button" className="ai-icon-button" style={{ width: 20, height: 20 }} onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X size={12} /></button></span>)}
+                </div>
+              )}
               <div className="ai-composer-actions">
                 <div className="ai-composer-left">
                   <input ref={fileInputRef} hidden type="file" multiple onChange={(event) => void handleFiles(event)} />
-                  <button className="ai-icon-button" onClick={() => fileInputRef.current?.click()} aria-label="Adjuntar archivo"><Paperclip size={17} /></button>
-                  <button className="ai-icon-button" onClick={() => setShowPalette((current) => !current)} aria-label="Comandos"><Command size={17} /></button>
+                  <button type="button" className="ai-icon-button" onClick={() => fileInputRef.current?.click()} aria-label="Adjuntar archivo"><Paperclip size={17} /></button>
+                  <button type="button" className="ai-icon-button" onClick={() => setShowPalette((current) => !current)} aria-label="Comandos"><Command size={17} /></button>
                 </div>
-                <button className="studio-button studio-button-primary ai-send" onClick={() => void sendMessage()} disabled={!input.trim() || !integrationId || !model || streaming}>
+                <button type="button" className="studio-button studio-button-primary ai-send" onClick={() => void sendMessage()} disabled={!input.trim() || !integrationId || !model || streaming}>
                   {streaming ? <Loader2 size={16} className="spin" /> : <Send size={16} />}<span>Enviar</span>
                 </button>
               </div>
@@ -522,7 +516,7 @@ export default function AIStudio() {
                   <textarea className="studio-textarea" value={designPrompt} onChange={(event) => setDesignPrompt(event.target.value)} placeholder="Ejemplo: mejora la portada con una presentación premium, métricas, servicios y CTA, manteniendo la identidad amarilla y negra..." />
                 </div>
               </div>
-              <button className="studio-button studio-button-primary" onClick={() => void generateDesign()} disabled={generating || !integrationId || !model || !targetPageId || designPrompt.trim().length < 8}>
+              <button type="button" className="studio-button studio-button-primary" onClick={() => void generateDesign()} disabled={generating || !integrationId || !model || !targetPageId || designPrompt.trim().length < 8}>
                 {generating ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />} Generar dos propuestas
               </button>
             </div>
@@ -535,18 +529,18 @@ export default function AIStudio() {
                     <article className={`ai-preview-card ${selectedProposal === index ? 'selected' : ''}`} key={proposal.id}>
                       <div className="ai-preview-card-head"><div><h3>{proposal.title}</h3><p>{proposal.summary}</p></div>{selectedProposal === index && <span className="studio-pill studio-pill-ok"><Check size={12} /> Seleccionada</span>}</div>
                       <iframe className="ai-preview-frame" title={`Preview ${proposal.title}`} sandbox="" srcDoc={previewDocument(proposal)} />
-                      <div className="ai-preview-actions"><button className="studio-button" onClick={() => setSelectedProposal(index)}><Eye size={14} /> Seleccionar</button></div>
+                      <div className="ai-preview-actions"><button type="button" className="studio-button" onClick={() => setSelectedProposal(index)}><Eye size={14} /> Seleccionar</button></div>
                     </article>
                   ))}
                 </div>
 
-                {selected && <div><div className="ai-code-tabs"><button className={codeTab === 'html' ? 'active' : ''} onClick={() => setCodeTab('html')}>HTML</button><button className={codeTab === 'css' ? 'active' : ''} onClick={() => setCodeTab('css')}>CSS</button><button className={codeTab === 'layout' ? 'active' : ''} onClick={() => setCodeTab('layout')}>Bloques Payload</button></div><pre className="ai-code-view">{codeTab === 'html' ? selected.html : codeTab === 'css' ? selected.css : JSON.stringify(selected.layout, null, 2)}</pre></div>}
+                {selected && <div><div className="ai-code-tabs"><button type="button" className={codeTab === 'html' ? 'active' : ''} onClick={() => setCodeTab('html')}>HTML</button><button type="button" className={codeTab === 'css' ? 'active' : ''} onClick={() => setCodeTab('css')}>CSS</button><button type="button" className={codeTab === 'layout' ? 'active' : ''} onClick={() => setCodeTab('layout')}>Bloques Payload</button></div><pre className="ai-code-view">{codeTab === 'html' ? selected.html : codeTab === 'css' ? selected.css : JSON.stringify(selected.layout, null, 2)}</pre></div>}
 
                 <div className="ai-apply-bar">
-                  <div>{appliedPath && !rolledBack ? <div className="studio-notice studio-notice-success">Diseño aplicado en {publish ? 'producción' : 'borrador'}: <a href={appliedPath} target="_blank">abrir página</a></div> : rolledBack ? <div className="studio-notice">Cambio deshecho correctamente.</div> : <span className="studio-pill">Opción {selectedProposal + 1} preparada</span>}</div>
+                  <div>{appliedPath && !rolledBack ? <div className="studio-notice studio-notice-success">Diseño aplicado en {publish ? 'producción' : 'borrador'}: <a href={appliedPath} target="_blank" rel="noreferrer">abrir página</a></div> : rolledBack ? <div className="studio-notice">Cambio deshecho correctamente.</div> : <span className="studio-pill">Opción {selectedProposal + 1} preparada</span>}</div>
                   <div className="studio-toolbar">
-                    {appliedPath && !rolledBack && <button className="studio-button" onClick={() => void rollbackDesign()} disabled={applying}><Undo2 size={15} /> Deshacer</button>}
-                    <button className="studio-button studio-button-primary" onClick={() => void applyDesign()} disabled={applying || Boolean(appliedPath && !rolledBack)}>{applying ? <Loader2 size={15} className="spin" /> : <ArrowUp size={15} />} Aplicar diseño</button>
+                    {appliedPath && !rolledBack && <button type="button" className="studio-button" onClick={() => void rollbackDesign()} disabled={applying}><Undo2 size={15} /> Deshacer</button>}
+                    <button type="button" className="studio-button studio-button-primary" onClick={() => void applyDesign()} disabled={applying || Boolean(appliedPath && !rolledBack)}>{applying ? <Loader2 size={15} className="spin" /> : <ArrowUp size={15} />} Aplicar diseño</button>
                   </div>
                 </div>
               </>
