@@ -29,13 +29,17 @@ if (!isAndroid) {
   }
 }
 
+const deploymentURL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
 const serverURL =
   process.env.NEXT_PUBLIC_SERVER_URL ||
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : 'http://localhost:3000')
+  deploymentURL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'http://localhost:3000')
+
+const allowedOrigins = Array.from(
+  new Set([serverURL, deploymentURL, 'http://localhost:3000'].filter(Boolean) as string[]),
+)
 
 const databaseURL =
   process.env.DATABASE_URL ||
@@ -86,8 +90,8 @@ export default buildConfig({
       token: blobToken,
     }),
   ],
-  cors: [serverURL, 'http://localhost:3000'].filter(Boolean),
-  csrf: [serverURL, 'http://localhost:3000'].filter(Boolean),
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   maxDepth: 4,
   secret: process.env.PAYLOAD_SECRET || 'fabrickbuild-development-secret-change-in-production',
   serverURL,
