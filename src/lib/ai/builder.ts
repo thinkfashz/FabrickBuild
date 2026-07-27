@@ -148,14 +148,23 @@ function sanitizeBlock(input: unknown): BuilderBlock {
   }
 
   if (blockType === 'stats') {
-    const items = (Array.isArray(block.items) ? block.items : []).slice(0, 6).map((item: any) => ({
+    const items: Array<{
+      id?: string
+      value: string
+      label: string
+      description?: string
+    }> = (Array.isArray(block.items) ? block.items : []).slice(0, 6).map((item: any) => ({
       ...(safeID(item?.id) ? { id: safeID(item.id) } : {}),
       value: text(item?.value, 60) || '01',
       label: text(item?.label, 160) || 'Indicador',
       description: optionalText(item?.description, 700),
     }))
     while (items.length < 2) {
-      items.push({ value: String(items.length + 1).padStart(2, '0'), label: 'Indicador' })
+      items.push({
+        value: String(items.length + 1).padStart(2, '0'),
+        label: 'Indicador',
+        description: undefined,
+      })
     }
     return {
       ...base({ ...block, blockType }),
