@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { AIPageStyle } from '@/components/AIPageStyle'
 import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 import { RenderBlocks } from '@/components/RenderBlocks'
 import { getPageBySlug } from '@/lib/queries'
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: Args): Promise<Metadata> {
   return {
     title: seo.title || page.title,
     description: seo.description,
-    robots: seo.noIndex ? { index: false, follow: false } : undefined
+    robots: seo.noIndex ? { index: false, follow: false } : undefined,
   }
 }
 
@@ -24,8 +25,11 @@ export default async function DynamicPage({ params }: Args) {
   if (!page) notFound()
   return (
     <>
+      <AIPageStyle css={page.aiStyle as string | undefined} />
       <RefreshRouteOnSave />
-      <RenderBlocks blocks={(page.layout || []) as Record<string, unknown>[]} />
+      <main className="ai-page">
+        <RenderBlocks blocks={(page.layout || []) as Record<string, unknown>[]} />
+      </main>
     </>
   )
 }
