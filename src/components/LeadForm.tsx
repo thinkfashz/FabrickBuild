@@ -3,16 +3,27 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 
-type Service = { id: string | number; title?: string | null }
+type ServiceOption = {
+  id?: string | number | null
+  title?: string | null
+}
+
 type Props = {
-  services?: Service[]
+  services?: ServiceOption[]
   successMessage?: string
 }
 
 export function LeadForm({ services = [], successMessage }: Props) {
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
-  const serviceOptions = useMemo(() => services.filter((item) => item?.id), [services])
+  const serviceOptions = useMemo(
+    () =>
+      services.filter(
+        (item): item is ServiceOption & { id: string | number } =>
+          item?.id !== undefined && item.id !== null,
+      ),
+    [services],
+  )
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,14 +41,14 @@ export function LeadForm({ services = [], successMessage }: Props) {
       area: form.get('area') ? Number(form.get('area')) : undefined,
       budget: form.get('budget') || 'unknown',
       message: form.get('message'),
-      source: 'website'
+      source: 'website',
     }
 
     try {
       const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
       if (!response.ok) throw new Error('No fue posible registrar la solicitud.')
       event.currentTarget.reset()
