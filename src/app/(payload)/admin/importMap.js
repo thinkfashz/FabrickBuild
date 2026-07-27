@@ -14,6 +14,7 @@ import {
   UnderlineFeatureClient,
   ParagraphFeatureClient
 } from '@payloadcms/richtext-lexical/client'
+import { VercelBlobClientUploadHandler } from '@payloadcms/storage-vercel-blob/client'
 import BeforeDashboard from '@/components/admin/BeforeDashboard'
 
 /** @type {import('payload').ImportMap} */
@@ -30,5 +31,6 @@ export const importMap = {
   '@payloadcms/richtext-lexical/client#ItalicFeatureClient': ItalicFeatureClient,
   '@payloadcms/richtext-lexical/client#UnderlineFeatureClient': UnderlineFeatureClient,
   '@payloadcms/richtext-lexical/client#ParagraphFeatureClient': ParagraphFeatureClient,
+  '@payloadcms/storage-vercel-blob/client#VercelBlobClientUploadHandler': VercelBlobClientUploadHandler,
   '@/components/admin/BeforeDashboard#default': BeforeDashboard
 }
