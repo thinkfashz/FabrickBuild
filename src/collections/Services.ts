@@ -11,11 +11,11 @@ const getServerURL = () =>
 const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) =>
   `${getServerURL()}/servicios/${typeof data.slug === 'string' ? data.slug : ''}`
 
-const getPreviewURL = ({ data }: { data: Record<string, unknown> }) => {
+const getPreviewURL = (data: Record<string, unknown>) => {
   const params = new URLSearchParams({
     collection: 'services',
     slug: typeof data.slug === 'string' ? data.slug : '',
-    secret: process.env.PREVIEW_SECRET || ''
+    secret: process.env.PREVIEW_SECRET || '',
   })
   return `${getServerURL()}/preview?${params.toString()}`
 }
@@ -27,17 +27,17 @@ export const Services: CollectionConfig = {
     read: publishedOrAuthenticated,
     create: authenticated,
     update: authenticated,
-    delete: authenticated
+    delete: authenticated,
   },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'featured', 'priceFrom', '_status'],
     livePreview: { url: getLivePreviewURL },
-    preview: getPreviewURL
+    preview: (data) => getPreviewURL(data),
   },
   versions: {
     drafts: { autosave: true, schedulePublish: true },
-    maxPerDoc: 30
+    maxPerDoc: 30,
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -50,28 +50,28 @@ export const Services: CollectionConfig = {
       type: 'array',
       fields: [
         { name: 'image', type: 'upload', relationTo: 'media', required: true },
-        { name: 'caption', type: 'text' }
-      ]
+        { name: 'caption', type: 'text' },
+      ],
     },
     {
       name: 'benefits',
       type: 'array',
       fields: [
         { name: 'title', type: 'text', required: true },
-        { name: 'description', type: 'textarea' }
-      ]
+        { name: 'description', type: 'textarea' },
+      ],
     },
     {
       name: 'process',
       type: 'array',
       fields: [
         { name: 'title', type: 'text', required: true },
-        { name: 'description', type: 'textarea' }
-      ]
+        { name: 'description', type: 'textarea' },
+      ],
     },
     { name: 'priceFrom', type: 'number', min: 0, label: 'Precio desde (CLP)' },
     { name: 'duration', type: 'text', label: 'Duración aproximada' },
     { name: 'featured', type: 'checkbox', defaultValue: false, admin: { position: 'sidebar' } },
-    seoFields
-  ]
+    seoFields,
+  ],
 }
