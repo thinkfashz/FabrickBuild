@@ -1,0 +1,76 @@
+name: FabrickBuild CMS integration
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fabrickbuild
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fabrickbuild"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild
+      PAYLOAD_SECRET: test-payload-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+      PREVIEW_SECRET: test-preview-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+      SEED_SECRET: test-bootstrap-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+      ADMIN_EMAIL: admin-test@fabrickbuild.local
+      ADMIN_PASSWORD: test-admin-password-0123456789
+      NEXT_PUBLIC_SERVER_URL: http://127.0.0.1:3000
+      BLOB_READ_WRITE_TOKEN: test_blob_token
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - name: Start application
+        run: |
+          npm run dev > /tmp/fabrickbuild.log 2>&1 &
+          echo $! > /tmp/fabrickbuild.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:3000/api/system/bootstrap > /tmp/status.json; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/fabrickbuild.log
+          exit 1
+      - name: Run one-time web installer
+        run: |
+          curl --fail-with-body --silent \
+            -X POST http://127.0.0.1:3000/api/system/bootstrap \
+            -H 'Content-Type: application/json' \
+            --data '{"secret":"test-bootstrap-secret-0123456789-abcdefghijklmnopqrstuvwxyz","confirmation":"INSTALAR FABRICKBUILD"}' \
+            | tee /tmp/install.json
+          node -e "const r=require('/tmp/install.json'); if(!r.ok||!r.installed||!r.checks?.superAdmin) process.exit(1)"
+      - name: Verify installer is permanently locked
+        run: |
+          code=$(curl --silent --output /tmp/retry.json --write-out '%{http_code}' \
+            -X POST http://127.0.0.1:3000/api/system/bootstrap \
+            -H 'Content-Type: application/json' \
+            --data '{"secret":"test-bootstrap-secret-0123456789-abcdefghijklmnopqrstuvwxyz","confirmation":"INSTALAR FABRICKBUILD"}')
+          test "$code" = "410"
+      - name: Build production application
+        run: |
+          kill $(cat /tmp/fabrickbuild.pid) || true
+          npm run build
