@@ -93,6 +93,19 @@ export const Pages: CollectionConfig = {
     },
     slugField(),
     {
+      name: 'aiStyle',
+      type: 'textarea',
+      admin: {
+        hidden: true,
+        description: 'CSS aislado generado y validado por FabrickBuild AI Studio.',
+      },
+    },
+    {
+      name: 'aiDesignVersion',
+      type: 'text',
+      admin: { hidden: true },
+    },
+    {
       name: 'publishedAt',
       type: 'date',
       admin: { position: 'sidebar', date: { pickerAppearance: 'dayAndTime' } },
