@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 import { authenticated } from '@/access/authenticated'
 
+const imageProcessingEnabled = process.platform !== 'android'
+
 export const Media: CollectionConfig = {
   slug: 'media',
   labels: { singular: 'Archivo', plural: 'Biblioteca multimedia' },
@@ -16,14 +18,21 @@ export const Media: CollectionConfig = {
   },
   upload: {
     staticDir: 'media',
-    adminThumbnail: 'thumbnail',
-    focalPoint: true,
     mimeTypes: ['image/*', 'application/pdf', 'video/mp4'],
-    imageSizes: [
-      { name: 'thumbnail', width: 480, height: 320, position: 'centre' },
-      { name: 'card', width: 900, height: 650, position: 'centre' },
-      { name: 'hero', width: 1920, height: 1080, position: 'centre' }
-    ]
+    ...(imageProcessingEnabled
+      ? {
+          adminThumbnail: 'thumbnail',
+          focalPoint: true,
+          imageSizes: [
+            { name: 'thumbnail', width: 480, height: 320, position: 'centre' as const },
+            { name: 'card', width: 900, height: 650, position: 'centre' as const },
+            { name: 'hero', width: 1920, height: 1080, position: 'centre' as const }
+          ]
+        }
+      : {
+          crop: false,
+          focalPoint: false
+        })
   },
   fields: [
     { name: 'alt', type: 'text', required: true, label: 'Texto alternativo' },
