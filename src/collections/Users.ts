@@ -1,7 +1,6 @@
 import { APIError, type CollectionConfig } from 'payload'
 
 import { adminOnly } from '@/access/adminOnly'
-import { authenticated } from '@/access/authenticated'
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -18,7 +17,7 @@ export const Users: CollectionConfig = {
     defaultColumns: ['name', 'email', 'role'],
   },
   access: {
-    admin: authenticated,
+    admin: ({ req }) => Boolean(req.user),
     create: adminOnly,
     read: ({ req }) => {
       if (req.user?.role === 'admin') return true
