@@ -5,6 +5,8 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
+import { AIChanges } from '@/collections/AIChanges'
+import { Integrations } from '@/collections/Integrations'
 import { Leads } from '@/collections/Leads'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
@@ -42,10 +44,24 @@ const allowedOrigins = Array.from(
   new Set([serverURL, deploymentURL, 'http://localhost:3000'].filter(Boolean) as string[]),
 )
 
-const databaseURL =
+function normalizePostgresSSLMode(connectionString: string): string {
+  try {
+    const url = new URL(connectionString)
+    const mode = url.searchParams.get('sslmode')
+    if (mode && ['prefer', 'require', 'verify-ca'].includes(mode)) {
+      url.searchParams.set('sslmode', 'verify-full')
+    }
+    return url.toString()
+  } catch {
+    return connectionString
+  }
+}
+
+const rawDatabaseURL =
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
+const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 
 const blobToken =
   process.env.BLOB_READ_WRITE_TOKEN ||
@@ -77,7 +93,17 @@ export default buildConfig({
       connectionString: databaseURL,
     },
   }),
-  collections: [Users, Media, Pages, Services, Projects, Testimonials, Leads],
+  collections: [
+    Users,
+    Media,
+    Pages,
+    Services,
+    Projects,
+    Testimonials,
+    Leads,
+    Integrations,
+    AIChanges,
+  ],
   globals: [Header, Footer, SiteSettings],
   plugins: [
     vercelBlobStorage({
