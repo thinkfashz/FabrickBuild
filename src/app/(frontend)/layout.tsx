@@ -4,6 +4,7 @@ import { getGlobals } from '@/lib/queries'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import './globals.css'
+import './generated.css'
 
 export const dynamic = 'force-dynamic'
 
