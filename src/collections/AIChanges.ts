@@ -11,7 +11,7 @@ export const AIChanges: CollectionConfig = {
     defaultColumns: ['title', 'targetPage', 'provider', 'model', 'status', 'updatedAt'],
   },
   access: {
-    admin: adminOnly,
+    admin: ({ req }) => req.user?.role === 'admin',
     create: adminOnly,
     read: adminOnly,
     update: adminOnly,
