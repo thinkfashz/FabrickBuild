@@ -20,10 +20,11 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 const isAndroid = process.platform === 'android'
 
-let sharpInstance: (typeof import('sharp'))['default'] | undefined
+let sharpInstance: any
 if (!isAndroid) {
   try {
-    sharpInstance = (await import('sharp')).default
+    const sharpModule = (await import('sharp')) as any
+    sharpInstance = sharpModule.default ?? sharpModule
   } catch (error) {
     console.warn('Sharp no está disponible. Se desactiva el procesamiento de imágenes.', error)
   }
