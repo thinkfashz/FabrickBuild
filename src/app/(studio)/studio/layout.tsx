@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 
 import './studio.css'
 import './studio-motion.css'
+import './chat-enhancements.css'
 import './vault.css'
 import './builder.css'
 
