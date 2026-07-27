@@ -22,7 +22,7 @@ export const Integrations: CollectionConfig = {
     defaultColumns: ['label', 'provider', 'status', 'defaultModel', 'lastTestedAt'],
   },
   access: {
-    admin: adminOnly,
+    admin: ({ req }) => req.user?.role === 'admin',
     create: adminOnly,
     read: adminOnly,
     update: adminOnly,
