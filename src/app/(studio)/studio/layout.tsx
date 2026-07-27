@@ -8,6 +8,7 @@ import { getPayload } from 'payload'
 import type { ReactNode } from 'react'
 
 import './studio.css'
+import './studio-motion.css'
 
 export const metadata: Metadata = {
   title: 'FabrickBuild AI Studio',
