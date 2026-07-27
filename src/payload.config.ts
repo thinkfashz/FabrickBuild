@@ -78,6 +78,7 @@ export default buildConfig({
       titleSuffix: '— FabrickBuild CMS',
     },
     components: {
+      beforeNavLinks: ['@/components/admin/AdminStudioNav'],
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
     livePreview: {
