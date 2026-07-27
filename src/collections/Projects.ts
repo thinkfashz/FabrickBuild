@@ -11,11 +11,11 @@ const getServerURL = () =>
 const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) =>
   `${getServerURL()}/proyectos/${typeof data.slug === 'string' ? data.slug : ''}`
 
-const getPreviewURL = ({ data }: { data: Record<string, unknown> }) => {
+const getPreviewURL = (data: Record<string, unknown>) => {
   const params = new URLSearchParams({
     collection: 'projects',
     slug: typeof data.slug === 'string' ? data.slug : '',
-    secret: process.env.PREVIEW_SECRET || ''
+    secret: process.env.PREVIEW_SECRET || '',
   })
   return `${getServerURL()}/preview?${params.toString()}`
 }
@@ -27,17 +27,17 @@ export const Projects: CollectionConfig = {
     read: publishedOrAuthenticated,
     create: authenticated,
     update: authenticated,
-    delete: authenticated
+    delete: authenticated,
   },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'featured', '_status'],
     livePreview: { url: getLivePreviewURL },
-    preview: getPreviewURL
+    preview: (data) => getPreviewURL(data),
   },
   versions: {
     drafts: { autosave: true, schedulePublish: true },
-    maxPerDoc: 30
+    maxPerDoc: 30,
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -51,16 +51,16 @@ export const Projects: CollectionConfig = {
       type: 'array',
       fields: [
         { name: 'image', type: 'upload', relationTo: 'media', required: true },
-        { name: 'caption', type: 'text' }
-      ]
+        { name: 'caption', type: 'text' },
+      ],
     },
     {
       name: 'beforeAfter',
       type: 'group',
       fields: [
         { name: 'before', type: 'upload', relationTo: 'media' },
-        { name: 'after', type: 'upload', relationTo: 'media' }
-      ]
+        { name: 'after', type: 'upload', relationTo: 'media' },
+      ],
     },
     {
       name: 'details',
@@ -69,8 +69,8 @@ export const Projects: CollectionConfig = {
         { name: 'location', type: 'text', label: 'Ubicación' },
         { name: 'area', type: 'number', min: 0, label: 'Superficie (m²)' },
         { name: 'duration', type: 'text', label: 'Duración' },
-        { name: 'completionDate', type: 'date', label: 'Fecha de entrega' }
-      ]
+        { name: 'completionDate', type: 'date', label: 'Fecha de entrega' },
+      ],
     },
     {
       name: 'status',
@@ -79,10 +79,10 @@ export const Projects: CollectionConfig = {
       options: [
         { label: 'Planificación', value: 'planning' },
         { label: 'En construcción', value: 'building' },
-        { label: 'Finalizado', value: 'completed' }
-      ]
+        { label: 'Finalizado', value: 'completed' },
+      ],
     },
     { name: 'featured', type: 'checkbox', defaultValue: false, admin: { position: 'sidebar' } },
-    seoFields
-  ]
+    seoFields,
+  ],
 }
