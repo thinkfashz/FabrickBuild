@@ -8,6 +8,9 @@ import { RichText } from './RichText'
 
 type Doc = Record<string, any>
 
+const isDoc = (item: unknown): item is Doc => Boolean(item) && typeof item === 'object'
+const onlyDocs = (items: unknown[]): Doc[] => items.filter(isDoc)
+
 const SectionHeading = ({ eyebrow, heading, intro }: Doc) => (
   <div className="section-heading">
     <div>
@@ -76,10 +79,8 @@ const ProjectCards = ({ projects }: { projects: Doc[] }) => (
 )
 
 async function ServicesBlock({ block }: { block: Doc }) {
-  const selected = Array.isArray(block.services)
-    ? block.services.filter((item: unknown) => typeof item === 'object')
-    : []
-  const services = selected.length ? selected : await getServices(true, block.limit || 6)
+  const selected = Array.isArray(block.services) ? onlyDocs(block.services) : []
+  const services = selected.length ? selected : onlyDocs(await getServices(true, block.limit || 6))
   return (
     <section className="section shell">
       <SectionHeading eyebrow={block.eyebrow} heading={block.heading} intro={block.intro} />
@@ -90,10 +91,8 @@ async function ServicesBlock({ block }: { block: Doc }) {
 }
 
 async function ProjectsBlock({ block }: { block: Doc }) {
-  const selected = Array.isArray(block.projects)
-    ? block.projects.filter((item: unknown) => typeof item === 'object')
-    : []
-  const projects = selected.length ? selected : await getProjects(true, block.limit || 6)
+  const selected = Array.isArray(block.projects) ? onlyDocs(block.projects) : []
+  const projects = selected.length ? selected : onlyDocs(await getProjects(true, block.limit || 6))
   if (!projects.length) return null
   return (
     <section className="section section-dark">
@@ -107,17 +106,15 @@ async function ProjectsBlock({ block }: { block: Doc }) {
 }
 
 async function TestimonialsBlock({ block }: { block: Doc }) {
-  const selected = Array.isArray(block.items)
-    ? block.items.filter((item: unknown) => typeof item === 'object')
-    : []
-  const items = selected.length ? selected : await getTestimonials()
+  const selected = Array.isArray(block.items) ? onlyDocs(block.items) : []
+  const items = selected.length ? selected : onlyDocs(await getTestimonials())
   if (!items.length) return null
   return (
     <section className="section testimonials-section">
       <div className="shell">
         <SectionHeading eyebrow={block.eyebrow} heading={block.heading} />
         <div className="testimonial-grid">
-          {items.map((item: Doc) => (
+          {items.map((item) => (
             <article key={item.id}>
               <div className="stars">{'★★★★★'.slice(0, item.rating || 5)}</div>
               <blockquote>“{item.quote}”</blockquote>
@@ -132,10 +129,8 @@ async function TestimonialsBlock({ block }: { block: Doc }) {
 }
 
 async function ContactFormBlock({ block }: { block: Doc }) {
-  const selected = Array.isArray(block.services)
-    ? block.services.filter((item: unknown) => typeof item === 'object')
-    : []
-  const services = selected.length ? selected : await getServices(false, 30)
+  const selected = Array.isArray(block.services) ? onlyDocs(block.services) : []
+  const services = selected.length ? selected : onlyDocs(await getServices(false, 30))
   return (
     <section className="contact-section" id="contacto">
       <div className="shell contact-grid">
@@ -181,7 +176,7 @@ export async function RenderBlocks({ blocks = [] }: { blocks?: Doc[] }) {
                     </div>
                     {Array.isArray(block.stats) && (
                       <div className="hero-stats">
-                        {block.stats.map((item: Doc) => (
+                        {onlyDocs(block.stats).map((item) => (
                           <div key={item.id || item.label}>
                             <strong>{item.value}</strong>
                             <span>{item.label}</span>
@@ -229,7 +224,7 @@ export async function RenderBlocks({ blocks = [] }: { blocks?: Doc[] }) {
                 <div className="shell">
                   {block.heading && <h2>{block.heading}</h2>}
                   <div className="stats-grid">
-                    {(block.items || []).map((item: Doc) => (
+                    {onlyDocs(Array.isArray(block.items) ? block.items : []).map((item) => (
                       <article key={item.id || item.label}>
                         <strong>{item.value}</strong>
                         <h3>{item.label}</h3>
