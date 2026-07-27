@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 
-import { BootstrapError, readBootstrapState, runOneTimeBootstrap } from '../lib/bootstrap'
+import { BootstrapError, readBootstrapState, runOneTimeBootstrap } from '../system/bootstrap'
 import config from '../payload.config'
 
 async function autoBootstrap(): Promise<void> {
