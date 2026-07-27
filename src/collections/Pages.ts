@@ -12,24 +12,27 @@ import {
   ProjectsGrid,
   ServicesGrid,
   Stats,
-  Testimonials
+  Testimonials,
 } from '@/blocks'
 
 const getServerURL = () =>
   process.env.NEXT_PUBLIC_SERVER_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) => {
+const pagePath = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
-  return `${getServerURL()}${slug === 'home' ? '/' : `/${slug}`}`
+  return slug === 'home' ? '/' : `/${slug}`
 }
 
-const getPreviewURL = ({ data }: { data: Record<string, unknown> }) => {
+const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) =>
+  `${getServerURL()}${pagePath(data)}`
+
+const getPreviewURL = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
   const params = new URLSearchParams({
     collection: 'pages',
     slug,
-    secret: process.env.PREVIEW_SECRET || ''
+    secret: process.env.PREVIEW_SECRET || '',
   })
   return `${getServerURL()}/preview?${params.toString()}`
 }
@@ -41,20 +44,20 @@ export const Pages: CollectionConfig = {
     read: publishedOrAuthenticated,
     create: authenticated,
     update: authenticated,
-    delete: authenticated
+    delete: authenticated,
   },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', '_status', 'updatedAt'],
     livePreview: { url: getLivePreviewURL },
-    preview: getPreviewURL
+    preview: (data) => getPreviewURL(data),
   },
   versions: {
     drafts: {
       autosave: { interval: 800 },
-      schedulePublish: true
+      schedulePublish: true,
     },
-    maxPerDoc: 50
+    maxPerDoc: 50,
   },
   fields: [
     {
@@ -77,16 +80,16 @@ export const Pages: CollectionConfig = {
                 Testimonials,
                 BeforeAfter,
                 CTA,
-                ContactForm
-              ]
-            }
-          ]
+                ContactForm,
+              ],
+            },
+          ],
         },
         {
           label: 'SEO',
-          fields: [seoFields]
-        }
-      ]
+          fields: [seoFields],
+        },
+      ],
     },
     slugField(),
     {
@@ -98,9 +101,9 @@ export const Pages: CollectionConfig = {
           ({ siblingData, value }) => {
             if (siblingData?._status === 'published' && !value) return new Date()
             return value
-          }
-        ]
-      }
-    }
-  ]
+          },
+        ],
+      },
+    },
+  ],
 }
