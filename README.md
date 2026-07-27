@@ -42,6 +42,9 @@ ADMIN_EMAIL=...
 ADMIN_PASSWORD=...
 ```
 
+También se reconoce el nombre generado por algunas instalaciones de Blob:
+`BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN`.
+
 `BOOTSTRAP_SECRET` puede configurarse por separado. Si no existe, el instalador usa
 `SEED_SECRET`. Los secretos de Payload e instalación deben tener al menos 32 caracteres y la
 contraseña inicial debe tener al menos 16.
@@ -76,6 +79,14 @@ El instalador:
 - La instalación usa comparación de secreto en tiempo constante, verificación de origen,
   limitación de intentos, bloqueo advisory de PostgreSQL y cierre permanente tras el éxito.
 - El antiguo endpoint reutilizable de seed fue eliminado.
+
+## Verificación realizada
+
+- Build de Next.js y Payload completado correctamente en Vercel.
+- Preview marcado `READY`.
+- `/instalar` responde HTTP 200 y está marcado `noindex`.
+- Payload y Next.js aparecen activos en la respuesta del servidor.
+- La instalación no se ejecuta durante el build ni automáticamente al visitar la página.
 
 ## Instalación local opcional
 
