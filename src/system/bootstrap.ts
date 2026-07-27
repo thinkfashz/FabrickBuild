@@ -11,11 +11,20 @@ const MAX_ATTEMPTS = 5
 
 type QueryRow = Record<string, unknown>
 
+type PoolClient = {
+  query<T = QueryRow>(
+    statement: string,
+    values?: unknown[],
+  ): Promise<{ rows: T[]; rowCount?: number }>
+  release(): void
+}
+
 type Pool = {
   query<T = QueryRow>(
     statement: string,
     values?: unknown[],
   ): Promise<{ rows: T[]; rowCount?: number }>
+  connect(): Promise<PoolClient>
 }
 
 type BootstrapState = {
@@ -174,18 +183,30 @@ export async function clearAttempts(payload: Payload, fingerprint: string): Prom
   ])
 }
 
-async function acquireBootstrapLock(payload: Payload): Promise<boolean> {
-  const pool = getPool(payload)
-  const result = await pool.query<{ acquired: boolean }>(
-    `SELECT pg_try_advisory_lock($1) AS acquired`,
-    [BOOTSTRAP_LOCK_ID],
-  )
-  return Boolean(result.rows[0]?.acquired)
+async function acquireBootstrapLock(payload: Payload): Promise<PoolClient | null> {
+  const client = await getPool(payload).connect()
+  try {
+    const result = await client.query<{ acquired: boolean }>(
+      `SELECT pg_try_advisory_lock($1) AS acquired`,
+      [BOOTSTRAP_LOCK_ID],
+    )
+    if (!result.rows[0]?.acquired) {
+      client.release()
+      return null
+    }
+    return client
+  } catch (error) {
+    client.release()
+    throw error
+  }
 }
 
-async function releaseBootstrapLock(payload: Payload): Promise<void> {
-  const pool = getPool(payload)
-  await pool.query(`SELECT pg_advisory_unlock($1)`, [BOOTSTRAP_LOCK_ID])
+async function releaseBootstrapLock(client: PoolClient): Promise<void> {
+  try {
+    await client.query(`SELECT pg_advisory_unlock($1)`, [BOOTSTRAP_LOCK_ID])
+  } finally {
+    client.release()
+  }
 }
 
 async function setState(
@@ -373,12 +394,12 @@ async function ensureSuperAdmin(payload: Payload): Promise<{ id: string; repaire
       collection: 'users',
       id: user.id,
       overrideAccess: true,
-      data: {
-        password,
-        role: 'admin',
-        loginAttempts: 0,
-        lockUntil: null,
-      } as never,
+      data: { password, role: 'admin' },
+    })
+    await payload.unlock({
+      collection: 'users',
+      data: { email },
+      overrideAccess: true,
     })
     await payload.login({ collection: 'users', data: { email, password } })
     repaired = true
@@ -432,8 +453,8 @@ export async function runOneTimeBootstrap(payload: Payload): Promise<{
   assertEnvironment()
   await ensureControlTables(payload)
 
-  const acquired = await acquireBootstrapLock(payload)
-  if (!acquired) {
+  const lockClient = await acquireBootstrapLock(payload)
+  if (!lockClient) {
     throw new BootstrapError(
       'Otra instalación está en curso. Espera unos segundos.',
       409,
@@ -478,7 +499,7 @@ export async function runOneTimeBootstrap(payload: Payload): Promise<{
     }
     throw error
   } finally {
-    await releaseBootstrapLock(payload)
+    await releaseBootstrapLock(lockClient)
   }
 }
 
