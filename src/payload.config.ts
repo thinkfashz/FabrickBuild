@@ -2,7 +2,6 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
-import sharp from 'sharp'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
@@ -20,6 +19,19 @@ import { SiteSettings } from '@/globals/SiteSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+const isAndroid = process.platform === 'android'
+
+// Sharp ships native binaries that are not available in the standard Termux runtime.
+// Payload only needs it for image resizing/cropping, so database setup and seeding can
+// safely run without it on Android. Vercel/Linux still loads Sharp normally.
+let sharpInstance: (typeof import('sharp'))['default'] | undefined
+if (!isAndroid) {
+  try {
+    sharpInstance = (await import('sharp')).default
+  } catch (error) {
+    console.warn('Sharp no está disponible. Se desactiva el procesamiento de imágenes.', error)
+  }
+}
 
 const serverURL =
   process.env.NEXT_PUBLIC_SERVER_URL ||
@@ -33,6 +45,12 @@ const databaseURL =
   process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
+
+// Vercel may prefix the generated variable with the Blob store name. Support both
+// the canonical variable and the name currently generated for FabrickBuild.
+const blobToken =
+  process.env.BLOB_READ_WRITE_TOKEN ||
+  process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
 
 export default buildConfig({
   admin: {
@@ -65,21 +83,21 @@ export default buildConfig({
   endpoints: [seedEndpoint],
   plugins: [
     vercelBlobStorage({
-      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      enabled: Boolean(blobToken),
       collections: {
         media: {
           prefix: 'fabrickbuild'
         }
       },
       clientUploads: true,
-      token: process.env.BLOB_READ_WRITE_TOKEN
+      token: blobToken
     })
   ],
   cors: [serverURL, 'http://localhost:3000'].filter(Boolean),
   csrf: [serverURL, 'http://localhost:3000'].filter(Boolean),
   secret: process.env.PAYLOAD_SECRET || 'fabrickbuild-development-secret-change-in-production',
   serverURL,
-  sharp,
+  ...(sharpInstance ? { sharp: sharpInstance } : {}),
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts')
   }
