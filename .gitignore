@@ -1,7 +1,10 @@
-node_modules/
-dist/
-.vercel/
+node_modules
+.next
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
+media
+payload.db
+*.log
 .DS_Store
+.vercel
