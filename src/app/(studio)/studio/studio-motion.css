@@ -1,0 +1,25 @@
+.spin {
+  animation: studio-spin .9s linear infinite;
+}
+
+.studio-enter {
+  animation: studio-enter .28s ease-out both;
+}
+
+@keyframes studio-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes studio-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin,
+  .studio-enter,
+  .ai-thinking-dots i,
+  .studio-skeleton {
+    animation: none !important;
+  }
+}
