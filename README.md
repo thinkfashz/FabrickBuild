@@ -6,6 +6,7 @@ CMS, CRM y frontend integral para Soluciones Fabrick.
 
 - **Payload CMS 3** integrado en Next.js 16.
 - Panel privado en `/admin` con usuarios `admin` y `editor`.
+- Instalador web único y bloqueable en `/instalar`.
 - Constructor visual de páginas por bloques.
 - Páginas, servicios, proyectos, testimonios y biblioteca multimedia.
 - CRM de cotizaciones con estado, prioridad, responsable y notas internas.
@@ -20,7 +21,9 @@ CMS, CRM y frontend integral para Soluciones Fabrick.
 | Área | Ruta |
 |---|---|
 | Sitio público | `/` |
+| Instalación única | `/instalar` |
 | Administrador | `/admin` |
+| Salud del sistema para administradores | `/api/system/health` |
 | API REST | `/api/:collection` |
 | GraphQL | `/api/graphql` |
 | Servicios | `/servicios` |
@@ -28,23 +31,53 @@ CMS, CRM y frontend integral para Soluciones Fabrick.
 
 ## Variables
 
-Copia `.env.example` a `.env.local`:
-
 ```bash
 DATABASE_URL=postgresql://...
 PAYLOAD_SECRET=...
 PREVIEW_SECRET=...
-NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+NEXT_PUBLIC_SERVER_URL=https://fabrickbuild.vercel.app
 BLOB_READ_WRITE_TOKEN=...
 SEED_SECRET=...
 ADMIN_EMAIL=...
 ADMIN_PASSWORD=...
 ```
 
-`DATABASE_URL`, `PAYLOAD_SECRET` y `PREVIEW_SECRET` son obligatorias. En Vercel,
-`BLOB_READ_WRITE_TOKEN` evita que los archivos subidos desaparezcan al cambiar de despliegue.
+`BOOTSTRAP_SECRET` puede configurarse por separado. Si no existe, el instalador usa
+`SEED_SECRET`. Los secretos de Payload e instalación deben tener al menos 32 caracteres y la
+contraseña inicial debe tener al menos 16.
 
-## Instalación local
+## Instalación web sin Termux
+
+1. Conecta Neon y Vercel Blob al proyecto.
+2. Configura las variables anteriores para Production y Preview.
+3. Despliega la rama del CMS.
+4. Abre `/instalar` en el deployment.
+5. Introduce `BOOTSTRAP_SECRET` o `SEED_SECRET` y confirma.
+
+El instalador:
+
+- sincroniza únicamente una base vacía o compatible;
+- se detiene si detecta advertencias o posible pérdida de datos;
+- crea o valida el superadministrador configurado;
+- comprueba el inicio de sesión;
+- carga servicios y portada iniciales;
+- verifica todas las colecciones y Vercel Blob;
+- registra el resultado en un esquema separado `fabrickbuild_system`;
+- se bloquea permanentemente tras completarse.
+
+## Seguridad de usuarios
+
+- Solo un administrador puede crear usuarios.
+- Los editores solo pueden leer y actualizar su propia cuenta.
+- Solo un administrador puede cambiar roles o eliminar usuarios.
+- No se puede eliminar ni degradar al último administrador.
+- Hay bloqueo automático después de cinco intentos fallidos.
+- Los tokens no se devuelven en las respuestas de autenticación.
+- La instalación usa comparación de secreto en tiempo constante, verificación de origen,
+  limitación de intentos, bloqueo advisory de PostgreSQL y cierre permanente tras el éxito.
+- El antiguo endpoint reutilizable de seed fue eliminado.
+
+## Instalación local opcional
 
 ```bash
 npm install
@@ -52,41 +85,7 @@ npm run setup
 npm run dev
 ```
 
-`npm run setup` sincroniza el esquema de una base PostgreSQL nueva y ejecuta el seed.
-Debe ejecutarse de forma consciente al instalar o modificar el modelo. Después, el trabajo de
-producción debe pasar a migraciones versionadas.
-
-También se puede ejecutar por separado:
-
-```bash
-npm run db:push
-npm run seed
-```
-
-## Primer acceso
-
-Si el seed creó el usuario, entra con `ADMIN_EMAIL` y `ADMIN_PASSWORD`. Si no se definieron,
-abre `/admin` y crea el primer usuario. Después cambia cualquier contraseña temporal.
-
-## Despliegue en Vercel
-
-1. Conecta el repositorio a Vercel.
-2. Añade una base Neon desde Vercel Marketplace.
-3. Añade Vercel Blob.
-4. Configura los secretos y URL pública.
-5. Ejecuta una vez `npm run setup` contra la base nueva desde un entorno autorizado.
-6. Despliega y abre `/admin`.
-
-El frontend muestra una portada de respaldo mientras la base aún no está conectada. El panel y
-los datos dinámicos requieren PostgreSQL.
-
-## Seguridad
-
-- Los visitantes solo pueden crear contactos y leer contenido publicado.
-- El panel exige autenticación.
-- Solo administradores pueden borrar usuarios o cambiar roles.
-- Las vistas previas requieren `PREVIEW_SECRET`.
-- El seed remoto requiere `SEED_SECRET` en el encabezado `Authorization: Bearer ...`.
+El flujo local sigue disponible para desarrollo, pero no es necesario para instalar producción.
 
 ## Licencia
 
