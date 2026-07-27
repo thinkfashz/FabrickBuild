@@ -31,7 +31,7 @@ export const Projects: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'featured', '_status'],
+    defaultColumns: ['title', 'projectStatus', 'featured', '_status'],
     livePreview: { url: getLivePreviewURL },
     preview: (data) => getPreviewURL(data),
   },
@@ -73,7 +73,8 @@ export const Projects: CollectionConfig = {
       ],
     },
     {
-      name: 'status',
+      name: 'projectStatus',
+      label: 'Estado de la obra',
       type: 'select',
       defaultValue: 'completed',
       options: [
