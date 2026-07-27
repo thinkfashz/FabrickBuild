@@ -58,7 +58,7 @@ const ProjectCards = ({ projects }: { projects: Doc[] }) => (
             ) : (
               <div className="project-placeholder">FABRICK / {String(index + 1).padStart(2, '0')}</div>
             )}
-            <span>{project.status === 'building' ? 'En construcción' : 'Proyecto'}</span>
+            <span>{project.projectStatus === 'building' ? 'En construcción' : 'Proyecto'}</span>
           </div>
           <div className="project-info">
             <div>
