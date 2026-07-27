@@ -38,6 +38,17 @@ export default function BeforeDashboard() {
     }
   }
 
+  const linkStyle = {
+    color: 'inherit',
+    textDecoration: 'none',
+    border: '1px solid var(--theme-elevation-150)',
+    borderRadius: 12,
+    padding: '15px 16px',
+    background: 'var(--theme-elevation-50)',
+    display: 'grid',
+    gap: 5,
+  } as const
+
   return (
     <section
       style={{
@@ -57,6 +68,28 @@ export default function BeforeDashboard() {
         Edita páginas, publica proyectos, organiza servicios, responde cotizaciones y controla el
         contenido público desde un solo lugar.
       </p>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          gap: 10,
+          marginTop: 18,
+        }}
+      >
+        <a href="/studio/ia" style={linkStyle}>
+          <strong>FabrickBuild AI Studio →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Chat multi-modelo, proceso en vivo, dos previews y aplicación reversible.
+          </small>
+        </a>
+        <a href="/studio/integraciones" style={linkStyle}>
+          <strong>Integraciones y credenciales →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Ollama Cloud, ChatGPT, Claude, GLM, OpenRouter, Resend y Cloudinary.
+          </small>
+        </a>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>
         <button
