@@ -1,8 +1,12 @@
+import config from '@payload-config'
 import Image from 'next/image'
 import Link from 'next/link'
+import { getPayload } from 'payload'
 import { ArrowRight, Check, MapPin, Ruler, Timer } from 'lucide-react'
+import { sanitizeComponentStyles } from '@/lib/ai/builder'
 import { getMediaAlt, getMediaURL } from '@/lib/media'
 import { getProjects, getServices, getTestimonials } from '@/lib/queries'
+import { ComponentFrame } from './generated/ComponentFrame'
 import { LeadForm } from './LeadForm'
 import { RichText } from './RichText'
 
@@ -150,7 +154,52 @@ async function ContactFormBlock({ block }: { block: Doc }) {
   )
 }
 
-export async function RenderBlocks({ blocks = [] }: { blocks?: Doc[] }) {
+async function ReusableComponentBlock({ block, depth }: { block: Doc; depth: number }) {
+  if (depth >= 4) return null
+
+  let component = isDoc(block.component) ? block.component : null
+  if (!component && (typeof block.component === 'string' || typeof block.component === 'number')) {
+    try {
+      const payload = await getPayload({ config })
+      component = await (payload as any).findByID({
+        collection: 'reusable-components',
+        id: block.component,
+        depth: 1,
+        overrideAccess: true,
+      })
+    } catch {
+      return null
+    }
+  }
+
+  if (!component || component.status !== 'active' || !Array.isArray(component.layout)) return null
+  let styles = ''
+  try {
+    styles = sanitizeComponentStyles(component.styles || '', String(component.slug || 'component'))
+  } catch {
+    styles = ''
+  }
+
+  return (
+    <ComponentFrame
+      anchor={block.anchor}
+      background={block.background}
+      componentSlug={String(component.slug || 'component')}
+      spacing={block.spacing}
+      styles={styles}
+    >
+      <RenderBlocks blocks={component.layout} componentDepth={depth + 1} />
+    </ComponentFrame>
+  )
+}
+
+export async function RenderBlocks({
+  blocks = [],
+  componentDepth = 0,
+}: {
+  blocks?: Doc[]
+  componentDepth?: number
+}) {
   return (
     <>
       {blocks.map((block, index) => {
@@ -268,6 +317,8 @@ export async function RenderBlocks({ blocks = [] }: { blocks?: Doc[] }) {
             )
           case 'contactForm':
             return <ContactFormBlock block={block} key={block.id || index} />
+          case 'reusableComponent':
+            return <ReusableComponentBlock block={block} depth={componentDepth} key={block.id || index} />
           default:
             return null
         }
