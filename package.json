@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run assets:luxury && npm run bootstrap:auto && next build",
+    "build": "npm run assets:luxury && next build",
     "start": "next start",
     "lint": "eslint .",
     "payload": "payload",
@@ -15,6 +15,7 @@
     "generate:importmap": "payload generate:importmap",
     "assets:luxury": "node src/scripts/materializeLuxuryFrames.mjs",
     "bootstrap:auto": "payload run src/scripts/autoBootstrap.ts",
+    "bootstrap:vercel": "cross-env AUTO_BOOTSTRAP=true payload run src/scripts/autoBootstrap.ts",
     "seed": "payload run src/seed.ts",
     "db:push": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
     "setup": "npm run db:push && npm run seed"
