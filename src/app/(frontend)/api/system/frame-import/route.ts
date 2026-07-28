@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const IMPORT_TOKEN = '7s_LMu8m8FZnHtucnKBPWOYyBYf-5d0ylGyG3PcPau8'
+const IMPORT_TOKEN = '7s_LMu8m8FZnHtucnKBPWOYyBYf-5d8'
 const MAX_BYTES = 200_000
 const ALLOWED_PATH = /^luxury-frames\/(desktop|mobile)\/frame_\d{3}\.webp$/
 
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const type = request.headers.get('content-type') || ''
     if (!type.includes('image/webp')) return json({ ok: false, error: 'Solo se acepta WebP.' }, 415)
 
-    const bytes = new Uint8Array(await request.arrayBuffer())
+    const bytes = Buffer.from(await request.arrayBuffer())
     if (!bytes.length || bytes.length > MAX_BYTES) {
       return json({ ok: false, error: `El archivo debe pesar entre 1 y ${MAX_BYTES} bytes.` }, 413)
     }
