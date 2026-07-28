@@ -43,7 +43,6 @@ export async function POST(request: Request) {
     const blob = await put(pathname, bytes, {
       access: 'public',
       addRandomSuffix: false,
-      overwrite: true,
       contentType: 'image/webp',
       cacheControlMaxAge: 31_536_000,
       token: tokenValue,
