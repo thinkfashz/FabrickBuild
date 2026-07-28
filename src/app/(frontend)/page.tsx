@@ -1,4 +1,5 @@
 import { AIPageStyle } from '@/components/AIPageStyle'
+import { LuxuryScrollExperience } from '@/components/LuxuryScrollExperience'
 import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 import { RenderBlocks } from '@/components/RenderBlocks'
 import { getPageBySlug } from '@/lib/queries'
@@ -52,6 +53,7 @@ export default async function HomePage() {
       <AIPageStyle css={page?.aiStyle as string | undefined} />
       <RefreshRouteOnSave />
       <main className="ai-page">
+        <LuxuryScrollExperience />
         <RenderBlocks blocks={(page?.layout as Record<string, unknown>[]) || fallback} />
       </main>
     </>
