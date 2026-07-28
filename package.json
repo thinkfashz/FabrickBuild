@@ -6,8 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "npm run bootstrap:auto && next build",
+    "dev": "node scripts/build-luxury-atlas.mjs && next dev",
+    "build": "node scripts/build-luxury-atlas.mjs && npm run bootstrap:auto && next build",
     "start": "next start",
     "lint": "eslint .",
     "payload": "payload",
@@ -25,7 +25,6 @@
     "@payloadcms/richtext-lexical": "3.86.0",
     "@payloadcms/storage-vercel-blob": "3.86.0",
     "@payloadcms/ui": "3.86.0",
-    "@vercel/blob": "2.6.1",
     "cross-env": "10.1.0",
     "graphql": "16.11.0",
     "lucide-react": "0.563.0",
