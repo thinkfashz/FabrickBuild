@@ -2,17 +2,10 @@ import type { CollectionBeforeChangeHook, CollectionConfig } from 'payload'
 
 import { authenticated } from '@/access/authenticated'
 
-const deviceOptions = [
-  { label: 'Web / escritorio', value: 'desktop' },
-  { label: 'Móvil vertical', value: 'mobile' },
-  { label: 'Responsive: web + móvil', value: 'responsive' },
-]
-
 type MediaLike = {
   id: string | number
   filename?: string | null
   frameOrder?: number | null
-  createdAt?: string | null
 }
 
 const idOf = (value: unknown): string | number | null => {
@@ -25,15 +18,20 @@ const idOf = (value: unknown): string | number | null => {
 }
 
 const numberFromFilename = (filename?: string | null): number => {
-  if (!filename) return Number.MAX_SAFE_INTEGER
-  const matches = filename.match(/\d+/g)
-  if (!matches?.length) return Number.MAX_SAFE_INTEGER
-  const value = Number(matches[matches.length - 1])
+  const matches = filename?.match(/\d+/g)
+  const value = matches?.length ? Number(matches[matches.length - 1]) : Number.MAX_SAFE_INTEGER
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
 }
 
 async function sortMediaIds(values: unknown, req: any): Promise<(string | number)[]> {
-  const ids = Array.isArray(values) ? values.map(idOf).filter((id): id is string | number => id !== null) : []
+  const ids = Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map(idOf)
+        .filter((id): id is string | number => id !== null)
+        .map(String),
+    ),
+  )
   if (ids.length < 2) return ids
 
   const result = await req.payload.find({
@@ -44,64 +42,57 @@ async function sortMediaIds(values: unknown, req: any): Promise<(string | number
     where: { id: { in: ids } },
   })
 
-  const position = new Map(ids.map((id, index) => [String(id), index]))
-  const docs = (result.docs || []) as MediaLike[]
+  return ((result.docs || []) as MediaLike[])
+    .sort((a, b) => {
+      const explicitA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
+      const explicitB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
+      if (explicitA !== explicitB) return explicitA - explicitB
 
-  docs.sort((a, b) => {
-    const explicitA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
-    const explicitB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
-    if (explicitA !== explicitB) return explicitA - explicitB
+      const fileA = numberFromFilename(a.filename)
+      const fileB = numberFromFilename(b.filename)
+      if (fileA !== fileB) return fileA - fileB
 
-    const fileA = numberFromFilename(a.filename)
-    const fileB = numberFromFilename(b.filename)
-    if (fileA !== fileB) return fileA - fileB
-
-    const nameCompare = String(a.filename || '').localeCompare(String(b.filename || ''), 'es', {
-      numeric: true,
-      sensitivity: 'base',
+      return String(a.filename || '').localeCompare(String(b.filename || ''), 'es', {
+        numeric: true,
+        sensitivity: 'base',
+      })
     })
-    if (nameCompare !== 0) return nameCompare
-
-    return (position.get(String(a.id)) || 0) - (position.get(String(b.id)) || 0)
-  })
-
-  return docs.map((doc) => doc.id)
+    .map((doc) => doc.id)
 }
 
 const orderFrames: CollectionBeforeChangeHook = async ({ data, req }) => {
   if (!data || data.kind !== 'frames') return data
+  const desktopFrames = await sortMediaIds(data.desktopFrames, req)
+  const mobileFrames = await sortMediaIds(data.mobileFrames, req)
 
   return {
     ...data,
-    desktopFrames: await sortMediaIds(data.desktopFrames, req),
-    mobileFrames: await sortMediaIds(data.mobileFrames, req),
-    frameCountDesktop: Array.isArray(data.desktopFrames) ? data.desktopFrames.length : 0,
-    frameCountMobile: Array.isArray(data.mobileFrames) ? data.mobileFrames.length : 0,
+    desktopFrames,
+    mobileFrames,
+    frameCountDesktop: desktopFrames.length,
+    frameCountMobile: mobileFrames.length,
     orderedAt: new Date().toISOString(),
   }
 }
 
+const imageFilter = { mimeType: { contains: 'image/' } }
+
 export const Backgrounds: CollectionConfig = {
   slug: 'backgrounds',
-  labels: {
-    singular: 'Background multimedia',
-    plural: 'Backgrounds multimedia',
-  },
+  labels: { singular: 'Background multimedia', plural: 'Backgrounds multimedia' },
   access: {
     read: () => true,
     create: authenticated,
     update: authenticated,
     delete: authenticated,
   },
-  hooks: {
-    beforeChange: [orderFrames],
-  },
+  hooks: { beforeChange: [orderFrames] },
   admin: {
     group: 'Multimedia',
     useAsTitle: 'name',
-    defaultColumns: ['name', 'kind', 'device', 'status', 'frameCountDesktop', 'frameCountMobile', 'updatedAt'],
+    defaultColumns: ['name', 'kind', 'device', 'status', 'frameCountDesktop', 'frameCountMobile'],
     description:
-      'Carga una carpeta o selecciona imágenes de la biblioteca. Al guardar, FabrickBuild ordena automáticamente los frames por orden explícito, número del archivo y nombre natural.',
+      'Sube una carpeta completa, varias imágenes o reutiliza archivos de la biblioteca. El orden final se automatiza al guardar.',
   },
   fields: [
     {
@@ -118,7 +109,7 @@ export const Backgrounds: CollectionConfig = {
               unique: true,
               index: true,
               label: 'Identificador',
-              admin: { description: 'Ejemplo: casa-lujo-portada. Se usa para llamarlo desde páginas y héroes.' },
+              admin: { description: 'Ejemplo: casa-lujo-portada.' },
             },
             {
               name: 'kind',
@@ -133,27 +124,16 @@ export const Backgrounds: CollectionConfig = {
               ],
             },
             {
-              name: 'sourceMode',
-              type: 'radio',
-              defaultValue: 'library',
-              label: 'Origen de los archivos',
-              options: [
-                { label: 'Subir carpeta', value: 'folder' },
-                { label: 'Seleccionar varias imágenes', value: 'images' },
-                { label: 'Elegir desde la biblioteca', value: 'library' },
-              ],
-              admin: {
-                condition: (_, siblingData) => siblingData?.kind === 'frames',
-                description: 'Los tres métodos terminan en una secuencia única y reutilizable.',
-              },
-            },
-            {
               name: 'device',
               type: 'radio',
               required: true,
               defaultValue: 'responsive',
               label: 'Destino',
-              options: deviceOptions,
+              options: [
+                { label: 'Web / escritorio', value: 'desktop' },
+                { label: 'Móvil vertical', value: 'mobile' },
+                { label: 'Responsive: web + móvil', value: 'responsive' },
+              ],
             },
             {
               name: 'status',
@@ -173,17 +153,25 @@ export const Backgrounds: CollectionConfig = {
           label: 'Frames',
           fields: [
             {
+              name: 'frameUploader',
+              type: 'ui',
+              admin: {
+                condition: (_, siblingData) => siblingData?.kind === 'frames',
+                components: { Field: '@/components/admin/FrameFolderUploader' },
+              },
+            },
+            {
               name: 'desktopFrames',
               type: 'relationship',
               relationTo: 'media',
               hasMany: true,
               label: 'Frames web / escritorio',
-              filterOptions: { mimeType: { contains: 'image/' } },
+              filterOptions: imageFilter,
               admin: {
                 condition: (_, siblingData) =>
                   siblingData?.kind === 'frames' &&
                   (siblingData?.device === 'desktop' || siblingData?.device === 'responsive'),
-                description: 'Admite selección múltiple. El orden se corrige automáticamente al guardar.',
+                description: 'También puedes seleccionar imágenes existentes. El orden se corrige al guardar.',
               },
             },
             {
@@ -192,7 +180,7 @@ export const Backgrounds: CollectionConfig = {
               relationTo: 'media',
               hasMany: true,
               label: 'Frames móvil vertical',
-              filterOptions: { mimeType: { contains: 'image/' } },
+              filterOptions: imageFilter,
               admin: {
                 condition: (_, siblingData) =>
                   siblingData?.kind === 'frames' &&
@@ -225,7 +213,7 @@ export const Backgrounds: CollectionConfig = {
                 { label: 'GSAP ScrollTrigger + Canvas 2D', value: 'gsap-canvas' },
                 { label: 'Canvas ligero', value: 'canvas' },
               ],
-              admin: { description: 'GSAP + Three.js queda como motor cinematográfico principal.' },
+              admin: { description: 'GSAP + Three.js se mantiene como motor cinematográfico principal.' },
             },
             {
               name: 'playback',
@@ -245,8 +233,9 @@ export const Backgrounds: CollectionConfig = {
                 },
                 { name: 'scrub', type: 'number', defaultValue: 0.35, min: 0, max: 3, label: 'Suavidad del scrub' },
                 { name: 'pin', type: 'checkbox', defaultValue: true, label: 'Fijar escena durante el recorrido' },
+                { name: 'snap', type: 'checkbox', defaultValue: false, label: 'Ajustar al frame más cercano' },
                 { name: 'scrollLength', type: 'number', defaultValue: 500, min: 100, max: 1500, label: 'Longitud del recorrido (% pantalla)' },
-                { name: 'parallax', type: 'number', defaultValue: 12, min: 0, max: 100, label: 'Profundidad / parallax' },
+                { name: 'parallax', type: 'number', defaultValue: 12, min: 0, max: 100, label: 'Profundidad / parallax Three.js' },
                 {
                   name: 'fit',
                   type: 'select',
