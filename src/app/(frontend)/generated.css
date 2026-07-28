@@ -1,0 +1,22 @@
+.generated-component {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+}
+
+.generated-component-inherit { background: transparent; }
+.generated-component-light { background: #f7f5ee; color: #111319; }
+.generated-component-dark { background: #0b0c0f; color: #f7f7f8; }
+.generated-component-yellow { background: #f4c84b; color: #111319; }
+
+.generated-component-spacing-compact { padding-block: clamp(18px, 3vw, 38px); }
+.generated-component-spacing-normal { padding-block: clamp(32px, 5vw, 72px); }
+.generated-component-spacing-large { padding-block: clamp(54px, 8vw, 120px); }
+
+.generated-component > .hero:first-child,
+.generated-component > .section:first-child,
+.generated-component > .stats-section:first-child,
+.generated-component > .cta-section:first-child,
+.generated-component > .contact-section:first-child {
+  margin-top: 0;
+}

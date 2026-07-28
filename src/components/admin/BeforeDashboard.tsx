@@ -47,6 +47,7 @@ export default function BeforeDashboard() {
     background: 'var(--theme-elevation-50)',
     display: 'grid',
     gap: 5,
+    minWidth: 0,
   } as const
 
   return (
@@ -55,38 +56,53 @@ export default function BeforeDashboard() {
         border: '1px solid var(--theme-elevation-150)',
         borderRadius: 14,
         marginBottom: 24,
-        padding: '24px 26px',
+        padding: 'clamp(16px, 4vw, 26px)',
         background:
           'linear-gradient(135deg, var(--theme-elevation-50), var(--theme-elevation-100))',
+        overflow: 'hidden',
       }}
     >
       <p style={{ margin: 0, opacity: 0.65, fontSize: 12, letterSpacing: '.14em' }}>
         FABRICKBUILD / CONTROL
       </p>
-      <h2 style={{ margin: '8px 0 10px', fontSize: 28 }}>Administra la obra digital.</h2>
-      <p style={{ margin: 0, maxWidth: 760, lineHeight: 1.6 }}>
-        Edita páginas, publica proyectos, organiza servicios, responde cotizaciones y controla el
-        contenido público desde un solo lugar.
+      <h2 style={{ margin: '8px 0 10px', fontSize: 'clamp(24px, 5vw, 32px)' }}>
+        Administra la obra digital.
+      </h2>
+      <p style={{ margin: 0, maxWidth: 820, lineHeight: 1.6 }}>
+        Edita páginas, construye componentes reutilizables, conecta proveedores de IA, publica
+        proyectos y controla el contenido desde una interfaz preparada para móvil y escritorio.
       </p>
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
           gap: 10,
           marginTop: 18,
         }}
       >
         <a href="/studio/ia" style={linkStyle}>
-          <strong>FabrickBuild AI Studio →</strong>
+          <strong>Chat y propuestas de IA →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Chat multi-modelo, proceso en vivo, dos previews y aplicación reversible.
+            Chat multi-modelo, razonamiento compatible y dos propuestas antes de modificar.
+          </small>
+        </a>
+        <a href="/studio/editor" style={linkStyle}>
+          <strong>Editor visual en vivo →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Selecciona, mueve, duplica, modifica o elimina bloques antes de guardar.
           </small>
         </a>
         <a href="/studio/integraciones" style={linkStyle}>
-          <strong>Integraciones y credenciales →</strong>
+          <strong>Bóveda de integraciones →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Ollama Cloud, ChatGPT, Claude, GLM, OpenRouter, Resend y Cloudinary.
+            Selecciona proveedor, pega la clave y conecta automáticamente con cifrado por registro.
+          </small>
+        </a>
+        <a href="/admin/collections/reusable-components" style={linkStyle}>
+          <strong>Componentes reutilizables →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Biblioteca versionada de secciones creadas manualmente o con IA.
           </small>
         </a>
       </div>
@@ -99,6 +115,7 @@ export default function BeforeDashboard() {
           style={{
             border: 0,
             borderRadius: 9,
+            minHeight: 42,
             padding: '11px 15px',
             background: 'var(--theme-success-500)',
             color: '#fff',
@@ -124,7 +141,7 @@ export default function BeforeDashboard() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 135px), 1fr))',
             gap: 8,
             marginTop: 16,
           }}
@@ -143,6 +160,7 @@ export default function BeforeDashboard() {
                 border: '1px solid var(--theme-elevation-150)',
                 borderRadius: 8,
                 padding: 10,
+                minWidth: 0,
               }}
             >
               <small style={{ display: 'block', opacity: 0.65 }}>{String(label)}</small>

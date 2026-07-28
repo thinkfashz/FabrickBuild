@@ -6,6 +6,14 @@
 
 .template-default {
   --theme-success-500: #e4a400;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.template-default *,
+.template-default *::before,
+.template-default *::after {
+  box-sizing: border-box;
 }
 
 .nav {
@@ -33,6 +41,323 @@
 
 .collection-list__wrap,
 .doc-controls,
-.card {
+.card,
+.blocks-field__row,
+.array-field__row,
+.tabs-field,
+.collapsible {
   border-radius: 14px;
+}
+
+.template-default__wrap,
+.template-default__content,
+.collection-list,
+.collection-list__wrap,
+.document-fields,
+.render-fields,
+.field-type,
+.field-type__wrap,
+.doc-drawer__content,
+.form-submit,
+.form-submit__controls {
+  min-width: 0;
+}
+
+.collection-list__wrap,
+.table-wrapper,
+.table,
+.list-controls,
+.relationship-table,
+.upload-collection {
+  max-width: 100%;
+}
+
+.table-wrapper,
+.collection-list__wrap,
+.relationship-table,
+.upload-collection {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.doc-controls,
+.doc-header__actions,
+.list-controls,
+.list-controls__wrap,
+.form-submit__controls,
+.collection-list__actions,
+.upload__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.doc-controls > *,
+.doc-header__actions > *,
+.form-submit__controls > * {
+  min-width: 0;
+}
+
+.tabs-field__tabs,
+.step-nav,
+.pill-selector,
+.list-selection {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs-field__tab-button,
+.step-nav a,
+.step-nav button {
+  flex: 0 0 auto;
+}
+
+.blocks-field__row,
+.array-field__row {
+  overflow: hidden;
+  border: 1px solid var(--theme-elevation-100);
+}
+
+.blocks-field__header,
+.array-field__header,
+.collapsible__toggle-wrap {
+  min-width: 0;
+}
+
+.blocks-field__block-pill,
+.array-field__row-label,
+.collapsible__toggle {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-type input,
+.field-type textarea,
+.field-type select,
+.react-select,
+.upload__dropzone,
+.rich-text-lexical,
+.lexical-editor {
+  max-width: 100%;
+}
+
+.field-type textarea {
+  resize: vertical;
+}
+
+.popup,
+.popup-button-list,
+.drawer,
+.doc-drawer,
+.modal-container {
+  max-width: 100vw;
+}
+
+@media (max-width: 1024px) {
+  .template-default__wrap {
+    padding-inline: clamp(14px, 3vw, 28px);
+  }
+
+  .collection-list__wrap,
+  .card,
+  .doc-controls {
+    border-radius: 12px;
+  }
+
+  .render-fields {
+    --field-width: 100%;
+  }
+
+  .render-fields > .field-type,
+  .render-fields > .field-type--width-half,
+  .render-fields > .field-type--width-one-third,
+  .render-fields > .field-type--width-two-thirds {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .template-default__wrap {
+    padding: 12px !important;
+  }
+
+  .template-default__content {
+    width: 100%;
+  }
+
+  .nav {
+    width: min(88vw, 320px);
+    max-width: 100%;
+    box-shadow: 16px 0 48px rgba(0, 0, 0, .24);
+  }
+
+  .nav__scroll {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .step-nav {
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .doc-header,
+  .doc-controls,
+  .collection-list__header,
+  .list-controls,
+  .list-controls__wrap,
+  .upload__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .doc-header__actions,
+  .doc-controls__controls,
+  .collection-list__actions,
+  .form-submit__controls {
+    width: 100%;
+  }
+
+  .doc-header__actions .btn,
+  .doc-controls__controls .btn,
+  .collection-list__actions .btn,
+  .form-submit__controls .btn,
+  .form-submit__controls button {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  .form-submit {
+    position: sticky;
+    z-index: 20;
+    bottom: 0;
+    margin-inline: -12px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--theme-elevation-100);
+    background: color-mix(in srgb, var(--theme-bg) 92%, transparent);
+    backdrop-filter: blur(16px);
+  }
+
+  .collection-list__wrap,
+  .table-wrapper,
+  .relationship-table {
+    margin-inline: -4px;
+    padding-bottom: 6px;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  .tabs-field__tabs {
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .tabs-field__tab-button {
+    min-height: 44px;
+  }
+
+  .blocks-field__row,
+  .array-field__row {
+    margin-inline: 0;
+  }
+
+  .blocks-field__header,
+  .array-field__header {
+    min-height: 48px;
+    padding-inline: 10px;
+  }
+
+  .blocks-field__row-fields,
+  .array-field__row-fields,
+  .collapsible__content {
+    padding-inline: 10px;
+  }
+
+  .drawer,
+  .doc-drawer {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .drawer__content,
+  .doc-drawer__content {
+    padding-inline: 12px;
+  }
+
+  .popup {
+    max-width: calc(100vw - 20px);
+  }
+}
+
+@media (max-width: 480px) {
+  .template-default__wrap {
+    padding: 9px !important;
+  }
+
+  h1 {
+    font-size: clamp(25px, 9vw, 36px);
+  }
+
+  .card,
+  .collection-list__wrap,
+  .doc-controls,
+  .blocks-field__row,
+  .array-field__row {
+    border-radius: 10px;
+  }
+
+  .doc-header__actions,
+  .doc-controls__controls,
+  .form-submit__controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .doc-header__actions .btn,
+  .doc-controls__controls .btn,
+  .form-submit__controls .btn,
+  .form-submit__controls button {
+    width: 100%;
+  }
+
+  .field-label,
+  .field-description,
+  .blocks-field__block-pill,
+  .array-field__row-label {
+    overflow-wrap: anywhere;
+  }
+
+  .blocks-field__header-actions,
+  .array-field__header-actions {
+    gap: 2px;
+  }
+
+  .blocks-field__header-actions button,
+  .array-field__header-actions button {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn,
+  button,
+  .tabs-field__tab-button,
+  .step-nav a {
+    min-height: 42px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

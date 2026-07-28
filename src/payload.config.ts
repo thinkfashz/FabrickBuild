@@ -11,6 +11,7 @@ import { Leads } from '@/collections/Leads'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Projects } from '@/collections/Projects'
+import { ReusableComponents } from '@/collections/ReusableComponents'
 import { Services } from '@/collections/Services'
 import { Testimonials } from '@/collections/Testimonials'
 import { Users } from '@/collections/Users'
@@ -77,6 +78,7 @@ export default buildConfig({
       titleSuffix: '— FabrickBuild CMS',
     },
     components: {
+      beforeNavLinks: ['@/components/admin/AdminStudioNav'],
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
     livePreview: {
@@ -103,6 +105,7 @@ export default buildConfig({
     Leads,
     Integrations,
     AIChanges,
+    ReusableComponents,
   ],
   globals: [Header, Footer, SiteSettings],
   plugins: [
