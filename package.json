@@ -6,8 +6,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/build-luxury-atlas.mjs && next dev",
-    "build": "node scripts/build-luxury-atlas.mjs && npm run bootstrap:auto && next build",
+    "dev": "next dev",
+    "build": "npm run bootstrap:auto && next build",
     "start": "next start",
     "lint": "eslint .",
     "payload": "payload",
