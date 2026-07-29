@@ -1,4 +1,4 @@
-import type { CollectionBeforeChangeHook, CollectionConfig } from 'payload'
+import type { CollectionBeforeChangeHook, CollectionBeforeValidateHook, CollectionConfig } from 'payload'
 
 import { authenticated } from '@/access/authenticated'
 
@@ -15,6 +15,42 @@ const idOf = (value: unknown): string | number | null => {
     return typeof id === 'string' || typeof id === 'number' ? id : null
   }
   return null
+}
+
+const slugify = (value: unknown): string =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 90)
+
+const createUniqueSlug: CollectionBeforeValidateHook = async ({ data, originalDoc, req }) => {
+  if (!data) return data
+
+  const base = slugify(data.slug || data.name) || `background-${Date.now()}`
+  let candidate = base
+  let suffix = 2
+  const currentID = originalDoc?.id
+
+  while (suffix < 1000) {
+    const existing = await req.payload.find({
+      collection: 'backgrounds',
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+      where: { slug: { equals: candidate } },
+    })
+
+    const match = existing.docs?.[0]
+    if (!match || String(match.id) === String(currentID || '')) break
+    candidate = `${base}-${suffix}`
+    suffix += 1
+  }
+
+  return { ...data, slug: candidate }
 }
 
 const numberFromFilename = (filename?: string | null): number => {
@@ -47,15 +83,10 @@ async function sortMediaIds(values: unknown, req: any): Promise<(string | number
       const explicitA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
       const explicitB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
       if (explicitA !== explicitB) return explicitA - explicitB
-
       const fileA = numberFromFilename(a.filename)
       const fileB = numberFromFilename(b.filename)
       if (fileA !== fileB) return fileA - fileB
-
-      return String(a.filename || '').localeCompare(String(b.filename || ''), 'es', {
-        numeric: true,
-        sensitivity: 'base',
-      })
+      return String(a.filename || '').localeCompare(String(b.filename || ''), 'es', { numeric: true, sensitivity: 'base' })
     })
     .map((doc) => doc.id)
 }
@@ -64,7 +95,6 @@ const orderFrames: CollectionBeforeChangeHook = async ({ data, req }) => {
   if (!data || data.kind !== 'frames') return data
   const desktopFrames = await sortMediaIds(data.desktopFrames, req)
   const mobileFrames = await sortMediaIds(data.mobileFrames, req)
-
   return {
     ...data,
     desktopFrames,
@@ -80,19 +110,13 @@ const imageFilter = { mimeType: { contains: 'image/' } }
 export const Backgrounds: CollectionConfig = {
   slug: 'backgrounds',
   labels: { singular: 'Background multimedia', plural: 'Backgrounds multimedia' },
-  access: {
-    read: () => true,
-    create: authenticated,
-    update: authenticated,
-    delete: authenticated,
-  },
-  hooks: { beforeChange: [orderFrames] },
+  access: { read: () => true, create: authenticated, update: authenticated, delete: authenticated },
+  hooks: { beforeValidate: [createUniqueSlug], beforeChange: [orderFrames] },
   admin: {
     group: 'Multimedia',
     useAsTitle: 'name',
-    defaultColumns: ['name', 'kind', 'device', 'status', 'frameCountDesktop', 'frameCountMobile'],
-    description:
-      'Sube una carpeta completa, varias imágenes o reutiliza archivos de la biblioteca. El orden final se automatiza al guardar.',
+    defaultColumns: ['name', 'slug', 'kind', 'device', 'status', 'frameCountDesktop', 'frameCountMobile'],
+    description: 'Sube una carpeta completa, varias imágenes o reutiliza archivos. El slug y el orden se generan automáticamente.',
   },
   fields: [
     {
@@ -103,20 +127,11 @@ export const Backgrounds: CollectionConfig = {
           fields: [
             { name: 'name', type: 'text', required: true, label: 'Nombre del background' },
             {
-              name: 'slug',
-              type: 'text',
-              required: true,
-              unique: true,
-              index: true,
-              label: 'Identificador',
-              admin: { description: 'Ejemplo: casa-lujo-portada.' },
+              name: 'slug', type: 'text', unique: true, index: true, label: 'Identificador automático',
+              admin: { readOnly: true, description: 'Se genera desde el nombre y añade un número cuando ya existe.' },
             },
             {
-              name: 'kind',
-              type: 'radio',
-              required: true,
-              defaultValue: 'frames',
-              label: 'Tipo de background',
+              name: 'kind', type: 'radio', required: true, defaultValue: 'frames', label: 'Tipo de background',
               options: [
                 { label: 'Secuencia cinematográfica de frames', value: 'frames' },
                 { label: 'Imagen única', value: 'image' },
@@ -124,11 +139,7 @@ export const Backgrounds: CollectionConfig = {
               ],
             },
             {
-              name: 'device',
-              type: 'radio',
-              required: true,
-              defaultValue: 'responsive',
-              label: 'Destino',
+              name: 'device', type: 'radio', required: true, defaultValue: 'responsive', label: 'Destino',
               options: [
                 { label: 'Web / escritorio', value: 'desktop' },
                 { label: 'Móvil vertical', value: 'mobile' },
@@ -136,15 +147,10 @@ export const Backgrounds: CollectionConfig = {
               ],
             },
             {
-              name: 'status',
-              type: 'select',
-              required: true,
-              defaultValue: 'draft',
+              name: 'status', type: 'select', required: true, defaultValue: 'draft',
               options: [
-                { label: 'Borrador', value: 'draft' },
-                { label: 'Procesando', value: 'processing' },
-                { label: 'Listo para usar', value: 'ready' },
-                { label: 'Archivado', value: 'archived' },
+                { label: 'Borrador', value: 'draft' }, { label: 'Procesando', value: 'processing' },
+                { label: 'Listo para usar', value: 'ready' }, { label: 'Archivado', value: 'archived' },
               ],
             },
           ],
@@ -153,48 +159,26 @@ export const Backgrounds: CollectionConfig = {
           label: 'Frames',
           fields: [
             {
-              name: 'frameUploader',
-              type: 'ui',
+              name: 'frameUploader', type: 'ui',
+              admin: { condition: (_, siblingData) => siblingData?.kind === 'frames', components: { Field: '@/components/admin/FrameFolderUploader' } },
+            },
+            {
+              name: 'desktopFrames', type: 'relationship', relationTo: 'media', hasMany: true,
+              label: 'Frames web / escritorio', filterOptions: imageFilter,
               admin: {
-                condition: (_, siblingData) => siblingData?.kind === 'frames',
-                components: { Field: '@/components/admin/FrameFolderUploader' },
+                condition: (_, siblingData) => siblingData?.kind === 'frames' && ['desktop', 'responsive'].includes(siblingData?.device),
+                description: 'Puedes subir una carpeta o seleccionar imágenes. Se ordenan automáticamente al guardar.',
               },
             },
             {
-              name: 'desktopFrames',
-              type: 'relationship',
-              relationTo: 'media',
-              hasMany: true,
-              label: 'Frames web / escritorio',
-              filterOptions: imageFilter,
+              name: 'mobileFrames', type: 'relationship', relationTo: 'media', hasMany: true,
+              label: 'Frames móvil vertical', filterOptions: imageFilter,
               admin: {
-                condition: (_, siblingData) =>
-                  siblingData?.kind === 'frames' &&
-                  (siblingData?.device === 'desktop' || siblingData?.device === 'responsive'),
-                description: 'También puedes seleccionar imágenes existentes. El orden se corrige al guardar.',
+                condition: (_, siblingData) => siblingData?.kind === 'frames' && ['mobile', 'responsive'].includes(siblingData?.device),
+                description: 'La secuencia móvil se ordena independientemente.',
               },
             },
-            {
-              name: 'mobileFrames',
-              type: 'relationship',
-              relationTo: 'media',
-              hasMany: true,
-              label: 'Frames móvil vertical',
-              filterOptions: imageFilter,
-              admin: {
-                condition: (_, siblingData) =>
-                  siblingData?.kind === 'frames' &&
-                  (siblingData?.device === 'mobile' || siblingData?.device === 'responsive'),
-                description: 'La secuencia móvil se ordena independientemente de la versión web.',
-              },
-            },
-            {
-              name: 'poster',
-              type: 'upload',
-              relationTo: 'media',
-              label: 'Portada mientras cargan los frames',
-              admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' },
-            },
+            { name: 'poster', type: 'upload', relationTo: 'media', label: 'Portada mientras cargan los frames', admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' } },
             { name: 'frameCountDesktop', type: 'number', admin: { readOnly: true, position: 'sidebar' } },
             { name: 'frameCountMobile', type: 'number', admin: { readOnly: true, position: 'sidebar' } },
             { name: 'orderedAt', type: 'date', admin: { readOnly: true, position: 'sidebar' } },
@@ -204,48 +188,24 @@ export const Backgrounds: CollectionConfig = {
           label: 'Animación cinematográfica',
           fields: [
             {
-              name: 'engine',
-              type: 'select',
-              defaultValue: 'gsap-three',
-              required: true,
+              name: 'engine', type: 'select', defaultValue: 'gsap-three', required: true,
               options: [
                 { label: 'GSAP ScrollTrigger + Three.js', value: 'gsap-three' },
                 { label: 'GSAP ScrollTrigger + Canvas 2D', value: 'gsap-canvas' },
                 { label: 'Canvas ligero', value: 'canvas' },
               ],
-              admin: { description: 'GSAP + Three.js se mantiene como motor cinematográfico principal.' },
             },
             {
-              name: 'playback',
-              type: 'group',
-              label: 'Comportamiento de la secuencia',
-              admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' },
+              name: 'playback', type: 'group', label: 'Comportamiento', admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' },
               fields: [
-                {
-                  name: 'trigger',
-                  type: 'select',
-                  defaultValue: 'scroll',
-                  options: [
-                    { label: 'ScrollTrigger cinematográfico', value: 'scroll' },
-                    { label: 'Reproducción automática', value: 'autoplay' },
-                    { label: 'Bucle continuo', value: 'loop' },
-                  ],
-                },
-                { name: 'scrub', type: 'number', defaultValue: 0.35, min: 0, max: 3, label: 'Suavidad del scrub' },
-                { name: 'pin', type: 'checkbox', defaultValue: true, label: 'Fijar escena durante el recorrido' },
-                { name: 'snap', type: 'checkbox', defaultValue: false, label: 'Ajustar al frame más cercano' },
-                { name: 'scrollLength', type: 'number', defaultValue: 500, min: 100, max: 1500, label: 'Longitud del recorrido (% pantalla)' },
-                { name: 'parallax', type: 'number', defaultValue: 12, min: 0, max: 100, label: 'Profundidad / parallax Three.js' },
-                {
-                  name: 'fit',
-                  type: 'select',
-                  defaultValue: 'cover',
-                  options: [
-                    { label: 'Cubrir todo el fondo', value: 'cover' },
-                    { label: 'Contener imagen completa', value: 'contain' },
-                  ],
-                },
-                { name: 'overlayOpacity', type: 'number', defaultValue: 20, min: 0, max: 90, label: 'Oscurecimiento (%)' },
+                { name: 'trigger', type: 'select', defaultValue: 'scroll', options: [{ label: 'ScrollTrigger cinematográfico', value: 'scroll' }, { label: 'Automático', value: 'autoplay' }, { label: 'Bucle', value: 'loop' }] },
+                { name: 'scrub', type: 'number', defaultValue: 0.35, min: 0, max: 3 },
+                { name: 'pin', type: 'checkbox', defaultValue: true },
+                { name: 'snap', type: 'checkbox', defaultValue: false },
+                { name: 'scrollLength', type: 'number', defaultValue: 500, min: 100, max: 1500 },
+                { name: 'parallax', type: 'number', defaultValue: 12, min: 0, max: 100 },
+                { name: 'fit', type: 'select', defaultValue: 'cover', options: [{ label: 'Cubrir', value: 'cover' }, { label: 'Contener', value: 'contain' }] },
+                { name: 'overlayOpacity', type: 'number', defaultValue: 20, min: 0, max: 90 },
               ],
             },
           ],
@@ -253,21 +213,12 @@ export const Backgrounds: CollectionConfig = {
         {
           label: 'Imagen o URL',
           fields: [
+            { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagen principal', admin: { condition: (_, siblingData) => siblingData?.kind === 'image' } },
             {
-              name: 'image',
-              type: 'upload',
-              relationTo: 'media',
-              label: 'Imagen principal',
-              admin: { condition: (_, siblingData) => siblingData?.kind === 'image' },
-            },
-            {
-              name: 'externalURL',
-              type: 'text',
-              label: 'URL del background',
+              name: 'externalURL', type: 'text', label: 'URL del background',
               validate: (value: unknown, { siblingData }: { siblingData?: Record<string, unknown> }) => {
                 if (siblingData?.kind !== 'url') return true
-                if (typeof value !== 'string' || !/^https?:\/\//i.test(value)) return 'Ingresa una URL http:// o https:// válida.'
-                return true
+                return typeof value === 'string' && /^https?:\/\//i.test(value) ? true : 'Ingresa una URL http:// o https:// válida.'
               },
               admin: { condition: (_, siblingData) => siblingData?.kind === 'url' },
             },
@@ -277,16 +228,11 @@ export const Backgrounds: CollectionConfig = {
           label: 'Organización',
           fields: [
             {
-              name: 'category',
-              type: 'select',
-              defaultValue: 'hero',
+              name: 'category', type: 'select', defaultValue: 'hero',
               options: [
-                { label: 'Hero / portada', value: 'hero' },
-                { label: 'Página', value: 'page' },
-                { label: 'Colección', value: 'collection' },
-                { label: 'Servicio', value: 'service' },
-                { label: 'Proyecto', value: 'project' },
-                { label: 'Campaña', value: 'campaign' },
+                { label: 'Hero / portada', value: 'hero' }, { label: 'Página', value: 'page' },
+                { label: 'Colección', value: 'collection' }, { label: 'Servicio', value: 'service' },
+                { label: 'Proyecto', value: 'project' }, { label: 'Campaña', value: 'campaign' },
               ],
             },
             { name: 'tags', type: 'array', fields: [{ name: 'value', type: 'text', required: true }] },
