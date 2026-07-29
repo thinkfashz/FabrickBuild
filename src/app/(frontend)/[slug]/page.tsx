@@ -23,12 +23,15 @@ export default async function DynamicPage({ params }: Args) {
   const { slug } = await params
   const page = await getPageBySlug(slug)
   if (!page) notFound()
+
+  const blocks = (page.layout || []) as unknown as Record<string, unknown>[]
+
   return (
     <>
       <AIPageStyle css={page.aiStyle as string | undefined} />
       <RefreshRouteOnSave />
       <main className="ai-page">
-        <RenderBlocks blocks={(page.layout || []) as Record<string, unknown>[]} />
+        <RenderBlocks blocks={blocks} />
       </main>
     </>
   )
