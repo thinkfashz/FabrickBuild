@@ -196,7 +196,7 @@ export async function saveIntegration(payload: Payload, input: SaveIntegrationIn
   const encrypted = Object.keys(credentials).length
     ? encryptCredentials(credentials, input.provider, existing?.credentialBinding)
     : undefined
-  const hintSource = credentials.apiKey || credentials.cloudName || credentials.apiSecret
+  const hintSource = credentials.apiKey || credentials.accessKeyId || credentials.cloudName || credentials.apiSecret
 
   const data: Record<string, unknown> = {
     label: input.label.trim(),

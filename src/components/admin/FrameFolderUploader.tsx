@@ -86,6 +86,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
           device: target === 'desktopFrames' ? 'desktop' : 'mobile',
           frameOrder: index + 1,
           collectionKey,
+          storageFolder: `frames/${collectionKey}`,
         }
         const form = new FormData()
         form.append('file', file)
@@ -155,13 +156,13 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
       {(busy || message) && <div className="frame-folder-uploader__status" role="status">{busy && <progress max={100} value={progress} />}<span>{message}</span></div>}
 
       <style jsx>{`
-        .frame-folder-uploader{border:1px solid var(--theme-elevation-150);border-radius:14px;padding:18px;margin:8px 0 22px;background:var(--theme-elevation-50)}
+        .frame-folder-uploader{border:1px solid color-mix(in srgb,var(--theme-elevation-150) 74%,#f4c84b 26%);border-radius:16px;padding:clamp(12px,3vw,20px);margin:8px 0 22px;background:linear-gradient(135deg,color-mix(in srgb,var(--theme-elevation-50) 93%,#f4c84b 7%),var(--theme-elevation-50));box-shadow:0 12px 28px rgba(0,0,0,.05)}
         .frame-folder-uploader__head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px} strong{display:block;font-size:16px;margin-bottom:5px} p{margin:0;max-width:760px;color:var(--theme-elevation-600);line-height:1.5}
         select{min-width:190px;padding:10px 12px;border:1px solid var(--theme-elevation-250);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text)}
         .frame-folder-uploader__actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px} button{border:0;border-radius:8px;padding:11px 15px;cursor:pointer;background:var(--theme-elevation-800);color:#fff;font-weight:700} button.primary{background:#c99b19;color:#111} button.ghost{background:transparent;color:var(--theme-text);border:1px solid var(--theme-elevation-250)} button:disabled{opacity:.55;cursor:wait}
         .frame-folder-uploader__preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:18px;max-height:430px;overflow:auto;padding:10px;border-radius:10px;background:var(--theme-elevation-100)} figure{margin:0;min-width:0;border-radius:8px;overflow:hidden;background:var(--theme-elevation-50)} img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover} figcaption{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;padding:7px;font-size:10px} figcaption span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.more{display:grid;place-items:center;min-height:100px;font-weight:800}
         .frame-folder-uploader__status{display:grid;gap:8px;margin-top:14px;color:var(--theme-elevation-700)} progress{width:100%;height:8px}
-        @media(max-width:720px){.frame-folder-uploader__head{flex-direction:column}select,button{width:100%}.frame-folder-uploader__actions{display:grid}.frame-folder-uploader__preview{grid-template-columns:repeat(3,minmax(0,1fr));padding:6px;gap:6px}figcaption span{display:none}}
+        @media(max-width:720px){.frame-folder-uploader__head{flex-direction:column}select,button{width:100%;min-height:44px}.frame-folder-uploader__actions{display:grid}.frame-folder-uploader__preview{grid-template-columns:repeat(3,minmax(0,1fr));padding:6px;gap:6px}figcaption span{display:none}}
       `}</style>
     </section>
   )

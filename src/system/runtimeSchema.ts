@@ -26,6 +26,25 @@ async function repairSchema(payload: Payload): Promise<void> {
       ON "payload_locked_documents_rels" ("backgrounds_id");
     `,
     sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "storage_provider" varchar DEFAULT 'database';
+    `,
+    sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "external_u_r_l" varchar;
+    `,
+    sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "storage_key" varchar;
+    `,
+    sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "storage_folder" varchar DEFAULT 'general';
+    `,
+    sql`CREATE INDEX IF NOT EXISTS "media_storage_provider_idx" ON "media" ("storage_provider");`,
+    sql`CREATE INDEX IF NOT EXISTS "media_storage_key_idx" ON "media" ("storage_key");`,
+    sql`CREATE INDEX IF NOT EXISTS "media_storage_folder_idx" ON "media" ("storage_folder");`,
+    sql`
       ALTER TABLE IF EXISTS "pages_blocks_hero"
       ADD COLUMN IF NOT EXISTS "background_source" varchar DEFAULT 'upload';
     `,

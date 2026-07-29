@@ -40,6 +40,25 @@ export const Media: CollectionConfig = {
   fields: [
     { name: 'alt', type: 'text', required: true, label: 'Texto alternativo' },
     {
+      name: 'storageProvider',
+      type: 'select',
+      defaultValue: 'database',
+      index: true,
+      label: 'Origen del archivo',
+      options: [
+        { label: 'Base de datos + almacenamiento de Payload', value: 'database' },
+        { label: 'Vercel Blob', value: 'vercel-blob' },
+        { label: 'Cloudinary', value: 'cloudinary' },
+        { label: 'Amazon S3 / S3 compatible', value: 's3' },
+      ],
+      admin: {
+        description: 'El registro y los metadatos siempre quedan en PostgreSQL. Los proveedores externos guardan el archivo y esta URL se usa en el sitio.',
+      },
+    },
+    { name: 'externalURL', type: 'text', label: 'URL externa del archivo', admin: { readOnly: true } },
+    { name: 'storageKey', type: 'text', index: true, label: 'Clave remota', admin: { readOnly: true } },
+    { name: 'storageFolder', type: 'text', index: true, label: 'Carpeta multimedia', defaultValue: 'general' },
+    {
       name: 'category',
       type: 'select',
       defaultValue: 'obra',

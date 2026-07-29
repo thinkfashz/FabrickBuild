@@ -4,6 +4,54 @@
   --style-radius-l: 18px;
 }
 
+/* FabrickBuild admin system: high-contrast controls, calmer surfaces and safe mobile density. */
+.template-default {
+  --fabrick-admin-gold: #f4c84b;
+  --fabrick-admin-ink: #17140e;
+  --fabrick-admin-panel: color-mix(in srgb, var(--theme-elevation-50) 93%, #f4c84b 7%);
+}
+
+.doc-header,
+.collection-list__header {
+  gap: 12px;
+  padding-block: 8px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-elevation-100) 75%, var(--fabrick-admin-gold) 25%);
+}
+
+.doc-header h1,
+.collection-list__header h1,
+.dashboard__header h1 { letter-spacing: -.035em; }
+
+.card,
+.collection-list__wrap,
+.tabs-field,
+.blocks-field__row,
+.array-field__row,
+.collapsible {
+  box-shadow: 0 8px 26px rgba(20, 16, 7, .035);
+}
+
+.tabs-field__tab-button--active,
+.pill-selector__button--active {
+  color: var(--fabrick-admin-ink);
+  background: var(--fabrick-admin-gold);
+}
+
+.field-type input:focus,
+.field-type textarea:focus,
+.field-type select:focus,
+.react-select__control--is-focused {
+  border-color: var(--fabrick-admin-gold) !important;
+  box-shadow: 0 0 0 3px rgba(244, 200, 75, .18) !important;
+}
+
+.upload__dropzone {
+  min-height: 156px;
+  border: 1.5px dashed color-mix(in srgb, var(--theme-elevation-250) 65%, var(--fabrick-admin-gold) 35%);
+  border-radius: 14px;
+  background: var(--fabrick-admin-panel);
+}
+
 .template-default {
   --theme-success-500: #e4a400;
   min-width: 0;

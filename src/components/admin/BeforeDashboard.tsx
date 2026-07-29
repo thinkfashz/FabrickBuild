@@ -99,6 +99,18 @@ export default function BeforeDashboard() {
             Selecciona proveedor, pega la clave y conecta automáticamente con cifrado por registro.
           </small>
         </a>
+        <a href="/studio/multimedia" style={linkStyle}>
+          <strong>Biblioteca multimedia →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Revisa archivos guardados, selecciona Blob, Cloudinary o S3 y organiza por carpeta.
+          </small>
+        </a>
+        <a href="/admin/globals/site-settings" style={linkStyle}>
+          <strong>Marca y configuración →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Logotipo, contacto, SEO, navegación y pie de página a un toque.
+          </small>
+        </a>
         <a href="/admin/collections/reusable-components" style={linkStyle}>
           <strong>Componentes reutilizables →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>

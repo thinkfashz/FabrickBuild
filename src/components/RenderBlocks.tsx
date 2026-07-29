@@ -6,6 +6,7 @@ import { ArrowRight, Check, MapPin, Ruler, Timer } from 'lucide-react'
 import { sanitizeComponentStyles } from '@/lib/ai/builder'
 import { blockAppearanceProps, getBlockFrameSequence, resolveBlockBackground } from '@/lib/appearance'
 import { getMediaAlt, getMediaURL } from '@/lib/media'
+import { isStudioPreset, StudioPreset } from './StudioPresets'
 import { getProjects, getServices, getTestimonials } from '@/lib/queries'
 import { ComponentFrame } from './generated/ComponentFrame'
 import { FrameSequenceBackground } from './FrameSequenceBackground'
@@ -185,6 +186,9 @@ async function ReusableComponentBlock({ block, depth }: { block: Doc; depth: num
   if (!component || component.status !== 'active') return null
   if (component.slug === 'core-signature-experience') {
     return <div {...presentation(block, '')}><LuxuryScrollExperience /></div>
+  }
+  if (isStudioPreset(String(component.slug || ''))) {
+    return <div {...presentation(block, '')}><StudioPreset slug={String(component.slug)} /></div>
   }
   if (!Array.isArray(component.layout)) return null
   let styles = ''

@@ -102,6 +102,17 @@
 .fabrick-block .hero-copy h1 em { color:var(--fabrick-heading, currentColor); }
 .fabrick-block p,
 .fabrick-block .richtext { color:var(--fabrick-copy, inherit); }
+.fabrick-block h1,
+.fabrick-block h2,
+.fabrick-block h3 { font-size:calc(var(--fabrick-font-scale, 1) * 1em); }
+.fabrick-block > .shell,
+.fabrick-block > .hero-inner,
+.fabrick-block > .contact-grid,
+.fabrick-block > .cta-inner { border-radius:var(--fabrick-radius, 0); }
+.fabrick-space-compact { padding-block:clamp(34px,5vw,58px) !important; }
+.fabrick-space-large { padding-block:clamp(84px,12vw,160px) !important; }
+.fabrick-width-wide > .shell { max-width:min(1500px, calc(100% - 40px)); }
+.fabrick-width-full > .shell { max-width:none; width:100%; padding-inline:clamp(18px,5vw,90px); }
 .fabrick-block .button-yellow,
 .fabrick-block .round-link { background:var(--fabrick-button-bg, var(--yellow)); color:var(--fabrick-button-text, var(--ink)); }
 .fabrick-block-image .service-card,

@@ -10,7 +10,9 @@ export const integrationProviderOptions = [
   { label: 'Z.AI / GLM', value: 'glm' },
   { label: 'OpenAI compatible / OpenCode', value: 'custom-openai' },
   { label: 'Resend', value: 'resend' },
+  { label: 'Vercel Blob', value: 'vercel-blob' },
   { label: 'Cloudinary', value: 'cloudinary' },
+  { label: 'Amazon S3 / S3 compatible', value: 's3' },
 ] as const
 
 const hiddenSecretAccess = {

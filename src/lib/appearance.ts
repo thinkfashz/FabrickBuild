@@ -128,6 +128,8 @@ export function blockAppearanceProps(block: Doc): { className: string; style: CS
     ...(HEX.test(String(appearance.bodyColor || '')) ? { '--fabrick-copy': safeColor(appearance.bodyColor, '#4f493f') } : {}),
     ...(HEX.test(String(appearance.buttonColor || '')) ? { '--fabrick-button-bg': safeColor(appearance.buttonColor, '#f2b90c') } : {}),
     ...(HEX.test(String(appearance.buttonTextColor || '')) ? { '--fabrick-button-text': safeColor(appearance.buttonTextColor, '#15130f') } : {}),
+    '--fabrick-font-scale': `${Math.min(140, Math.max(80, Number(appearance.fontScale || 100))) / 100}`,
+    '--fabrick-radius': `${Math.min(32, Math.max(0, Number(appearance.cornerRadius || 0)))}px`,
     ...(mode === 'color' || mode === 'image' ? { '--fabrick-surface': surface } : {}),
     ...(mode === 'color' || mode === 'image' ? { backgroundColor: surface } : {}),
     ...(mode === 'image' && imageLayer
@@ -142,5 +144,7 @@ export function blockAppearanceProps(block: Doc): { className: string; style: CS
       : {}),
   } as CSSProperties
 
-  return { className: `fabrick-block fabrick-block-${mode}`, style }
+  const spacing = ['compact', 'normal', 'large'].includes(String(appearance.verticalSpacing)) ? appearance.verticalSpacing : 'normal'
+  const width = ['standard', 'wide', 'full'].includes(String(appearance.contentWidth)) ? appearance.contentWidth : 'standard'
+  return { className: `fabrick-block fabrick-block-${mode} fabrick-space-${spacing} fabrick-width-${width}`, style }
 }

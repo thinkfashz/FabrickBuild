@@ -6,7 +6,9 @@ export type ProviderID =
   | 'glm'
   | 'custom-openai'
   | 'resend'
+  | 'vercel-blob'
   | 'cloudinary'
+  | 's3'
 
 export type IntegrationRecord = {
   id: string | number
@@ -96,10 +98,20 @@ export const PROVIDER_CATALOG: Record<
     defaultBaseURL: 'https://api.resend.com',
     label: 'Resend',
   },
+  'vercel-blob': {
+    ai: false,
+    defaultBaseURL: 'https://blob.vercel-storage.com',
+    label: 'Vercel Blob',
+  },
   cloudinary: {
     ai: false,
     defaultBaseURL: 'https://api.cloudinary.com',
     label: 'Cloudinary',
+  },
+  s3: {
+    ai: false,
+    defaultBaseURL: 'https://s3.amazonaws.com',
+    label: 'Amazon S3 / S3 compatible',
   },
 }
 
@@ -296,6 +308,26 @@ export async function testProvider(
       },
     }
     details = { plan: data?.plan, cloudName }
+  } else if (integration.provider === 'vercel-blob') {
+    const { list } = await import('@vercel/blob')
+    const token = requireCredential(credentials, 'token')
+    const result = await list({ limit: 1, token })
+    details = { store: 'Vercel Blob', visibleFiles: result.blobs.length }
+  } else if (integration.provider === 's3') {
+    const bucket = requireCredential(credentials, 'bucket')
+    const region = credentials.region || 'us-east-1'
+    const endpoint = credentials.endpoint?.trim() || undefined
+    const client = new S3Client({
+      region,
+      endpoint,
+      forcePathStyle: Boolean(endpoint),
+      credentials: {
+        accessKeyId: requireCredential(credentials, 'accessKeyId'),
+        secretAccessKey: requireCredential(credentials, 'secretAccessKey'),
+      },
+    })
+    await client.send(new HeadBucketCommand({ Bucket: bucket }))
+    details = { bucket, region, endpoint: endpoint || 'AWS público' }
   }
 
   return {
@@ -303,7 +335,9 @@ export async function testProvider(
     models,
     capabilities: PROVIDER_CATALOG[integration.provider].ai
       ? ['chat', 'model-selection', 'code-generation', 'preview-proposals']
-      : ['credential-test', 'usage'],
+      : integration.provider === 'cloudinary' || integration.provider === 'vercel-blob' || integration.provider === 's3'
+        ? ['credential-test', 'usage', 'media-upload', 'media-list', 'media-move', 'media-delete']
+        : ['credential-test', 'usage'],
     usage: {
       ...usage,
       activeMilliseconds: Date.now() - startedAt,
@@ -479,3 +513,4 @@ export async function streamProviderChat(args: {
   onEvent({ type: 'done', value: { duration: Date.now() - startedAt } })
   return usage
 }
+import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'

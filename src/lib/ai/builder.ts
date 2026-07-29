@@ -87,6 +87,14 @@ function appearance(value: unknown) {
     ...(color(source.bodyColor) ? { bodyColor: color(source.bodyColor) } : {}),
     ...(color(source.buttonColor) ? { buttonColor: color(source.buttonColor) } : {}),
     ...(color(source.buttonTextColor) ? { buttonTextColor: color(source.buttonTextColor) } : {}),
+    fontScale: number(source.fontScale, 80, 140, 100),
+    verticalSpacing: ['compact', 'normal', 'large'].includes(String(source.verticalSpacing))
+      ? String(source.verticalSpacing)
+      : 'normal',
+    contentWidth: ['standard', 'wide', 'full'].includes(String(source.contentWidth))
+      ? String(source.contentWidth)
+      : 'standard',
+    cornerRadius: number(source.cornerRadius, 0, 32, 0),
   }
 }
 

@@ -26,6 +26,10 @@ const CORE_COMPONENTS = [
   ['core-cta', 'Llamado a la acción', 'cta'],
   ['core-contact', 'Formulario de cotización', 'contactForm'],
   ['core-signature-experience', 'Recorrido Signature Home', 'signatureExperience'],
+  ['preset-action-buttons', 'Panel de botones', 'actionButtons'],
+  ['preset-project-table', 'Tabla de proyecto', 'projectTable'],
+  ['preset-navigation-menu', 'Menú de navegación', 'navigationMenu'],
+  ['preset-text-drawer', 'Cajón de texto', 'textDrawer'],
 ] as const
 
 function coreLayout(type: (typeof CORE_COMPONENTS)[number][2]) {
@@ -38,6 +42,7 @@ function coreLayout(type: (typeof CORE_COMPONENTS)[number][2]) {
   if (type === 'cta') return [{ ...common, heading: 'Hablemos de tu proyecto', button: { label: 'Cotizar ahora', url: '#contacto' } }]
   if (type === 'contactForm') return [{ ...common, heading: 'Describe tu proyecto' }]
   if (type === 'signatureExperience') return []
+  if (['actionButtons', 'projectTable', 'navigationMenu', 'textDrawer'].includes(type)) return []
   return [{ ...common, heading: 'Lo que dicen nuestros clientes' }]
 }
 
