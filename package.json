@@ -7,9 +7,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run db:sync:vercel && next build",
+    "build": "next build",
     "build:code-only": "next build",
-    "build:with-assets": "npm run assets:luxury && npm run db:sync:vercel && next build",
+    "build:with-assets": "npm run assets:luxury && next build",
     "start": "next start",
     "lint": "eslint .",
     "payload": "payload",
