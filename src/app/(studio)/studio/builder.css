@@ -1005,7 +1005,7 @@
   .builder-inspector { display: none; }
 
   .builder-workspace.builder-mobile-outline .builder-outline,
-  .builder-workspace.builder-mobile-inspector .builder-inspector { position: fixed; right: 10px; bottom: calc(83px + env(safe-area-inset-bottom)); left: 10px; z-index: 85; display: grid; max-height: min(70vh, 650px); border-color: rgba(244,200,75,.3); box-shadow: 0 28px 86px rgba(0,0,0,.58); }
+  .builder-workspace.builder-mobile-inspector .builder-inspector { position: fixed; right: 10px; bottom: calc(82px + env(safe-area-inset-bottom)); left: 10px; z-index: 85; display: grid; max-height: min(70vh, 650px); border-color: rgba(244,200,75,.3); box-shadow: 0 28px 86px rgba(0,0,0,.58); }
   .builder-workspace.builder-mobile-outline .builder-outline,
   .builder-workspace.builder-mobile-inspector .builder-inspector { grid-template-rows: auto minmax(0, 1fr); }
 

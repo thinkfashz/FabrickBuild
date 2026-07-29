@@ -12,12 +12,10 @@ import {
   Loader2,
   Monitor,
   MousePointer2,
-  Palette,
   Plus,
   Redo2,
   Save,
   Smartphone,
-  SlidersHorizontal,
   Sparkles,
   Tablet,
   Trash2,
@@ -335,6 +333,7 @@ export default function VisualBuilder() {
   const [proposalIndex, setProposalIndex] = useState(0)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>('none')
+  const [externalSaveRequest, setExternalSaveRequest] = useState(0)
   const [past, setPast] = useState<Block[][]>([])
   const [future, setFuture] = useState<Block[][]>([])
 
@@ -369,6 +368,23 @@ export default function VisualBuilder() {
   }, [])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const handleEditorAction = (event: Event) => {
+      const action = (event as CustomEvent<string>).detail
+      if (action === 'blocks') {
+        setLibrary(false)
+        setMobilePanel((current) => current === 'outline' ? 'none' : 'outline')
+      }
+      if (action === 'add') {
+        setLibrary(true)
+        setMobilePanel('outline')
+      }
+      if (action === 'design' || action === 'edit') setMobilePanel('inspector')
+      if (action === 'save') setExternalSaveRequest((current) => current + 1)
+    }
+    window.addEventListener('fabrick:editor-action', handleEditorAction)
+    return () => window.removeEventListener('fabrick:editor-action', handleEditorAction)
+  }, [])
   useEffect(() => {
     setCode(codeTab === 'layout' ? JSON.stringify(layout, null, 2) : codeTab === 'css' ? style : `<main class="ai-page">\n${layout.map(blockHTML).join('\n')}\n</main>`)
     setCodeError('')
@@ -458,6 +474,10 @@ export default function VisualBuilder() {
     }
   }
 
+  useEffect(() => {
+    if (externalSaveRequest) void savePage()
+  }, [externalSaveRequest])
+
   async function saveComponent() {
     if (!block || !componentName.trim()) return
     setSaving(true)
@@ -487,13 +507,6 @@ export default function VisualBuilder() {
         <aside className="studio-card builder-inspector"><div className="studio-card-head"><div><h2>Inspector</h2><p>{block ? LABELS[block.blockType] : 'Selecciona un bloque'}</p></div></div>{block ? <div className="builder-inspector-body"><div className="builder-inspector-actions"><button type="button" disabled={selected === 0} onClick={() => move(selected, selected - 1)}><ArrowUp size={14} /> Subir</button><button type="button" disabled={selected === layout.length - 1} onClick={() => move(selected, selected + 1)}><ArrowDown size={14} /> Bajar</button><button type="button" onClick={() => { const next = clone(layout); next.splice(selected + 1, 0, { ...clone(block), id: uid() }); commit(next, selected + 1) }}><Copy size={14} /> Duplicar</button><button type="button" className="danger" onClick={() => layout.length > 1 && commit(layout.filter((_, index) => index !== selected), Math.max(0, selected - 1))}><Trash2 size={14} /> Eliminar</button></div>{block.blockType === 'reusableComponent' && <div className="studio-field"><label>Componente</label><select className="studio-select" value={String(relationID(block.component))} onChange={(event) => { const next = clone(block); next.component = event.target.value; updateBlock(next) }}>{components.map((item) => <option key={item.id} value={String(item.id)}>{item.name}</option>)}</select></div>}{(FIELDS[block.blockType] || []).map((field) => { const raw = field.path === '__plainContent' ? richTextToPlain(block.content) : getPath(block, field.path); const value: string | number = typeof raw === 'number' || typeof raw === 'string' ? raw : ''; return <div className="studio-field" key={field.path}><label>{field.label}</label>{field.kind === 'select' ? <select className="studio-select" value={String(value)} onChange={(event) => editField(field, event.target.value)}>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.kind === 'textarea' ? <textarea className="studio-textarea" value={String(value)} onChange={(event) => editField(field, event.target.value)} /> : <input className="studio-input" type={field.kind === 'number' ? 'number' : 'text'} value={value} onChange={(event) => editField(field, field.kind === 'number' ? Number(event.target.value) : event.target.value)} />}</div> })}<AppearanceEditor block={block} media={media} backgrounds={backgrounds} uploading={uploading} onChange={updateBlock} onUpload={uploadBackground} /><ItemEditor block={block} onChange={updateBlock} /><div className="builder-save-component"><strong>Guardar como componente</strong><input className="studio-input" value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nombre" /><button className="studio-button studio-button-violet" type="button" disabled={!componentName.trim() || saving} onClick={() => void saveComponent()}><Save size={15} /> Guardar bloque</button></div></div> : <div className="builder-empty-inspector"><MousePointer2 size={28} /><p>Selecciona un bloque.</p></div>}</aside>
       </div>}
       <section className="studio-card builder-code-panel"><div className="studio-card-head"><div><h2>Código sincronizado</h2><p>JSON, CSS y HTML de referencia.</p></div><div className="ai-code-tabs"><button type="button" className={codeTab === 'layout' ? 'active' : ''} onClick={() => setCodeTab('layout')}>JSON</button><button type="button" className={codeTab === 'css' ? 'active' : ''} onClick={() => setCodeTab('css')}>CSS</button><button type="button" className={codeTab === 'html' ? 'active' : ''} onClick={() => setCodeTab('html')}>HTML</button></div></div><div className="builder-code-body"><textarea value={code} readOnly={codeTab === 'html'} onChange={(event) => setCode(event.target.value)} spellCheck={false} /><div className="builder-code-actions">{codeError && <span className="studio-notice studio-notice-error">{codeError}</span>}<button className="studio-button studio-button-primary" type="button" disabled={codeTab === 'html'} onClick={() => { try { if (codeTab === 'layout') { const parsed = JSON.parse(code); if (!Array.isArray(parsed)) throw new Error('El layout debe ser una lista.'); commit(parsed, 0) } else { setStyle(code); setDirty(true) } setCodeError('') } catch (error) { setCodeError(error instanceof Error ? error.message : 'Código inválido.') } }}><Code2 size={15} /> Aplicar al canvas</button></div></div></section>
-      <nav className="builder-mobile-dock" aria-label="Herramientas del canvas">
-        <button type="button" className={mobilePanel === 'outline' ? 'active' : ''} onClick={() => setMobilePanel((current) => current === 'outline' ? 'none' : 'outline')}><Blocks size={18} /><span>Bloques</span></button>
-        <button type="button" onClick={() => { setMobilePanel('outline'); setLibrary(true) }}><Plus size={18} /><span>Añadir</span></button>
-        <button type="button" className={mobilePanel === 'inspector' ? 'active' : ''} onClick={() => setMobilePanel((current) => current === 'inspector' ? 'none' : 'inspector')}><Palette size={18} /><span>Diseño</span></button>
-        <button type="button" onClick={() => setMobilePanel('inspector')}><SlidersHorizontal size={18} /><span>Editar</span></button>
-        <button type="button" className="save" disabled={!dirty || saving} onClick={() => void savePage()}>{saving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}<span>Guardar</span></button>
-      </nav>
     </main>
   )
 }

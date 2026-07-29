@@ -1,6 +1,6 @@
 'use client'
 
-import { Gauge, Image, PanelsTopLeft, Settings2, Sparkles } from 'lucide-react'
+import { Blocks, Gauge, Image, Palette, PanelsTopLeft, Plus, Save, Settings2, SlidersHorizontal, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -14,6 +14,28 @@ const items = [
 
 export default function StudioMobileNav() {
   const pathname = usePathname()
+  const editorActive = pathname.startsWith('/studio/editor')
+
+  if (editorActive) {
+    const editorItems = [
+      { action: 'blocks', label: 'Bloques', icon: Blocks },
+      { action: 'add', label: 'Añadir', icon: Plus },
+      { action: 'design', label: 'Diseño', icon: Palette },
+      { action: 'edit', label: 'Editar', icon: SlidersHorizontal },
+      { action: 'save', label: 'Guardar', icon: Save },
+    ]
+    return (
+      <nav className="studio-mobile-nav studio-mobile-nav--editor" aria-label="Herramientas del editor">
+        {editorItems.map(({ action, label, icon: Icon }) => (
+          <button key={action} type="button" className={action === 'save' ? 'studio-mobile-nav__save' : ''} onClick={() => window.dispatchEvent(new CustomEvent('fabrick:editor-action', { detail: action }))}>
+            <Icon size={19} strokeWidth={1.9} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+    )
+  }
+
   return (
     <nav className="studio-mobile-nav" aria-label="Herramientas principales">
       {items.map(({ href, label, icon: Icon }) => {

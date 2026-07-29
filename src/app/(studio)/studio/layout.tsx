@@ -8,6 +8,7 @@ import { getPayload } from 'payload'
 import type { ReactNode } from 'react'
 
 import StudioMobileNav from '@/components/studio/StudioMobileNav'
+import StudioMobileHeader from '@/components/studio/StudioMobileHeader'
 
 import './studio.css'
 import './studio-motion.css'
@@ -49,15 +50,7 @@ export default async function StudioLayout({ children }: { children: ReactNode }
         </div>
       </aside>
       <div className="studio-main">
-        <header className="studio-mobile-head">
-          <Link href="/studio/editor" className="studio-brand">
-            <span className="studio-brand-mark"><Boxes size={18} /></span>
-            <span><b>FabrickBuild CMS</b><small>Constructor visual</small></span>
-          </Link>
-          <div className="studio-mobile-links">
-            <Link href="/" target="_blank" aria-label="Abrir sitio"><ExternalLink size={19} /></Link>
-          </div>
-        </header>
+        <StudioMobileHeader />
         {children}
         <StudioMobileNav />
       </div>
