@@ -7,15 +7,20 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run bootstrap:auto && next build",
+    "build": "npm run db:sync:vercel && next build",
+    "build:code-only": "next build",
+    "build:with-assets": "npm run assets:luxury && npm run db:sync:vercel && next build",
     "start": "next start",
     "lint": "eslint .",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "generate:importmap": "payload generate:importmap",
+    "assets:luxury": "node src/scripts/materializeLuxuryFrames.mjs",
     "bootstrap:auto": "payload run src/scripts/autoBootstrap.ts",
+    "bootstrap:vercel": "cross-env AUTO_BOOTSTRAP=true payload run src/scripts/autoBootstrap.ts",
     "seed": "payload run src/seed.ts",
     "db:push": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
+    "db:sync:vercel": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
     "setup": "npm run db:push && npm run seed"
   },
   "dependencies": {
@@ -27,17 +32,20 @@
     "@payloadcms/ui": "3.86.0",
     "cross-env": "10.1.0",
     "graphql": "16.11.0",
+    "gsap": "3.13.0",
     "lucide-react": "0.563.0",
     "next": "16.2.11",
     "payload": "3.86.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "sharp": "0.34.2"
+    "sharp": "0.34.2",
+    "three": "0.179.1"
   },
   "devDependencies": {
     "@types/node": "24.12.3",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/three": "0.179.0",
     "eslint": "9.39.1",
     "eslint-config-next": "16.2.11",
     "typescript": "6.0.3",

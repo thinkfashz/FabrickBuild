@@ -1,0 +1,18 @@
+{
+  "desktop": {
+    "frames": 21,
+    "resolution": "1280x720",
+    "format": "webp",
+    "maxBytes": 81560
+  },
+  "mobile": {
+    "frames": 20,
+    "resolution": "720x1280",
+    "format": "webp",
+    "maxBytes": 62036
+  },
+  "quality": 88,
+  "limitBytes": 200000,
+  "assetsCommitted": false,
+  "reason": "The connected GitHub contents interface accepts UTF-8 text but not local binary file paths."
+}

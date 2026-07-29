@@ -6,6 +6,7 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { AIChanges } from '@/collections/AIChanges'
+import { Backgrounds } from '@/collections/Backgrounds'
 import { Integrations } from '@/collections/Integrations'
 import { Leads } from '@/collections/Leads'
 import { Media } from '@/collections/Media'
@@ -98,6 +99,7 @@ export default buildConfig({
   collections: [
     Users,
     Media,
+    Backgrounds,
     Pages,
     Services,
     Projects,

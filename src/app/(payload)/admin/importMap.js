@@ -17,6 +17,7 @@ import {
 import { VercelBlobClientUploadHandler } from '@payloadcms/storage-vercel-blob/client'
 import AdminStudioNav from '@/components/admin/AdminStudioNav'
 import BeforeDashboard from '@/components/admin/BeforeDashboard'
+import FrameFolderUploader from '@/components/admin/FrameFolderUploader'
 
 /** @type {import('payload').ImportMap} */
 export const importMap = {
@@ -34,5 +35,6 @@ export const importMap = {
   '@payloadcms/richtext-lexical/client#ParagraphFeatureClient': ParagraphFeatureClient,
   '@payloadcms/storage-vercel-blob/client#VercelBlobClientUploadHandler': VercelBlobClientUploadHandler,
   '@/components/admin/AdminStudioNav#default': AdminStudioNav,
-  '@/components/admin/BeforeDashboard#default': BeforeDashboard
+  '@/components/admin/BeforeDashboard#default': BeforeDashboard,
+  '@/components/admin/FrameFolderUploader#default': FrameFolderUploader
 }
