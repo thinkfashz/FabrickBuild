@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const Hero: Block = {
   slug: 'hero',
@@ -15,6 +16,7 @@ export const Hero: Block = {
         { label: 'Amarillo', value: 'yellow' },
       ],
     },
+    appearanceField,
     { name: 'eyebrow', type: 'text', label: 'Texto superior' },
     { name: 'heading', type: 'text', required: true, label: 'Título principal' },
     { name: 'highlight', type: 'text', label: 'Texto destacado' },

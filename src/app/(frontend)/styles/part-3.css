@@ -88,3 +88,22 @@
 .brand-logo img { object-fit: contain; }
 .whatsapp-float { position: fixed; right: 22px; bottom: 22px; z-index: 50; background: #1f9d55; color: #fff; padding: 13px 17px; border-radius: 999px; font-weight: 800; box-shadow: 0 14px 40px rgba(0,0,0,.24); }
 .whatsapp-float:hover { transform: translateY(-2px); }
+
+/* Visual Builder: constrained colors, transparency and image backgrounds. */
+.fabrick-block { position:relative; isolation:isolate; }
+.fabrick-block > .shell,
+.fabrick-block > .hero-inner,
+.fabrick-block > .contact-grid,
+.fabrick-block > .cta-inner { position:relative; z-index:1; }
+.fabrick-block .eyebrow { color:var(--fabrick-eyebrow, currentColor) !important; }
+.fabrick-block h1,
+.fabrick-block h2,
+.fabrick-block h3,
+.fabrick-block .hero-copy h1 em { color:var(--fabrick-heading, currentColor); }
+.fabrick-block p,
+.fabrick-block .richtext { color:var(--fabrick-copy, inherit); }
+.fabrick-block .button-yellow,
+.fabrick-block .round-link { background:var(--fabrick-button-bg, var(--yellow)); color:var(--fabrick-button-text, var(--ink)); }
+.fabrick-block-image .service-card,
+.fabrick-block-image .testimonial-grid article,
+.fabrick-block-image .lead-form { backdrop-filter:blur(14px); }

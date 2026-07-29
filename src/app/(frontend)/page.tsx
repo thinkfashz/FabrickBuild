@@ -48,13 +48,19 @@ const fallback = [
 
 export default async function HomePage() {
   const page = await getPageBySlug('home')
+  const layout = (page?.layout as Record<string, unknown>[]) || fallback
+  const hasSignatureBlock = layout.some((block) => {
+    if (block?.blockType !== 'reusableComponent') return false
+    const component = block.component
+    return Boolean(component && typeof component === 'object' && (component as { slug?: unknown }).slug === 'core-signature-experience')
+  })
   return (
     <>
       <AIPageStyle css={page?.aiStyle as string | undefined} />
       <RefreshRouteOnSave />
       <main className="ai-page">
-        <LuxuryScrollExperience />
-        <RenderBlocks blocks={(page?.layout as Record<string, unknown>[]) || fallback} />
+        {!hasSignatureBlock && <LuxuryScrollExperience />}
+        <RenderBlocks blocks={layout} />
       </main>
     </>
   )

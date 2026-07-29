@@ -804,6 +804,77 @@
   background: rgba(255,255,255,.018);
 }
 
+.builder-preview-appearance {
+  min-height: 54px;
+  background-repeat: no-repeat;
+}
+
+.builder-preview-appearance h1,
+.builder-preview-appearance h2,
+.builder-preview-appearance h3 { color: var(--builder-preview-heading, inherit); }
+.builder-preview-appearance p { color: var(--builder-preview-copy, inherit); }
+.builder-preview-appearance .builder-preview-actions button,
+.builder-preview-appearance .builder-preview-cta > button { background: var(--builder-preview-accent, #f4c84b); }
+
+.builder-appearance-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--studio-border);
+}
+
+.builder-color-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.builder-color-control {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  color: var(--studio-muted);
+  font-size: 10px;
+}
+
+.builder-color-control > input[type='color'] {
+  width: 34px;
+  height: 31px;
+  padding: 2px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.builder-color-control .studio-input {
+  min-width: 0;
+  min-height: 31px;
+  padding: 6px 8px;
+  font-size: 10px;
+}
+
+.builder-upload-inline {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed var(--studio-border-strong);
+  border-radius: 10px;
+  background: rgba(244, 200, 75, .04);
+}
+
+.builder-upload-inline .studio-button { width: fit-content; cursor: pointer; }
+.builder-upload-inline small { color: var(--studio-muted); font-size: 10px; line-height: 1.45; }
+.builder-preview-signature > div { display:grid; gap:8px; min-height:170px; padding:28px; background:linear-gradient(135deg,#10100f,#473804); color:#fff; }
+.builder-preview-signature span { max-width:340px; color:rgba(255,255,255,.7); font-size:13px; line-height:1.5; }
+
+@media (max-width: 520px) {
+  .builder-color-grid { grid-template-columns: 1fr; }
+}
+
 .builder-code-actions .studio-notice {
   font-size: 11px;
 }

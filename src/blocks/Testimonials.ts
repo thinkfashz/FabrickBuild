@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const Testimonials: Block = {
   slug: 'testimonials',
@@ -13,6 +14,7 @@ export const Testimonials: Block = {
       relationTo: 'testimonials',
       hasMany: true,
       admin: { description: 'Vacío muestra todos los testimonios publicados.' }
-    }
+    },
+    appearanceField,
   ]
 }

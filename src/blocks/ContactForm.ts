@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const ContactForm: Block = {
   slug: 'contactForm',
@@ -19,6 +20,7 @@ export const ContactForm: Block = {
       name: 'successMessage',
       type: 'text',
       defaultValue: 'Recibimos tu solicitud. Te contactaremos pronto.'
-    }
+    },
+    appearanceField,
   ]
 }

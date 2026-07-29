@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const Content: Block = {
   slug: 'content',
@@ -18,6 +19,7 @@ export const Content: Block = {
         { label: 'Izquierda', value: 'left' },
         { label: 'Arriba', value: 'top' }
       ]
-    }
+    },
+    appearanceField,
   ]
 }

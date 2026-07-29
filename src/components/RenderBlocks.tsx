@@ -4,16 +4,24 @@ import Link from 'next/link'
 import { getPayload } from 'payload'
 import { ArrowRight, Check, MapPin, Ruler, Timer } from 'lucide-react'
 import { sanitizeComponentStyles } from '@/lib/ai/builder'
+import { blockAppearanceProps, getBlockFrameSequence, resolveBlockBackground } from '@/lib/appearance'
 import { getMediaAlt, getMediaURL } from '@/lib/media'
 import { getProjects, getServices, getTestimonials } from '@/lib/queries'
 import { ComponentFrame } from './generated/ComponentFrame'
+import { FrameSequenceBackground } from './FrameSequenceBackground'
 import { LeadForm } from './LeadForm'
+import { LuxuryScrollExperience } from './LuxuryScrollExperience'
 import { RichText } from './RichText'
 
 type Doc = Record<string, any>
 
 const isDoc = (item: unknown): item is Doc => Boolean(item) && typeof item === 'object'
 const onlyDocs = (items: unknown[]): Doc[] => items.filter(isDoc)
+
+const presentation = (block: Doc, className: string) => {
+  const props = blockAppearanceProps(block)
+  return { className: `${className} ${props.className}`, style: props.style }
+}
 
 const SectionHeading = ({ eyebrow, heading, intro }: Doc) => (
   <div className="section-heading">
@@ -86,10 +94,12 @@ async function ServicesBlock({ block }: { block: Doc }) {
   const selected = Array.isArray(block.services) ? onlyDocs(block.services) : []
   const services = selected.length ? selected : onlyDocs(await getServices(true, block.limit || 6))
   return (
-    <section className="section shell">
-      <SectionHeading eyebrow={block.eyebrow} heading={block.heading} intro={block.intro} />
-      <ServiceCards services={services} />
-      <div className="section-action"><Link className="button button-outline" href="/servicios">Ver todos los servicios</Link></div>
+    <section {...presentation(block, 'section')}>
+      <div className="shell">
+        <SectionHeading eyebrow={block.eyebrow} heading={block.heading} intro={block.intro} />
+        <ServiceCards services={services} />
+        <div className="section-action"><Link className="button button-outline" href="/servicios">Ver todos los servicios</Link></div>
+      </div>
     </section>
   )
 }
@@ -99,7 +109,7 @@ async function ProjectsBlock({ block }: { block: Doc }) {
   const projects = selected.length ? selected : onlyDocs(await getProjects(true, block.limit || 6))
   if (!projects.length) return null
   return (
-    <section className="section section-dark">
+    <section {...presentation(block, 'section section-dark')}>
       <div className="shell">
         <SectionHeading eyebrow={block.eyebrow} heading={block.heading} intro={block.intro} />
         <ProjectCards projects={projects} />
@@ -114,7 +124,7 @@ async function TestimonialsBlock({ block }: { block: Doc }) {
   const items = selected.length ? selected : onlyDocs(await getTestimonials())
   if (!items.length) return null
   return (
-    <section className="section testimonials-section">
+    <section {...presentation(block, 'section testimonials-section')}>
       <div className="shell">
         <SectionHeading eyebrow={block.eyebrow} heading={block.heading} />
         <div className="testimonial-grid">
@@ -136,7 +146,7 @@ async function ContactFormBlock({ block }: { block: Doc }) {
   const selected = Array.isArray(block.services) ? onlyDocs(block.services) : []
   const services = selected.length ? selected : onlyDocs(await getServices(false, 30))
   return (
-    <section className="contact-section" id="contacto">
+    <section {...presentation(block, 'contact-section')} id="contacto">
       <div className="shell contact-grid">
         <div>
           <span className="eyebrow">{block.eyebrow || 'Cotización'}</span>
@@ -172,7 +182,11 @@ async function ReusableComponentBlock({ block, depth }: { block: Doc; depth: num
     }
   }
 
-  if (!component || component.status !== 'active' || !Array.isArray(component.layout)) return null
+  if (!component || component.status !== 'active') return null
+  if (component.slug === 'core-signature-experience') {
+    return <div {...presentation(block, '')}><LuxuryScrollExperience /></div>
+  }
+  if (!Array.isArray(component.layout)) return null
   let styles = ''
   try {
     styles = sanitizeComponentStyles(component.styles || '', String(component.slug || 'component'))
@@ -181,15 +195,17 @@ async function ReusableComponentBlock({ block, depth }: { block: Doc; depth: num
   }
 
   return (
-    <ComponentFrame
-      anchor={block.anchor}
-      background={block.background}
-      componentSlug={String(component.slug || 'component')}
-      spacing={block.spacing}
-      styles={styles}
-    >
-      <RenderBlocks blocks={component.layout} componentDepth={depth + 1} />
-    </ComponentFrame>
+    <div {...presentation(block, '')}>
+      <ComponentFrame
+        anchor={block.anchor}
+        background={block.background}
+        componentSlug={String(component.slug || 'component')}
+        spacing={block.spacing}
+        styles={styles}
+      >
+        <RenderBlocks blocks={component.layout} componentDepth={depth + 1} />
+      </ComponentFrame>
+    </div>
   )
 }
 
@@ -205,10 +221,15 @@ export async function RenderBlocks({
       {blocks.map((block, index) => {
         switch (block.blockType) {
           case 'hero': {
-            const media = getMediaURL(block.media, 'hero')
+            const media = resolveBlockBackground(block)
+            const frameSequence = getBlockFrameSequence(block)
             return (
-              <section className={`hero hero-${block.theme || 'dark'}`} key={block.id || index}>
-                {media && <Image className="hero-background" src={media} alt={getMediaAlt(block.media, block.heading)} fill priority sizes="100vw" />}
+              <section {...presentation(block, `hero hero-${block.theme || 'dark'}`)} key={block.id || index}>
+                {frameSequence ? (
+                  <FrameSequenceBackground sequence={frameSequence} />
+                ) : (
+                  media && <div className="hero-background" aria-hidden="true" style={{ backgroundImage: `url(${JSON.stringify(media)})` }} />
+                )}
                 <div className="hero-overlay" />
                 <div className="shell hero-inner">
                   <div className="hero-copy">
@@ -255,21 +276,23 @@ export async function RenderBlocks({
           case 'content': {
             const media = getMediaURL(block.media, 'hero')
             return (
-              <section className="section shell" key={block.id || index}>
-                <div className={`content-split media-${block.mediaPosition || 'right'}`}>
-                  <div>
-                    {block.eyebrow && <span className="eyebrow">{block.eyebrow}</span>}
-                    {block.heading && <h2>{block.heading}</h2>}
-                    <RichText data={block.content} />
+              <section {...presentation(block, 'section')} key={block.id || index}>
+                <div className="shell">
+                  <div className={`content-split media-${block.mediaPosition || 'right'}`}>
+                    <div>
+                      {block.eyebrow && <span className="eyebrow">{block.eyebrow}</span>}
+                      {block.heading && <h2>{block.heading}</h2>}
+                      <RichText data={block.content} />
+                    </div>
+                    {media && <div className="content-media"><Image src={media} alt={getMediaAlt(block.media, block.heading)} fill sizes="(max-width: 900px) 100vw, 50vw" /></div>}
                   </div>
-                  {media && <div className="content-media"><Image src={media} alt={getMediaAlt(block.media, block.heading)} fill sizes="(max-width: 900px) 100vw, 50vw" /></div>}
                 </div>
               </section>
             )
           }
           case 'stats':
             return (
-              <section className="stats-section" key={block.id || index}>
+              <section {...presentation(block, 'stats-section')} key={block.id || index}>
                 <div className="shell">
                   {block.heading && <h2>{block.heading}</h2>}
                   <div className="stats-grid">
@@ -291,18 +314,20 @@ export async function RenderBlocks({
             const after = getMediaURL(block.after, 'hero')
             if (!before || !after) return null
             return (
-              <section className="section shell" key={block.id || index}>
-                <SectionHeading eyebrow={block.eyebrow} heading={block.heading} intro={block.description} />
-                <div className="before-after">
-                  <figure><Image src={before} alt={getMediaAlt(block.before, 'Antes')} fill sizes="50vw" /><figcaption>Antes</figcaption></figure>
-                  <figure><Image src={after} alt={getMediaAlt(block.after, 'Después')} fill sizes="50vw" /><figcaption>Después</figcaption></figure>
+              <section {...presentation(block, 'section')} key={block.id || index}>
+                <div className="shell">
+                  <SectionHeading eyebrow={block.eyebrow} heading={block.heading} intro={block.description} />
+                  <div className="before-after">
+                    <figure><Image src={before} alt={getMediaAlt(block.before, 'Antes')} fill sizes="50vw" /><figcaption>Antes</figcaption></figure>
+                    <figure><Image src={after} alt={getMediaAlt(block.after, 'Después')} fill sizes="50vw" /><figcaption>Después</figcaption></figure>
+                  </div>
                 </div>
               </section>
             )
           }
           case 'cta':
             return (
-              <section className="cta-section" key={block.id || index}>
+              <section {...presentation(block, 'cta-section')} key={block.id || index}>
                 <div className="shell cta-inner">
                   <div>
                     <span className="eyebrow">{block.eyebrow}</span>

@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const ServicesGrid: Block = {
   slug: 'servicesGrid',
@@ -15,6 +16,7 @@ export const ServicesGrid: Block = {
       hasMany: true,
       admin: { description: 'Vacío muestra los servicios destacados.' }
     },
-    { name: 'limit', type: 'number', defaultValue: 6, min: 1, max: 12 }
+    { name: 'limit', type: 'number', defaultValue: 6, min: 1, max: 12 },
+    appearanceField,
   ]
 }

@@ -1,4 +1,5 @@
 import { NullField as NullFieldPayload } from '@payloadcms/ui'
+import { CollectionCards } from '@payloadcms/next/rsc'
 import {
   RscEntryLexicalCell,
   RscEntryLexicalField,
@@ -22,6 +23,7 @@ import FrameFolderUploader from '@/components/admin/FrameFolderUploader'
 /** @type {import('payload').ImportMap} */
 export const importMap = {
   '@payloadcms/ui#NullField': NullFieldPayload,
+  '@payloadcms/next/rsc#CollectionCards': CollectionCards,
   '@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell': RscEntryLexicalCell,
   '@payloadcms/richtext-lexical/rsc#RscEntryLexicalField': RscEntryLexicalField,
   '@payloadcms/richtext-lexical/rsc#LexicalDiffComponent': LexicalDiffComponent,

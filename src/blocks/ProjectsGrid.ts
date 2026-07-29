@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const ProjectsGrid: Block = {
   slug: 'projectsGrid',
@@ -15,6 +16,7 @@ export const ProjectsGrid: Block = {
       hasMany: true,
       admin: { description: 'Vacío muestra los proyectos destacados.' }
     },
-    { name: 'limit', type: 'number', defaultValue: 6, min: 1, max: 12 }
+    { name: 'limit', type: 'number', defaultValue: 6, min: 1, max: 12 },
+    appearanceField,
   ]
 }

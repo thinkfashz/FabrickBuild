@@ -95,7 +95,8 @@ img { object-fit: cover; }
   background: var(--ink);
   color: var(--white);
 }
-.hero-background { z-index: 0; }
+.hero-background { position:absolute; inset:0; z-index:0; background-position:center; background-size:cover; background-repeat:no-repeat; }
+.hero-frame-sequence canvas { display:block; width:100%; height:100%; }
 .hero-overlay {
   position: absolute;
   inset: 0;

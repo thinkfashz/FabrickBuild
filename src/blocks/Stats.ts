@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const Stats: Block = {
   slug: 'stats',
@@ -16,6 +17,7 @@ export const Stats: Block = {
         { name: 'label', type: 'text', required: true },
         { name: 'description', type: 'textarea' }
       ]
-    }
+    },
+    appearanceField,
   ]
 }
