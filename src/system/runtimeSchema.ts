@@ -60,6 +60,22 @@ async function repairSchema(payload: Payload): Promise<void> {
       CREATE INDEX IF NOT EXISTS "pages_blocks_hero_saved_background_id_idx"
       ON "pages_blocks_hero" ("saved_background_id");
     `,
+    sql`
+      ALTER TABLE IF EXISTS "_pages_v_blocks_hero"
+      ADD COLUMN IF NOT EXISTS "background_source" varchar DEFAULT 'upload';
+    `,
+    sql`
+      ALTER TABLE IF EXISTS "_pages_v_blocks_hero"
+      ADD COLUMN IF NOT EXISTS "background_u_r_l" varchar;
+    `,
+    sql`
+      ALTER TABLE IF EXISTS "_pages_v_blocks_hero"
+      ADD COLUMN IF NOT EXISTS "saved_background_id" integer;
+    `,
+    sql`
+      CREATE INDEX IF NOT EXISTS "_pages_v_blocks_hero_saved_background_id_idx"
+      ON "_pages_v_blocks_hero" ("saved_background_id");
+    `,
     ...[
       'pages_blocks_hero',
       'pages_blocks_services_grid',
@@ -71,6 +87,16 @@ async function repairSchema(payload: Payload): Promise<void> {
       'pages_blocks_cta',
       'pages_blocks_contact_form',
       'pages_blocks_reusable_component',
+      '_pages_v_blocks_hero',
+      '_pages_v_blocks_services_grid',
+      '_pages_v_blocks_projects_grid',
+      '_pages_v_blocks_content',
+      '_pages_v_blocks_stats',
+      '_pages_v_blocks_testimonials',
+      '_pages_v_blocks_before_after',
+      '_pages_v_blocks_cta',
+      '_pages_v_blocks_contact_form',
+      '_pages_v_blocks_reusable_component',
     ].map((table) => sql.raw(`ALTER TABLE IF EXISTS "${table}" ADD COLUMN IF NOT EXISTS "appearance" jsonb;`)),
   ]
 
