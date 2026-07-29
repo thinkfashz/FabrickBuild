@@ -19,8 +19,8 @@
     "bootstrap:auto": "payload run src/scripts/autoBootstrap.ts",
     "bootstrap:vercel": "cross-env AUTO_BOOTSTRAP=true payload run src/scripts/autoBootstrap.ts",
     "seed": "payload run src/seed.ts",
-    "db:push": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
-    "db:sync:vercel": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
+    "db:push": "cross-env NODE_ENV=development tsx src/scripts/pushSchema.ts",
+    "db:sync:vercel": "cross-env NODE_ENV=development tsx src/scripts/pushSchema.ts",
     "setup": "npm run db:push && npm run seed"
   },
   "dependencies": {
