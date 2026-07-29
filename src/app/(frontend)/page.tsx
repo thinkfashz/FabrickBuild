@@ -1,67 +1,28 @@
 import { AIPageStyle } from '@/components/AIPageStyle'
-import { LuxuryScrollExperience } from '@/components/LuxuryScrollExperience'
+import LivePagePreview from '@/components/LivePagePreview'
 import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 import { RenderBlocks } from '@/components/RenderBlocks'
-import { getPageBySlug } from '@/lib/queries'
-
-const fallback = [
-  {
-    blockType: 'hero',
-    theme: 'dark',
-    eyebrow: 'Construcción inteligente en Chile',
-    heading: 'Construimos casas.',
-    highlight: 'Dios construye hogares.',
-    description:
-      'Planificamos, construimos y remodelamos con información clara, seguimiento real y terminaciones responsables.',
-    primaryCTA: { label: 'Solicitar cotización', url: '#contacto' },
-    secondaryCTA: { label: 'Ver proyectos', url: '/proyectos' },
-    stats: [
-      { value: '8+', label: 'años de experiencia' },
-      { value: '360°', label: 'servicio integral' },
-      { value: '100%', label: 'trazabilidad' },
-    ],
-  },
-  {
-    blockType: 'servicesGrid',
-    eyebrow: 'Servicios',
-    heading: 'Una solución para cada etapa de tu obra.',
-    intro: 'Conecta la base de datos y ejecuta el seed para administrar esta sección.',
-    limit: 6,
-  },
-  {
-    blockType: 'stats',
-    heading: 'Más claridad antes, durante y después de construir.',
-    items: [
-      { value: '01', label: 'Diagnóstico', description: 'Revisamos el problema y el alcance real.' },
-      { value: '02', label: 'Presupuesto', description: 'Detallamos etapas, materiales y condiciones.' },
-      { value: '03', label: 'Ejecución', description: 'Registramos avances y decisiones importantes.' },
-      { value: '04', label: 'Entrega', description: 'Validamos terminaciones y pendientes.' },
-    ],
-  },
-  {
-    blockType: 'contactForm',
-    eyebrow: 'Cotización',
-    heading: 'Describe tu proyecto.',
-    description: 'Completa los datos principales y te contactaremos para revisar el alcance.',
-  },
-]
+import { pageAppearanceProps } from '@/lib/appearance'
+import { portfolioHomeLayout } from '@/lib/home-template'
+import { getPortfolioHomePage } from '@/lib/queries'
 
 export default async function HomePage() {
-  const page = await getPageBySlug('home')
-  const layout = (page?.layout as Record<string, unknown>[]) || fallback
-  const hasSignatureBlock = layout.some((block) => {
-    if (block?.blockType !== 'reusableComponent') return false
-    const component = block.component
-    return Boolean(component && typeof component === 'object' && (component as { slug?: unknown }).slug === 'core-signature-experience')
-  })
+  const page = await getPortfolioHomePage()
+  const layout = (page?.layout as Record<string, unknown>[]) || portfolioHomeLayout()
+  const previewPage = { ...(page || {}), slug: 'home', layout }
+  const pageProps = pageAppearanceProps(previewPage)
   return (
     <>
       <AIPageStyle css={page?.aiStyle as string | undefined} />
       <RefreshRouteOnSave />
-      <main className="ai-page">
-        {!hasSignatureBlock && <LuxuryScrollExperience />}
-        <RenderBlocks blocks={layout} />
-      </main>
+      <LivePagePreview initialPage={previewPage} />
+      <div className="page-server-render">
+        <main className={`ai-page ${pageProps.className}`} style={pageProps.style}>
+          <div className="fabrick-page-content">
+            <RenderBlocks blocks={layout} />
+          </div>
+        </main>
+      </div>
     </>
   )
 }

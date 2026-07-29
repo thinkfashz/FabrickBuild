@@ -10,7 +10,24 @@ export const appearanceField: Field = {
   type: 'json',
   label: 'Apariencia visual',
   admin: {
+    components: {
+      Field: '@/components/admin/VisualAppearanceField',
+    },
     description:
-      'Controla colores, transparencia y fondos desde el Editor visual. No modifica el contenido del bloque.',
+      'Inspector visual: colores, tipografía, transparencia y fondo. No modifica el contenido del bloque.',
+  },
+}
+
+/** The same non-technical inspector, applied to a complete Page instead of a block. */
+export const pageAppearanceField: Field = {
+  name: 'pageAppearance',
+  type: 'json',
+  label: 'Diseño global de la página',
+  admin: {
+    components: {
+      Field: '@/components/admin/VisualAppearanceField',
+    },
+    description:
+      'Define la tipografía y el background de esta página completa. Los bloques pueden heredar o sobrescribir estos valores.',
   },
 }

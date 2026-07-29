@@ -1,5 +1,5 @@
-import MediaLibraryManager from '@/components/studio/MediaLibraryManager'
+import { redirect } from 'next/navigation'
 
 export default function MultimediaPage() {
-  return <MediaLibraryManager />
+  redirect('/admin/collections/media')
 }

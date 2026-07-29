@@ -12,6 +12,7 @@ import { Leads } from '@/collections/Leads'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Projects } from '@/collections/Projects'
+import { Products } from '@/collections/Products'
 import { ReusableComponents } from '@/collections/ReusableComponents'
 import { Services } from '@/collections/Services'
 import { Testimonials } from '@/collections/Testimonials'
@@ -85,6 +86,10 @@ export default buildConfig({
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
     livePreview: {
+      // The Pages collection supplies the dynamic URL. Declaring the
+      // collection here guarantees the native Payload toggle is available in
+      // every document view, including documents created on mobile.
+      collections: ['pages'],
       breakpoints: [
         { label: 'Móvil', name: 'mobile', width: 390, height: 844 },
         { label: 'Tablet', name: 'tablet', width: 768, height: 1024 },
@@ -105,6 +110,7 @@ export default buildConfig({
     Pages,
     Services,
     Projects,
+    Products,
     Testimonials,
     Leads,
     Integrations,

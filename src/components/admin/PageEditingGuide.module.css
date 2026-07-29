@@ -1,0 +1,6 @@
+.guide { display: grid; gap: 12px; max-width: 980px; margin: 0 0 20px; padding: 17px; border: 1px solid color-mix(in srgb, var(--theme-elevation-150) 70%, #f4c84b 30%); border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--theme-elevation-50) 93%, #f4c84b 7%), var(--theme-elevation-50)); }
+.guide h3 { margin: 0; font-size: 17px; }
+.guide p { max-width: 760px; margin: 6px 0 0; color: var(--theme-elevation-650); font-size: 13px; line-height: 1.6; }
+.badge { width: fit-content; display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; color: #1e1a0e; background: #f4c84b; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid var(--theme-elevation-150); border-radius: 8px; color: var(--theme-elevation-650); background: var(--theme-elevation-50); font-size: 11px; }

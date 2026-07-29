@@ -1,11 +1,5 @@
-import AIStudio from '@/components/studio/AIStudio'
-import AIWorkspaceBar from '@/components/studio/AIWorkspaceBar'
+import { redirect } from 'next/navigation'
 
 export default function AIStudioPage() {
-  return (
-    <>
-      <AIWorkspaceBar />
-      <AIStudio />
-    </>
-  )
+  redirect('/admin/collections/ai-changes')
 }

@@ -12,6 +12,7 @@ import { ComponentFrame } from './generated/ComponentFrame'
 import { FrameSequenceBackground } from './FrameSequenceBackground'
 import { LeadForm } from './LeadForm'
 import { LuxuryScrollExperience } from './LuxuryScrollExperience'
+import { PortfolioExperience } from './PortfolioExperience'
 import { RichText } from './RichText'
 
 type Doc = Record<string, any>
@@ -277,6 +278,8 @@ export async function RenderBlocks({
             return <ServicesBlock block={block} key={block.id || index} />
           case 'projectsGrid':
             return <ProjectsBlock block={block} key={block.id || index} />
+          case 'portfolioShowcase':
+            return <section {...presentation(block, '')} key={block.id || index}><PortfolioExperience block={block} /></section>
           case 'content': {
             const media = getMediaURL(block.media, 'hero')
             return (

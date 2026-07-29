@@ -1,5 +1,5 @@
-import IntegrationsPanel from '@/components/studio/IntegrationsPanel'
+import { redirect } from 'next/navigation'
 
 export default function IntegrationsPage() {
-  return <IntegrationsPanel />
+  redirect('/admin/collections/integrations')
 }

@@ -1,3 +1,22 @@
 @import "./styles/part-1.css";
 @import "./styles/part-2.css";
 @import "./styles/part-3.css";
+
+.ai-page {
+  font-family: var(--fabrick-font-family, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+}
+
+.fabrick-page {
+  min-height: 100svh;
+  isolation: isolate;
+}
+
+.fabrick-page > .fabrick-page-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* The public SSR tree is replaced only inside Payload's native live-preview iframe. */
+.page-live-render { display: none; }
+html.payload-live-preview .page-server-render { display: none; }
+html.payload-live-preview .page-live-render { display: block; }

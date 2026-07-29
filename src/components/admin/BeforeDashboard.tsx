@@ -17,10 +17,10 @@ type Health = {
 }
 
 const workstations = [
-  { href: '/studio/editor', title: 'Editor visual', detail: 'Selecciona y modifica bloques directamente sobre la página.', label: 'CANVAS EN VIVO', icon: PanelsTopLeft, featured: true },
-  { href: '/studio/multimedia', title: 'Biblioteca multimedia', detail: 'Organiza imágenes, folders y proveedores en un solo lugar.', label: 'ACTIVOS', icon: Image },
-  { href: '/studio/integraciones', title: 'Conexiones', detail: 'Guarda claves y conecta Blob, Cloudinary, S3 e IA.', label: 'BÓVEDA', icon: Settings2 },
-  { href: '/studio/ia', title: 'Asistente de IA', detail: 'Crea propuestas antes de aplicarlas al canvas.', label: 'PROPUESTAS', icon: Sparkles },
+  { href: '/admin/collections/pages', title: 'Páginas y visor', detail: 'Edita bloques y abre Live Preview sin salir de Payload.', label: 'CANVAS EN VIVO', icon: PanelsTopLeft, featured: true },
+  { href: '/admin/collections/media', title: 'Biblioteca multimedia', detail: 'Organiza imágenes, folders y proveedores en un solo lugar.', label: 'ACTIVOS', icon: Image },
+  { href: '/admin/collections/integrations', title: 'Conexiones', detail: 'Guarda claves y conecta Blob, Cloudinary, S3 e IA.', label: 'BÓVEDA', icon: Settings2 },
+  { href: '/admin/collections/ai-changes', title: 'Asistente de IA', detail: 'Revisa propuestas antes de aplicarlas a una página.', label: 'PROPUESTAS', icon: Sparkles },
   { href: '/admin/globals/site-settings', title: 'Marca y configuración', detail: 'Identidad, SEO, navegación y pie de página.', label: 'SISTEMA', icon: SwatchBook },
   { href: '/admin/collections/reusable-components', title: 'Componentes', detail: 'Secciones versionadas para reutilizar en cada página.', label: 'BIBLIOTECA', icon: Blocks },
 ]

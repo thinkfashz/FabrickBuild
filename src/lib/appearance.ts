@@ -27,6 +27,19 @@ function safeColor(value: unknown, fallback: string): string {
   return typeof value === 'string' && HEX.test(value) ? value : fallback
 }
 
+function safeFont(value: unknown): string {
+  switch (value) {
+    case 'serif':
+      return 'Iowan Old Style, Baskerville, Georgia, serif'
+    case 'display':
+      return 'Arial Narrow, Avenir Next Condensed, Inter, Arial, sans-serif'
+    case 'mono':
+      return 'SFMono-Regular, Consolas, Liberation Mono, monospace'
+    default:
+      return 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+  }
+}
+
 function safeURL(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const url = value.trim()
@@ -128,6 +141,7 @@ export function blockAppearanceProps(block: Doc): { className: string; style: CS
     ...(HEX.test(String(appearance.bodyColor || '')) ? { '--fabrick-copy': safeColor(appearance.bodyColor, '#4f493f') } : {}),
     ...(HEX.test(String(appearance.buttonColor || '')) ? { '--fabrick-button-bg': safeColor(appearance.buttonColor, '#f2b90c') } : {}),
     ...(HEX.test(String(appearance.buttonTextColor || '')) ? { '--fabrick-button-text': safeColor(appearance.buttonTextColor, '#15130f') } : {}),
+    ...(appearance.fontFamily ? { '--fabrick-font-family': safeFont(appearance.fontFamily) } : {}),
     '--fabrick-font-scale': `${Math.min(140, Math.max(80, Number(appearance.fontScale || 100))) / 100}`,
     '--fabrick-radius': `${Math.min(32, Math.max(0, Number(appearance.cornerRadius || 0)))}px`,
     ...(mode === 'color' || mode === 'image' ? { '--fabrick-surface': surface } : {}),
@@ -147,4 +161,42 @@ export function blockAppearanceProps(block: Doc): { className: string; style: CS
   const spacing = ['compact', 'normal', 'large'].includes(String(appearance.verticalSpacing)) ? appearance.verticalSpacing : 'normal'
   const width = ['standard', 'wide', 'full'].includes(String(appearance.contentWidth)) ? appearance.contentWidth : 'standard'
   return { className: `fabrick-block fabrick-block-${mode} fabrick-space-${spacing} fabrick-width-${width}`, style }
+}
+
+/**
+ * Page-level counterpart of blockAppearanceProps. The JSON is intentionally
+ * presentation-only: it is safe to change from the Payload document editor
+ * and does not alter a page's layout or content.
+ */
+export function pageAppearanceProps(page: Doc | null | undefined): { className: string; style: CSSProperties } {
+  const appearance = (page?.pageAppearance || {}) as Doc
+  const image = resolveBlockBackground({ appearance })
+  const mode = appearance.backgroundMode === 'image' && image ? 'image' : appearance.backgroundMode === 'color' ? 'color' : 'none'
+  const surface = hexToRGBA(appearance.surfaceColor, appearance.surfaceOpacity, '#ffffff')
+  const overlay = hexToRGBA(appearance.overlayColor, appearance.overlayOpacity, '#000000')
+  const imageLayer = image ? `linear-gradient(${overlay}, ${overlay}), url(${JSON.stringify(image)})` : undefined
+
+  const style = {
+    ...(HEX.test(String(appearance.eyebrowColor || '')) ? { '--fabrick-eyebrow': safeColor(appearance.eyebrowColor, '#c98d00') } : {}),
+    ...(HEX.test(String(appearance.headingColor || '')) ? { '--fabrick-heading': safeColor(appearance.headingColor, '#15130f') } : {}),
+    ...(HEX.test(String(appearance.bodyColor || '')) ? { '--fabrick-copy': safeColor(appearance.bodyColor, '#4f493f') } : {}),
+    ...(HEX.test(String(appearance.buttonColor || '')) ? { '--fabrick-button-bg': safeColor(appearance.buttonColor, '#f2b90c') } : {}),
+    ...(HEX.test(String(appearance.buttonTextColor || '')) ? { '--fabrick-button-text': safeColor(appearance.buttonTextColor, '#15130f') } : {}),
+    '--fabrick-font-family': safeFont(appearance.fontFamily),
+    '--fabrick-font-scale': `${Math.min(150, Math.max(80, Number(appearance.fontScale || 100))) / 100}`,
+    ...(mode === 'color' || mode === 'image' ? { backgroundColor: surface } : {}),
+    ...(mode === 'image' && imageLayer
+      ? {
+          backgroundImage: imageLayer,
+          backgroundSize: appearance.backgroundFit === 'contain' ? 'contain' : 'cover',
+          backgroundPosition: ['center', 'top', 'bottom', 'left', 'right'].includes(appearance.backgroundPosition)
+            ? appearance.backgroundPosition
+            : 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+        }
+      : {}),
+  } as CSSProperties
+
+  return { className: `fabrick-page fabrick-page-${mode}`, style }
 }

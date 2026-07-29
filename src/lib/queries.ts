@@ -1,5 +1,6 @@
 import { draftMode } from 'next/headers'
 import { getCMS } from './cms'
+import { portfolioHomeLayout, portfolioPageAppearance, PORTFOLIO_HOME_TEMPLATE_VERSION } from './home-template'
 
 export async function getPageBySlug(slug: string) {
   try {
@@ -18,6 +19,32 @@ export async function getPageBySlug(slug: string) {
     return result.docs[0] || null
   } catch {
     return null
+  }
+}
+
+/**
+ * One-time, explicit migration requested for the existing Home page. The
+ * marker prevents any later manual edits from being overwritten.
+ */
+export async function getPortfolioHomePage() {
+  const page = await getPageBySlug('home')
+  if (!page || (page as { homeTemplateVersion?: string }).homeTemplateVersion === PORTFOLIO_HOME_TEMPLATE_VERSION) return page
+
+  try {
+    const payload = await getCMS()
+    return await payload.update({
+      collection: 'pages',
+      id: page.id,
+      draft: false,
+      overrideAccess: true,
+      data: {
+        layout: portfolioHomeLayout(),
+        pageAppearance: portfolioPageAppearance,
+        homeTemplateVersion: PORTFOLIO_HOME_TEMPLATE_VERSION,
+      } as never,
+    })
+  } catch {
+    return page
   }
 }
 
