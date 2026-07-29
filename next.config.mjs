@@ -14,6 +14,10 @@ const privateHeaders = [
 ]
 
 const nextConfig = {
+  // Payload's schema helper loads drizzle-kit lazily. Keep it as a Node
+  // external for serverless functions so the native admin can run its safe,
+  // additive compatibility check without Turbopack rewriting that require.
+  serverExternalPackages: ['drizzle-kit'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.public.blob.vercel-storage.com' },
