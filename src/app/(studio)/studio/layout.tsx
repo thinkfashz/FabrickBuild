@@ -25,13 +25,13 @@ export default async function StudioLayout({ children }: { children: ReactNode }
   const payload = await getPayload({ config })
   const auth = await payload.auth({ headers: await headers(), canSetHeaders: false })
   if (!auth.user || (auth.user as { role?: string }).role !== 'admin') {
-    redirect('/admin/login?redirect=%2Fstudio%2Fia')
+    redirect('/admin/login?redirect=%2Fstudio%2Feditor')
   }
 
   return (
     <div className="studio-shell">
       <aside className="studio-sidebar">
-        <Link href="/studio/ia" className="studio-brand">
+        <Link href="/studio/editor" className="studio-brand">
           <span className="studio-brand-mark"><Boxes size={19} /></span>
           <span><b>FabrickBuild CMS</b><small>Constructor visual</small></span>
         </Link>
@@ -50,7 +50,7 @@ export default async function StudioLayout({ children }: { children: ReactNode }
       </aside>
       <div className="studio-main">
         <header className="studio-mobile-head">
-          <Link href="/studio/ia" className="studio-brand">
+          <Link href="/studio/editor" className="studio-brand">
             <span className="studio-brand-mark"><Boxes size={18} /></span>
             <span><b>FabrickBuild CMS</b><small>Constructor visual</small></span>
           </Link>

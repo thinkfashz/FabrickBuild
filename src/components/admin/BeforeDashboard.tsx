@@ -81,16 +81,16 @@ export default function BeforeDashboard() {
           marginTop: 18,
         }}
       >
-        <a href="/studio/ia" style={linkStyle}>
-          <strong>Chat y propuestas de IA →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Chat multi-modelo, razonamiento compatible y dos propuestas antes de modificar.
-          </small>
-        </a>
         <a href="/studio/editor" style={linkStyle}>
           <strong>Editor visual en vivo →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
             Selecciona, mueve, duplica, modifica o elimina bloques antes de guardar.
+          </small>
+        </a>
+        <a href="/studio/ia" style={linkStyle}>
+          <strong>Chat y propuestas de IA →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Chat multi-modelo, razonamiento compatible y dos propuestas antes de modificar.
           </small>
         </a>
         <a href="/studio/integraciones" style={linkStyle}>
