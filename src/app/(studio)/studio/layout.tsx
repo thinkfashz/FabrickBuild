@@ -7,6 +7,8 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import type { ReactNode } from 'react'
 
+import StudioMobileNav from '@/components/studio/StudioMobileNav'
+
 import './studio.css'
 import './studio-motion.css'
 import './chat-enhancements.css'
@@ -31,13 +33,13 @@ export default async function StudioLayout({ children }: { children: ReactNode }
       <aside className="studio-sidebar">
         <Link href="/studio/ia" className="studio-brand">
           <span className="studio-brand-mark"><Boxes size={19} /></span>
-          <span><b>FabrickBuild</b><small>AI Studio</small></span>
+          <span><b>FabrickBuild CMS</b><small>Constructor visual</small></span>
         </Link>
         <nav className="studio-nav" aria-label="Navegación del estudio">
-          <Link href="/studio/ia"><Bot size={18} /><span>Chat y propuestas</span></Link>
-          <Link href="/studio/editor"><PanelsTopLeft size={18} /><span>Editor visual</span></Link>
+          <Link href="/studio/editor"><PanelsTopLeft size={18} /><span>Editor de páginas</span></Link>
           <Link href="/studio/multimedia"><Image size={18} /><span>Biblioteca multimedia</span></Link>
           <Link href="/studio/integraciones"><Settings2 size={18} /><span>Integraciones</span></Link>
+          <Link href="/studio/ia"><Bot size={18} /><span>Asistente de IA</span></Link>
           <Link href="/admin"><Gauge size={18} /><span>CMS principal</span></Link>
           <Link href="/" target="_blank"><ExternalLink size={18} /><span>Ver sitio</span></Link>
         </nav>
@@ -50,17 +52,14 @@ export default async function StudioLayout({ children }: { children: ReactNode }
         <header className="studio-mobile-head">
           <Link href="/studio/ia" className="studio-brand">
             <span className="studio-brand-mark"><Boxes size={18} /></span>
-            <span><b>FabrickBuild</b><small>AI Studio</small></span>
+            <span><b>FabrickBuild CMS</b><small>Constructor visual</small></span>
           </Link>
           <div className="studio-mobile-links">
-            <Link href="/studio/ia" aria-label="Chat"><Bot size={19} /></Link>
-            <Link href="/studio/editor" aria-label="Editor visual"><PanelsTopLeft size={19} /></Link>
-            <Link href="/studio/multimedia" aria-label="Biblioteca multimedia"><Image size={19} /></Link>
-            <Link href="/studio/integraciones" aria-label="Integraciones"><Settings2 size={19} /></Link>
-            <Link href="/admin" aria-label="CMS"><Gauge size={19} /></Link>
+            <Link href="/" target="_blank" aria-label="Abrir sitio"><ExternalLink size={19} /></Link>
           </div>
         </header>
         {children}
+        <StudioMobileNav />
       </div>
     </div>
   )

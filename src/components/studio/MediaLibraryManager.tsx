@@ -23,7 +23,7 @@ type Asset = {
 type Integration = { id: string | number; provider: Source; label: string; enabled?: boolean; status?: string }
 
 const SOURCE_COPY: Record<Source, { label: string; detail: string }> = {
-  database: { label: 'Payload + base de datos', detail: 'Metadatos en PostgreSQL y subida nativa persistente de Payload / Blob.' },
+  database: { label: 'Biblioteca del proyecto', detail: 'Registro en PostgreSQL y archivo guardado en el Blob privado del proyecto.' },
   'vercel-blob': { label: 'Vercel Blob', detail: 'Archivos persistentes con CDN, organizados por carpeta.' },
   cloudinary: { label: 'Cloudinary', detail: 'Optimización, transformación y biblioteca remota.' },
   s3: { label: 'Amazon S3', detail: 'AWS S3, R2, MinIO u otro endpoint compatible.' },
@@ -88,24 +88,15 @@ export default function MediaLibraryManager() {
     setUploading(true)
     setNotice(null)
     try {
-      if (source === 'database') {
-        const form = new FormData()
-        form.append('file', file)
-        form.append('_payload', JSON.stringify({ alt: file.name.replace(/\.[^.]+$/, ''), category: 'otro', storageProvider: 'database', storageFolder: folder }))
-        const response = await fetch('/api/media', { method: 'POST', body: form, credentials: 'include' })
-        const data = await response.json().catch(() => null)
-        if (!response.ok) throw new Error(data?.errors?.[0]?.message || 'Payload no confirmó la subida.')
-      } else {
-        const form = new FormData()
-        form.append('file', file)
-        form.append('source', source)
-        form.append('folder', folder)
-        form.append('integrationId', integrationID)
-        form.append('alt', file.name.replace(/\.[^.]+$/, ''))
-        const response = await fetch('/api/media-library', { method: 'POST', body: form, credentials: 'include' })
-        const data = await response.json()
-        if (!response.ok || !data.ok) throw new Error(data.error || 'El proveedor no confirmó la subida.')
-      }
+      const form = new FormData()
+      form.append('file', file)
+      form.append('source', source)
+      form.append('folder', folder)
+      form.append('integrationId', integrationID)
+      form.append('alt', file.name.replace(/\.[^.]+$/, ''))
+      const response = await fetch('/api/media-library', { method: 'POST', body: form, credentials: 'include' })
+      const data = await response.json()
+      if (!response.ok || !data.ok) throw new Error(data.error || 'El proveedor no confirmó la subida.')
       setNotice({ type: 'success', text: 'Archivo subido y registrado en la biblioteca.' })
       await load()
     } catch (error) {
@@ -179,8 +170,8 @@ export default function MediaLibraryManager() {
       <section className="studio-card media-assets-card">
         <div className="studio-card-head"><div><h2>{source === 'database' ? 'Archivos registrados' : 'Archivos remotos'}</h2><p>{loading ? 'Consultando el origen…' : `${assets.length} archivo(s) en “${folder}”`}</p></div></div>
         {loading ? <div className="media-loading"><Loader2 className="spin" size={22} /> Cargando biblioteca…</div> : assets.length ? <div className="media-asset-grid">{assets.map((asset, index) => {
-          const url = assetURL(asset)
           const record = source === 'database' ? asset : linkedMedia.get(asset.key || '')
+          const url = assetURL(record || asset)
           return <article className="media-asset" key={asset.id || asset.key || index}>
             <div className="media-asset-preview">{url ? <img src={url} alt={asset.alt || asset.name || asset.filename || 'Archivo multimedia'} /> : <ImageIcon size={26} />}</div>
             <div className="media-asset-copy"><strong>{asset.name || asset.filename || asset.alt || 'Archivo sin título'}</strong><small>{humanSize(asset.size)} · {asset.contentType || asset.mimeType || 'archivo'}</small>{record && source !== 'database' && <small>Registrado en PostgreSQL</small>}</div>

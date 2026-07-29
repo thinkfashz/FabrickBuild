@@ -5,7 +5,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
-import { del, list, put, rename } from '@vercel/blob'
+import { del, get, list, put, rename } from '@vercel/blob'
 import { createHash } from 'crypto'
 import type { Payload } from 'payload'
 
@@ -26,6 +26,7 @@ export type ManagedAsset = {
 
 type Credentials = Record<string, string>
 type StorageIntegration = IntegrationDocument & { provider: Exclude<MediaSource, 'database'> }
+export type BlobVisibility = 'private' | 'public'
 
 const db = (payload: Payload) => payload as any
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -47,6 +48,70 @@ function cleanFileName(value: string) {
     .replace(/[^a-zA-Z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(-160) || `archivo-${Date.now()}`
+}
+
+function blobVisibility(value?: unknown): BlobVisibility {
+  return value === 'public' ? 'public' : 'private'
+}
+
+function isPublicAccessError(error: unknown) {
+  return /public access on a private store/i.test(error instanceof Error ? error.message : String(error))
+}
+
+function isPrivateAccessError(error: unknown) {
+  return /private access on a public store/i.test(error instanceof Error ? error.message : String(error))
+}
+
+async function putBlob(path: string, file: File, token: string, visibility?: BlobVisibility) {
+  const access = blobVisibility(visibility)
+  try {
+    return await put(path, file, {
+      access,
+      addRandomSuffix: true,
+      contentType: file.type || undefined,
+      token,
+    })
+  } catch (error) {
+    // Existing projects can have either store type. Retry once with the only
+    // compatible mode, instead of returning a non-actionable 500 to Payload.
+    if (access === 'public' && isPublicAccessError(error)) {
+      return put(path, file, { access: 'private', addRandomSuffix: true, contentType: file.type || undefined, token })
+    }
+    if (access === 'private' && isPrivateAccessError(error)) {
+      return put(path, file, { access: 'public', addRandomSuffix: true, contentType: file.type || undefined, token })
+    }
+    throw error
+  }
+}
+
+async function getBlob(path: string, token: string, visibility?: BlobVisibility) {
+  const access = blobVisibility(visibility)
+  try {
+    return await get(path, { access, token })
+  } catch (error) {
+    // Keep media created in projects with an older public Blob store readable
+    // after the app moves to private-by-default storage.
+    if (access === 'private' && isPrivateAccessError(error)) return get(path, { access: 'public', token })
+    if (access === 'public' && isPublicAccessError(error)) return get(path, { access: 'private', token })
+    throw error
+  }
+}
+
+async function renameBlob(pathname: string, nextPathname: string, token: string, visibility?: BlobVisibility) {
+  const access = blobVisibility(visibility)
+  try {
+    return await rename(pathname, nextPathname, { access, token })
+  } catch (error) {
+    if (access === 'private' && isPrivateAccessError(error)) return rename(pathname, nextPathname, { access: 'public', token })
+    if (access === 'public' && isPublicAccessError(error)) return rename(pathname, nextPathname, { access: 'private', token })
+    throw error
+  }
+}
+
+function systemBlobToken() {
+  const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
+  if (!token) throw Object.assign(new Error('No hay un Blob del proyecto conectado. Agrega BLOB_READ_WRITE_TOKEN en Vercel o selecciona Cloudinary/S3.'), { status: 409 })
+  return token
 }
 
 function requireCredential(credentials: Credentials, name: string) {
@@ -191,8 +256,10 @@ async function createMediaRecord(payload: Payload, input: {
   folder: string
   alt?: string
   category?: string
+  integrationID?: string | number | null
+  visibility?: BlobVisibility
 }) {
-  return db(payload).create({
+  const media = await db(payload).create({
     collection: 'media',
     depth: 0,
     overrideAccess: true,
@@ -203,11 +270,23 @@ async function createMediaRecord(payload: Payload, input: {
       externalURL: input.asset.url,
       storageKey: input.asset.key,
       storageFolder: input.folder,
+      storageIntegrationID: input.integrationID ? String(input.integrationID) : undefined,
+      storageVisibility: input.visibility || 'public',
       filename: input.asset.name,
       mimeType: input.asset.contentType || undefined,
       filesize: input.asset.size || undefined,
     },
   })
+  if (input.visibility === 'private') {
+    return db(payload).update({
+      collection: 'media',
+      id: media.id,
+      depth: 0,
+      overrideAccess: true,
+      data: { externalURL: `/api/media-file/${media.id}` },
+    })
+  }
+  return media
 }
 
 export async function uploadManagedAsset(payload: Payload, args: {
@@ -229,12 +308,7 @@ export async function uploadManagedAsset(payload: Payload, args: {
   let asset: ManagedAsset
 
   if (args.source === 'vercel-blob') {
-    const result = await put(path, args.file, {
-      access: 'public',
-      addRandomSuffix: true,
-      contentType: args.file.type || undefined,
-      token: requireCredential(credentials, 'token'),
-    })
+    const result = await putBlob(path, args.file, requireCredential(credentials, 'token'))
     asset = { key: result.pathname, url: result.url, name: fileName, size: args.file.size, contentType: args.file.type, provider: args.source }
   } else if (args.source === 'cloudinary') {
     const timestamp = String(Math.floor(Date.now() / 1000))
@@ -262,8 +336,81 @@ export async function uploadManagedAsset(payload: Payload, args: {
     asset = { key: path, url: s3PublicURL(credentials, path), name: fileName, size: args.file.size, contentType: args.file.type, provider: args.source }
   }
 
-  const media = await createMediaRecord(payload, { asset, folder, alt: args.alt, category: args.category })
+  const media = await createMediaRecord(payload, {
+    asset,
+    folder,
+    alt: args.alt,
+    category: args.category,
+    integrationID: document.id,
+    visibility: args.source === 'vercel-blob' ? 'private' : 'public',
+  })
   return { asset, media, integrationID: document.id }
+}
+
+/** Store an application upload in the project Blob without exposing its token.
+ * This powers Payload's normal /api/media endpoint and its folder uploader. */
+export async function uploadSystemMedia(payload: Payload, args: {
+  folder?: string
+  file: File
+  alt?: string
+  category?: string
+  device?: string
+  frameOrder?: number
+  collectionKey?: string
+}) {
+  if (args.file.size > MAX_UPLOAD_BYTES) throw Object.assign(new Error('El archivo supera el límite de 25 MB.'), { status: 413 })
+  if (!args.file.type.startsWith('image/') && args.file.type !== 'video/mp4' && args.file.type !== 'application/pdf') {
+    throw Object.assign(new Error('Solo se permiten imágenes, PDF o video MP4.'), { status: 415 })
+  }
+  const folder = cleanFolder(args.folder)
+  const name = cleanFileName(args.file.name)
+  const result = await putBlob(`${folder}/${Date.now()}-${name}`, args.file, systemBlobToken())
+  const asset: ManagedAsset = {
+    key: result.pathname,
+    url: result.url,
+    name,
+    size: args.file.size,
+    contentType: args.file.type,
+    provider: 'vercel-blob',
+  }
+  const media = await createMediaRecord(payload, {
+    asset,
+    folder,
+    alt: args.alt,
+    category: args.category,
+    visibility: 'private',
+  })
+  const enriched = await db(payload).update({
+    collection: 'media',
+    id: media.id,
+    depth: 0,
+    overrideAccess: true,
+    data: {
+      device: args.device || 'universal',
+      frameOrder: args.frameOrder,
+      collectionKey: args.collectionKey,
+    },
+  })
+  return { asset, media: enriched }
+}
+
+export async function readPrivateBlob(payload: Payload, mediaID: string | number) {
+  const media = await db(payload).findByID({ collection: 'media', id: mediaID, depth: 0, overrideAccess: true })
+  if (media.storageProvider !== 'vercel-blob' || !media.storageKey) {
+    throw Object.assign(new Error('Este archivo no usa el almacenamiento Blob administrado.'), { status: 404 })
+  }
+  let token: string
+  if (media.storageIntegrationID) {
+    const integration = await integrationFor(payload, 'vercel-blob', media.storageIntegrationID)
+    token = requireCredential(integration.credentials, 'token')
+  } else {
+    token = systemBlobToken()
+  }
+  const result = await getBlob(media.storageKey, token, media.storageVisibility)
+  if (!result || result.statusCode !== 200 || !result.stream) {
+    throw Object.assign(new Error('El archivo ya no existe en el Blob.'), { status: 404 })
+  }
+  return { media, result }
 }
 
 export async function removeManagedAsset(payload: Payload, args: {
@@ -303,7 +450,7 @@ export async function moveManagedAsset(payload: Payload, args: {
   const nextKey = `${folder}/${cleanFileName(args.key.split('/').pop() || 'archivo')}`
   let url = ''
   if (args.source === 'vercel-blob') {
-    const result = await rename(args.key, nextKey, { access: 'public', token: requireCredential(credentials, 'token') })
+    const result = await renameBlob(args.key, nextKey, requireCredential(credentials, 'token'), 'private')
     url = result.url
   } else if (args.source === 'cloudinary') {
     const timestamp = String(Math.floor(Date.now() / 1000))
@@ -330,7 +477,7 @@ export async function moveManagedAsset(payload: Payload, args: {
       collection: 'media',
       id: args.mediaID,
       overrideAccess: true,
-      data: { storageKey: nextKey, storageFolder: folder, externalURL: url },
+      data: { storageKey: nextKey, storageFolder: folder, externalURL: args.source === 'vercel-blob' ? `/api/media-file/${args.mediaID}` : url },
     })
   }
   return { key: nextKey, url, folder }
@@ -350,5 +497,43 @@ export async function listDatabaseMedia(payload: Payload, folder?: string) {
 }
 
 export async function moveDatabaseMedia(payload: Payload, id: string | number, folder: string) {
-  return db(payload).update({ collection: 'media', id, data: { storageFolder: cleanFolder(folder) }, overrideAccess: true })
+  const media = await db(payload).findByID({ collection: 'media', id, depth: 0, overrideAccess: true })
+  const nextFolder = cleanFolder(folder)
+  if (media.storageProvider === 'vercel-blob' && media.storageKey) {
+    let token: string
+    if (media.storageIntegrationID) {
+      const integration = await integrationFor(payload, 'vercel-blob', media.storageIntegrationID)
+      token = requireCredential(integration.credentials, 'token')
+    } else {
+      token = systemBlobToken()
+    }
+    const nextKey = `${nextFolder}/${cleanFileName(String(media.storageKey).split('/').pop() || 'archivo')}`
+    await renameBlob(String(media.storageKey), nextKey, token, media.storageVisibility)
+    return db(payload).update({
+      collection: 'media',
+      id,
+      overrideAccess: true,
+      data: {
+        storageKey: nextKey,
+        storageFolder: nextFolder,
+        externalURL: media.storageVisibility === 'private' ? `/api/media-file/${id}` : media.externalURL,
+      },
+    })
+  }
+  return db(payload).update({ collection: 'media', id, data: { storageFolder: nextFolder }, overrideAccess: true })
+}
+
+export async function removeDatabaseMedia(payload: Payload, id: string | number) {
+  const media = await db(payload).findByID({ collection: 'media', id, depth: 0, overrideAccess: true })
+  if (media.storageProvider === 'vercel-blob' && media.storageKey) {
+    let token: string
+    if (media.storageIntegrationID) {
+      const integration = await integrationFor(payload, 'vercel-blob', media.storageIntegrationID)
+      token = requireCredential(integration.credentials, 'token')
+    } else {
+      token = systemBlobToken()
+    }
+    await del(String(media.storageKey), { token })
+  }
+  await db(payload).delete({ collection: 'media', id, overrideAccess: true })
 }

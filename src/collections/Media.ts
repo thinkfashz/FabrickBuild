@@ -21,6 +21,10 @@ export const Media: CollectionConfig = {
   },
   upload: {
     staticDir: 'media',
+    // Files are written through /api/media and /api/media-library so the same
+    // flow works with private Vercel Blob, Cloudinary and S3 on serverless.
+    disableLocalStorage: true,
+    filesRequiredOnCreate: false,
     mimeTypes: ['image/*', 'application/pdf', 'video/mp4'],
     ...(imageProcessingEnabled
       ? {
@@ -57,6 +61,18 @@ export const Media: CollectionConfig = {
     },
     { name: 'externalURL', type: 'text', label: 'URL externa del archivo', admin: { readOnly: true } },
     { name: 'storageKey', type: 'text', index: true, label: 'Clave remota', admin: { readOnly: true } },
+    { name: 'storageIntegrationID', type: 'text', label: 'Integración de almacenamiento', admin: { readOnly: true } },
+    {
+      name: 'storageVisibility',
+      type: 'select',
+      defaultValue: 'private',
+      label: 'Visibilidad remota',
+      options: [
+        { label: 'Privada, servida por FabrickBuild', value: 'private' },
+        { label: 'Pública', value: 'public' },
+      ],
+      admin: { readOnly: true },
+    },
     { name: 'storageFolder', type: 'text', index: true, label: 'Carpeta multimedia', defaultValue: 'general' },
     {
       name: 'category',

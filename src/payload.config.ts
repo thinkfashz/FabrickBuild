@@ -1,6 +1,6 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
+import { es } from '@payloadcms/translations/languages/es'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -65,11 +65,13 @@ const rawDatabaseURL =
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
 const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 
-const blobToken =
-  process.env.BLOB_READ_WRITE_TOKEN ||
-  process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
-
 export default buildConfig({
+  // Rendering the admin in Spanish prevents Chrome Translate from mutating
+  // React-managed nodes (the source of the client-side removeChild error).
+  i18n: {
+    fallbackLanguage: 'es',
+    supportedLanguages: { es },
+  },
   admin: {
     user: Users.slug,
     importMap: {
@@ -110,18 +112,10 @@ export default buildConfig({
     ReusableComponents,
   ],
   globals: [Header, Footer, SiteSettings],
-  plugins: [
-    vercelBlobStorage({
-      enabled: Boolean(blobToken),
-      collections: {
-        media: {
-          prefix: 'fabrickbuild',
-        },
-      },
-      clientUploads: true,
-      token: blobToken,
-    }),
-  ],
+  // Payload's current Vercel Blob adapter only supports public stores. The
+  // application uploader below supports both public and private stores and
+  // keeps PostgreSQL as the source of truth for every asset.
+  plugins: [],
   cors: allowedOrigins,
   csrf: allowedOrigins,
   maxDepth: 4,

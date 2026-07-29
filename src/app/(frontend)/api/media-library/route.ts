@@ -7,7 +7,9 @@ import {
   listRemoteAssets,
   moveDatabaseMedia,
   moveManagedAsset,
+  removeDatabaseMedia,
   removeManagedAsset,
+  uploadSystemMedia,
   uploadManagedAsset,
 } from '@/lib/media-storage'
 import { readLimitedJSON, requireAdmin } from '@/lib/integrations/service'
@@ -70,11 +72,17 @@ export async function POST(request: Request) {
     trustedFormOrigin(request)
     const form = await request.formData()
     const source = assertMediaSource(form.get('source'))
-    if (source === 'database') {
-      return response({ ok: false, error: 'La fuente Base de datos usa el cargador nativo de Payload para preservar sus transformaciones.' }, 400)
-    }
     const file = form.get('file')
     if (!(file instanceof File)) return response({ ok: false, error: 'Selecciona un archivo.' }, 400)
+    if (source === 'database') {
+      const result = await uploadSystemMedia(payload, {
+        folder: typeof form.get('folder') === 'string' ? String(form.get('folder')) : undefined,
+        alt: typeof form.get('alt') === 'string' ? String(form.get('alt')) : undefined,
+        category: typeof form.get('category') === 'string' ? String(form.get('category')) : undefined,
+        file,
+      })
+      return response({ ok: true, ...result }, 201)
+    }
     const result = await uploadManagedAsset(payload, {
       source,
       integrationID: typeof form.get('integrationId') === 'string' ? String(form.get('integrationId')) : undefined,
@@ -128,7 +136,7 @@ export async function DELETE(request: Request) {
     const source = assertMediaSource(body.source)
     if (source === 'database') {
       if (!body.mediaID) return response({ ok: false, error: 'Falta el archivo de biblioteca.' }, 400)
-      await (payload as any).delete({ collection: 'media', id: body.mediaID, overrideAccess: true })
+      await removeDatabaseMedia(payload, body.mediaID)
       return response({ ok: true })
     }
     if (!body.key) return response({ ok: false, error: 'Falta la clave del archivo remoto.' }, 400)

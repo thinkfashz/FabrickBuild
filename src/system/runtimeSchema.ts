@@ -41,6 +41,14 @@ async function repairSchema(payload: Payload): Promise<void> {
       ALTER TABLE IF EXISTS "media"
       ADD COLUMN IF NOT EXISTS "storage_folder" varchar DEFAULT 'general';
     `,
+    sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "storage_integration_i_d" varchar;
+    `,
+    sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "storage_visibility" varchar DEFAULT 'private';
+    `,
     sql`CREATE INDEX IF NOT EXISTS "media_storage_provider_idx" ON "media" ("storage_provider");`,
     sql`CREATE INDEX IF NOT EXISTS "media_storage_key_idx" ON "media" ("storage_key");`,
     sql`CREATE INDEX IF NOT EXISTS "media_storage_folder_idx" ON "media" ("storage_folder");`,
