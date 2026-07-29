@@ -7,8 +7,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "build:with-assets": "npm run assets:luxury && next build",
+    "build": "npm run db:sync:vercel && next build",
+    "build:code-only": "next build",
+    "build:with-assets": "npm run assets:luxury && npm run db:sync:vercel && next build",
     "start": "next start",
     "lint": "eslint .",
     "payload": "payload",
@@ -19,6 +20,7 @@
     "bootstrap:vercel": "cross-env AUTO_BOOTSTRAP=true payload run src/scripts/autoBootstrap.ts",
     "seed": "payload run src/seed.ts",
     "db:push": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
+    "db:sync:vercel": "cross-env NODE_ENV=development payload run src/scripts/pushSchema.ts",
     "setup": "npm run db:push && npm run seed"
   },
   "dependencies": {
