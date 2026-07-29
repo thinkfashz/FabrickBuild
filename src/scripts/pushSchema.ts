@@ -1,4 +1,4 @@
-import config from '../payload.config.ts'
+import config from '../payload.config'
 import { sql } from '@payloadcms/db-postgres'
 import { getPayload } from 'payload'
 
