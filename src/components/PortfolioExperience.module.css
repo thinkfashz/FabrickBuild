@@ -9,7 +9,7 @@
 .heroCopy p, .sceneCopy p { max-width:560px; margin:28px 0 0; color:var(--fabrick-copy,rgba(245,242,235,.77)); font-size:clamp(15px,1.5vw,20px); line-height:1.72; }
 .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:30px; }
 .heroTelemetry { align-self:end; display:grid; justify-items:end; gap:9px; min-width:160px; padding-bottom:6px; color:rgba(255,255,255,.74); font-size:10px; letter-spacing:.13em; }
-.heroTelemetry span { color:var(--fabrick-button-bg,#f2b90c); font-size:17px; font-weight:800; letter-spacing:-.04em; }
+.heroTelemetry span { color:var(--fabrick-button-bg,#f2b90c); font-size:10px; font-weight:850; letter-spacing:.16em; }
 .heroTelemetry strong { font-size:9px; font-weight:800; }
 .heroTelemetry i { display:block; width:104px; height:1px; background:linear-gradient(90deg,var(--fabrick-button-bg,#f2b90c) 0 38%,rgba(255,255,255,.4) 38%); }
 .scene { grid-template-columns:minmax(0,1fr); padding-block:clamp(52px,9vh,114px); }
