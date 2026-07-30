@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import { AIPageStyle } from '@/components/AIPageStyle'
-import { FabrickSignatureExperience } from '@/components/FabrickSignatureExperience'
 import { PageSurface } from '@/components/PageSurface'
 import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 import { RenderBlocks } from '@/components/RenderBlocks'
@@ -31,14 +30,13 @@ export default async function PreviewPage({ params, searchParams }: Args) {
 
   const settings = globals.settings as Record<string, any> | null
   const experience = String(settings?.homepageExperience || 'luxury')
-  const showSignature = slug === 'home' && experience === 'luxury'
-  const showPortfolio = slug === 'home' && experience === 'portfolio'
+  const usePortfolioFactory = slug === 'home' && (experience === 'luxury' || experience === 'portfolio')
   const selectedBackground =
     page.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
       ? page.savedBackground
       : defaultBackground
 
-  if (showPortfolio) {
+  if (usePortfolioFactory) {
     const portfolioBlocks = portfolioLayoutFromPage(
       (page.layout || []) as Record<string, any>[],
       selectedBackground as Record<string, any> | null,
@@ -54,25 +52,12 @@ export default async function PreviewPage({ params, searchParams }: Args) {
     )
   }
 
-  const sourceBlocks = (page.layout || []) as Record<string, any>[]
-  const blocks = showSignature && settings?.hideFirstHeroWhenLuxury !== false && sourceBlocks[0]?.blockType === 'hero'
-    ? sourceBlocks.slice(1)
-    : sourceBlocks
-  const video = page.backgroundSource === 'video' ? page.backgroundVideo : null
-
   return (
-    <PageSurface page={page as Record<string, unknown>} suppressMedia={showSignature}>
+    <PageSurface page={page as Record<string, unknown>}>
       <AIPageStyle css={page.aiStyle as string | undefined} />
       <RefreshRouteOnSave />
       <div className="ai-page ai-page--preview">
-        {showSignature && (
-          <FabrickSignatureExperience
-            background={selectedBackground as never}
-            backgroundVideo={video as never}
-            performance={settings?.performance as never}
-          />
-        )}
-        <RenderBlocks blocks={blocks} />
+        <RenderBlocks blocks={(page.layout || []) as Record<string, any>[]} />
       </div>
     </PageSurface>
   )
