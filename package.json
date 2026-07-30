@@ -22,7 +22,7 @@
     "bootstrap:vercel": "cross-env AUTO_BOOTSTRAP=true payload run src/scripts/autoBootstrap.ts",
     "components:seed": "payload run src/scripts/seedAnimatedComponents.ts",
     "seed": "payload run src/seed.ts",
-    "db:migrate": "payload migrate",
+    "db:migrate": "payload migrate --force-accept-warning",
     "db:migrate:status": "payload migrate:status",
     "db:create-migration": "payload migrate:create",
     "db:push": "cross-env NODE_ENV=development tsx src/scripts/pushSchema.ts",
