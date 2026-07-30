@@ -1,8 +1,8 @@
 import { AIPageStyle } from '@/components/AIPageStyle'
-import { LuxuryScrollExperience } from '@/components/LuxuryScrollExperience'
+import { CinematicScrollExperience } from '@/components/CinematicScrollExperience'
 import { PageSurface } from '@/components/PageSurface'
 import { RenderBlocks } from '@/components/RenderBlocks'
-import { getGlobals, getPageBySlug } from '@/lib/queries'
+import { getGlobals, getHeroBackground, getPageBySlug } from '@/lib/queries'
 
 const fallback = [
   {
@@ -49,7 +49,11 @@ const fallback = [
 export const revalidate = 300
 
 export default async function HomePage() {
-  const [page, globals] = await Promise.all([getPageBySlug('home'), getGlobals()])
+  const [page, globals, defaultBackground] = await Promise.all([
+    getPageBySlug('home'),
+    getGlobals(),
+    getHeroBackground(),
+  ])
   const settings = globals.settings as Record<string, any> | null
   const experience = String(settings?.homepageExperience || 'luxury')
   const showLuxury = experience === 'luxury'
@@ -57,12 +61,23 @@ export default async function HomePage() {
   const blocks = showLuxury && settings?.hideFirstHeroWhenLuxury !== false && sourceBlocks[0]?.blockType === 'hero'
     ? sourceBlocks.slice(1)
     : sourceBlocks
+  const selectedBackground =
+    page?.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
+      ? page.savedBackground
+      : defaultBackground
+  const backgroundVideo = page?.backgroundSource === 'video' ? page.backgroundVideo : null
 
   return (
     <PageSurface page={page as Record<string, unknown> | null}>
       <AIPageStyle css={page?.aiStyle as string | undefined} />
       <div className="ai-page">
-        {showLuxury && <LuxuryScrollExperience />}
+        {showLuxury && (
+          <CinematicScrollExperience
+            background={selectedBackground as never}
+            backgroundVideo={backgroundVideo as never}
+            performance={settings?.performance as never}
+          />
+        )}
         {experience !== 'blocks' || blocks.length ? <RenderBlocks blocks={blocks} /> : null}
       </div>
     </PageSurface>
