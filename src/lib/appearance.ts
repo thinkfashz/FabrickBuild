@@ -154,6 +154,7 @@ export function blockAppearanceProps(block: Doc): { className: string; style: CS
     '--fabrick-button-radius': String(appearance.buttonShape) === 'square' ? '0px' : String(appearance.buttonShape) === 'rounded' ? '12px' : '999px',
     ...(appearance.fontFamily ? { '--fabrick-font-family': safeFont(appearance.fontFamily) } : {}),
     '--fabrick-font-scale': `${Math.min(140, Math.max(80, Number(appearance.fontScale || 100))) / 100}`,
+    '--fabrick-text-glow': `${Math.min(100, Math.max(0, Number(appearance.textGlow ?? 18))) * .24}px`,
     '--fabrick-radius': `${Math.min(32, Math.max(0, Number(appearance.cornerRadius || 0)))}px`,
     ...(mode === 'color' || mode === 'image' ? { '--fabrick-surface': surface } : {}),
     ...(mode === 'color' || mode === 'image' ? { backgroundColor: surface } : {}),
@@ -200,6 +201,7 @@ export function pageAppearanceProps(page: Doc | null | undefined): { className: 
     '--fabrick-button-radius': String(appearance.buttonShape) === 'square' ? '0px' : String(appearance.buttonShape) === 'rounded' ? '12px' : '999px',
     '--fabrick-font-family': safeFont(appearance.fontFamily),
     '--fabrick-font-scale': `${Math.min(150, Math.max(80, Number(appearance.fontScale || 100))) / 100}`,
+    '--fabrick-text-glow': `${Math.min(100, Math.max(0, Number(appearance.textGlow ?? 18))) * .24}px`,
     ...(mode === 'color' || mode === 'image' ? { backgroundColor: surface } : {}),
     ...(mode === 'image' && imageLayer
       ? {

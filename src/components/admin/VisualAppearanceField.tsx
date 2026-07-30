@@ -33,6 +33,7 @@ const palettes = [
   { name: 'Arena', surface: '#f4f0e8', heading: '#1a1916', copy: '#5a554c', accent: '#aa5c20' },
   { name: 'Noche azul', surface: '#0d1b2a', heading: '#f5fbff', copy: '#c2d3e3', accent: '#62d0ff' },
   { name: 'Bosque', surface: '#173d32', heading: '#f4fff7', copy: '#c8e4d6', accent: '#a4e454' },
+  { name: 'Noir Racing', surface: '#090305', heading: '#fff7f8', copy: '#dfc6cc', accent: '#ff1f35' },
 ]
 
 const fieldValue = (value: unknown): Appearance =>
@@ -162,6 +163,7 @@ export default function VisualAppearanceField({ field, path, readOnly }: VisualA
           <label className={styles.field}><span>Tamaño de botón</span><select disabled={readOnly} value={String(appearance.buttonSize || 'medium')} onChange={(event) => update('buttonSize', event.target.value)}><option value="small">Pequeño</option><option value="medium">Mediano</option><option value="large">Grande</option></select></label>
           <label className={styles.field}><span>Forma de botón</span><select disabled={readOnly} value={String(appearance.buttonShape || 'pill')} onChange={(event) => update('buttonShape', event.target.value)}><option value="pill">Píldora</option><option value="rounded">Redondeado</option><option value="square">Recto</option></select></label>
           <RangeField label="Escala tipográfica" value={Number(appearance.fontScale ?? 100)} disabled={readOnly} min={80} max={150} onChange={(next) => update('fontScale', next)} />
+          <RangeField label="Brillo de títulos" value={Number(appearance.textGlow ?? 18)} disabled={readOnly} min={0} max={100} onChange={(next) => update('textGlow', next)} />
           <RangeField label="Redondez" value={Number(appearance.cornerRadius ?? 0)} disabled={readOnly} min={0} max={36} suffix="px" onChange={(next) => update('cornerRadius', next)} />
           {!isPage && <label className={styles.field}><span>Espaciado vertical</span><select disabled={readOnly} value={String(appearance.verticalSpacing || 'normal')} onChange={(event) => update('verticalSpacing', event.target.value)}><option value="compact">Compacto</option><option value="normal">Normal</option><option value="large">Amplio</option></select></label>}
         </div>
