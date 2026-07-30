@@ -334,7 +334,7 @@ export function FabrickSignatureExperience({ background, backgroundVideo, perfor
         if (Math.abs(video.currentTime - target) > 0.025) video.currentTime = target
       }
     }
-  }, [drawFrame, frameSet.paths.length, source])
+  }, [drawFrame, frameSet.paths, source])
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -462,7 +462,7 @@ export function FabrickSignatureExperience({ background, backgroundVideo, perfor
       end: 'bottom bottom',
       scrub,
       invalidateOnRefresh: true,
-      snap: snap && frameSet.paths.length > 1 ? 1 / (frameSet.paths.length - 1) : false,
+      ...(snap && frameSet.paths.length > 1 ? { snap: 1 / (frameSet.paths.length - 1) } : {}),
       onUpdate: (self) => syncProgress(self.progress),
     })
     syncProgress(trigger.progress)
