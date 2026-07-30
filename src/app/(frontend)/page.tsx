@@ -1,8 +1,8 @@
 import { AIPageStyle } from '@/components/AIPageStyle'
 import { LuxuryScrollExperience } from '@/components/LuxuryScrollExperience'
-import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
+import { PageSurface } from '@/components/PageSurface'
 import { RenderBlocks } from '@/components/RenderBlocks'
-import { getPageBySlug } from '@/lib/queries'
+import { getGlobals, getPageBySlug } from '@/lib/queries'
 
 const fallback = [
   {
@@ -25,7 +25,7 @@ const fallback = [
     blockType: 'servicesGrid',
     eyebrow: 'Servicios',
     heading: 'Una solución para cada etapa de tu obra.',
-    intro: 'Conecta la base de datos y ejecuta el seed para administrar esta sección.',
+    intro: 'Desde una reparación puntual hasta una casa completamente nueva.',
     limit: 6,
   },
   {
@@ -46,16 +46,25 @@ const fallback = [
   },
 ]
 
+export const revalidate = 300
+
 export default async function HomePage() {
-  const page = await getPageBySlug('home')
+  const [page, globals] = await Promise.all([getPageBySlug('home'), getGlobals()])
+  const settings = globals.settings as Record<string, any> | null
+  const experience = String(settings?.homepageExperience || 'luxury')
+  const showLuxury = experience === 'luxury'
+  const sourceBlocks = ((page?.layout as Record<string, unknown>[]) || fallback)
+  const blocks = showLuxury && settings?.hideFirstHeroWhenLuxury !== false && sourceBlocks[0]?.blockType === 'hero'
+    ? sourceBlocks.slice(1)
+    : sourceBlocks
+
   return (
-    <>
+    <PageSurface page={page as Record<string, unknown> | null}>
       <AIPageStyle css={page?.aiStyle as string | undefined} />
-      <RefreshRouteOnSave />
-      <main className="ai-page">
-        <LuxuryScrollExperience />
-        <RenderBlocks blocks={(page?.layout as Record<string, unknown>[]) || fallback} />
-      </main>
-    </>
+      <div className="ai-page">
+        {showLuxury && <LuxuryScrollExperience />}
+        {experience !== 'blocks' || blocks.length ? <RenderBlocks blocks={blocks} /> : null}
+      </div>
+    </PageSurface>
   )
 }
