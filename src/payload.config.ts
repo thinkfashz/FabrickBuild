@@ -70,13 +70,21 @@ function normalizePostgresSSLMode(connectionString: string): string {
   }
 }
 
+const databaseSource = process.env.POSTGRES_URL
+  ? 'POSTGRES_URL'
+  : process.env.DATABASE_URL
+    ? 'DATABASE_URL'
+    : 'local-fallback'
 const rawDatabaseURL =
-  process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL ||
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
 const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 const poolMax = Math.min(20, Math.max(2, Number(process.env.POSTGRES_POOL_MAX || 8)))
 const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
+
+console.info(`[database] Conexión seleccionada mediante ${databaseSource}.`)
+console.info(`[storage] Vercel Blob ${blobToken ? 'habilitado' : 'no configurado'}.`)
 
 const appendAfterChange = (
   collection: CollectionConfig,
