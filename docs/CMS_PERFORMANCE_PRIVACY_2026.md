@@ -22,14 +22,15 @@ Esta entrega conecta el editor de Payload con el frontend público mediante una 
 - Caché pública con invalidación al publicar.
 - Formulario público validado, protegido y con consentimiento explícito.
 
-## Fabrick Signature y Backgrounds
+## Portfolio cinematográfico y Backgrounds
 
-- `Fabrick Signature` es el diseño preestablecido de fábrica para Inicio y conserva la composición visual aprobada antes de las mejoras del CMS.
+- `Portfolio cinematográfico` es el diseño preestablecido de fábrica para Inicio y conserva la composición visual aprobada antes de las mejoras del CMS.
 - El Background se toma de `Páginas → Inicio → Diseño de página → Background multimedia` o, cuando no hay una selección directa, del último Background `Hero / portada` marcado como listo.
 - Desde el editor de la página se puede subir un video y elegir libremente la cantidad de frames: 60, 80, 120 o cualquier cantidad válida.
 - La cantidad de frames no se recorta durante el guardado, la recuperación ni la reproducción. La carga progresiva por lotes reduce el consumo sin eliminar fotogramas.
 - ScrollTrigger distribuye la secuencia completa a lo largo del recorrido y también puede sincronizar el tiempo de un MP4 o WebM con el scroll.
 - La secuencia móvil se utiliza en teléfonos; si no existe, se reutiliza la secuencia de escritorio, y viceversa.
+- `FabrickSignatureExperience` permanece conservado como código histórico, pero no se importa en Inicio ni en la vista previa del editor.
 
 ## Base de datos
 
@@ -57,8 +58,9 @@ El commit final debe comprobar, en este orden:
 6. Apertura de portada, páginas legales, admin y preview móvil.
 7. Ausencia de errores de esquema en runtime.
 8. Cabeceras de caché públicas para visitantes y privadas para admin, preview y formularios.
-9. Presencia del texto y composición Fabrick Signature en Inicio.
-10. Reproducción de la cantidad completa declarada por el Background.
+9. Presencia del texto y composición del portfolio cinematográfico aprobado en Inicio.
+10. Ausencia del visor Fabrick Signature en Inicio.
+11. Reproducción de la cantidad completa declarada por el Background.
 
 ## Despliegue
 
