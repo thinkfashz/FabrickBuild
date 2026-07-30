@@ -6,13 +6,15 @@ import { getPayload } from 'payload'
 import { ArrowRight, Check, MapPin, Ruler, Timer } from 'lucide-react'
 
 import { sanitizeComponentStyles } from '@/lib/ai/builder'
-import { appearanceProps, normalizeAppearance } from '@/lib/appearance'
+import { appearanceProps, getPortfolioFrameSequence, normalizeAppearance, portfolioAppearanceProps } from '@/lib/appearance'
 import { getMediaAlt, getMediaURL } from '@/lib/media'
 import { getProjects, getServices, getTestimonials } from '@/lib/queries'
 import { AnimatedPreset } from './animation/AnimatedPreset'
 import { AnimeSurface } from './animation/AnimeSurface'
+import { FrameSequenceBackground } from './FrameSequenceBackground'
 import { ComponentFrame } from './generated/ComponentFrame'
 import { LeadForm } from './LeadForm'
+import { PortfolioExperience } from './PortfolioExperience'
 import { RichText } from './RichText'
 
 type Doc = Record<string, any>
@@ -255,6 +257,24 @@ function heroBackground(block: Doc) {
 async function renderBlock(block: Doc, index: number, componentDepth: number) {
   const key = block.id || `${block.blockType}-${index}`
   switch (block.blockType) {
+    case 'portfolioShowcase': {
+      const sequence = getPortfolioFrameSequence(block)
+      const presentation = portfolioAppearanceProps(block)
+      const frameCount = sequence
+        ? Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length)
+        : 0
+      return (
+        <section
+          key={key}
+          className={`${presentation.className} ${sequence ? 'portfolio-showcase--cinematic' : ''}`}
+          style={presentation.style as CSSProperties}
+          data-frame-count={frameCount}
+        >
+          {sequence && <FrameSequenceBackground sequence={sequence} forceScroll />}
+          <PortfolioExperience block={block} frameCount={frameCount} />
+        </section>
+      )
+    }
     case 'hero': {
       const background = heroBackground(block)
       const appearance = { ...(block.appearance || {}) }
