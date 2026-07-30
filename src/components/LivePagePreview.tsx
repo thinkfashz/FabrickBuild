@@ -91,7 +91,7 @@ function LiveBlock({ block, depth = 0 }: { block: Doc; depth?: number }) {
       const sequence = getBlockFrameSequence(block)
       return (
         <section {...presentation(block, sequence ? 'portfolio-showcase portfolio-showcase--cinematic' : 'portfolio-showcase')}>
-          {sequence && <FrameSequenceBackground sequence={sequence} />}
+          {sequence && <FrameSequenceBackground sequence={sequence} forceScroll />}
           <PortfolioExperience block={block} />
         </section>
       )

@@ -22,6 +22,17 @@
 .sectionHead h2 { max-width: 600px; margin: 11px 0 0; color: var(--fabrick-heading, #f5f1e9); font-size: clamp(31px, 4.6vw, 64px); line-height: .94; letter-spacing: -.055em; }
 .stack { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
 .stack span { display: inline-flex; min-height: 38px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; color: #ddd9d1; background: rgba(255,255,255,.05); font-size: 12px; font-weight: 700; }
+.story { width: min(1240px, calc(100% - 40px)); display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(260px, .88fr); gap: clamp(28px, 8vw, 120px); align-items: center; margin: clamp(24px, 4vw, 58px) auto clamp(58px, 10vw, 128px); padding: clamp(26px, 4vw, 58px) 0; border-block: 1px solid rgba(255,255,255,.13); }
+.storyVisual { position: relative; min-height: clamp(260px, 33vw, 430px); overflow: hidden; isolation: isolate; border: 1px solid rgba(255,255,255,.18); border-radius: 3px; background: radial-gradient(circle at 68% 33%, rgba(242,185,12,.85), transparent 0 11%), radial-gradient(circle at 30% 70%, rgba(75,133,255,.72), transparent 0 20%), linear-gradient(135deg, rgba(242,185,12,.12), rgba(11,14,23,.5)); box-shadow: 0 28px 80px rgba(0,0,0,.3); }
+.storyVisual::before, .storyVisual::after { content: ''; position: absolute; inset: 12%; z-index: -1; border: 1px solid rgba(255,255,255,.26); border-radius: 50%; transform: rotate(-23deg); }
+.storyVisual::after { inset: 29%; border-style: dashed; animation: spin 18s linear infinite; }
+.storyVisual span { position: absolute; top: 20px; left: 20px; color: #f5f1e9; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.storyVisual i { position: absolute; width: 18%; aspect-ratio: 1; border-radius: 50%; background: #f5f1e9; box-shadow: 0 0 55px rgba(255,255,255,.45); }
+.storyVisual i:nth-of-type(1) { top: 27%; right: 24%; } .storyVisual i:nth-of-type(2) { bottom: 15%; left: 22%; width: 8%; background: var(--fabrick-button-bg, #f2b90c); } .storyVisual b { position:absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 42px, rgba(255,255,255,.08) 43px 44px); mix-blend-mode: overlay; }
+.storyCopy { max-width: 500px; }
+.storyCopy h2 { margin: 12px 0 0; color: var(--fabrick-heading, #f5f1e9); font-size: clamp(37px, 4.7vw, 70px); line-height: .9; letter-spacing: -.065em; }
+.storyCopy p { margin: 20px 0 0; color: var(--fabrick-copy, #bfbbb2); line-height: 1.7; }
+.storyCopy .button { display: inline-flex; margin-top: 26px; }
 .projects { padding: clamp(40px, 6vw, 82px) 0; }
 .projectList { display: grid; gap: clamp(34px, 6vw, 80px); margin-top: clamp(34px, 5vw, 64px); }
 .projectList article { display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(260px, .78fr); gap: clamp(24px, 5vw, 70px); align-items: end; }
@@ -39,4 +50,4 @@
 .closing svg { color: var(--fabrick-button-bg, #f2b90c); }
 .closing p { max-width: 620px; margin: 0; font-size: 14px; line-height: 1.6; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 760px) { .portfolio { padding-top: 18px; } .hero { min-height: auto; grid-template-columns: 1fr; gap: 42px; padding: 56px 0 62px; } .heroCopy h1 { font-size: clamp(46px, 14vw, 72px); } .orbital { width: min(78vw, 360px); } .stackSection { grid-template-columns: 1fr; padding: 55px 0; } .stack { justify-content: flex-start; } .projectList article, .projectList article:nth-child(even) { grid-template-columns: 1fr; gap: 20px; } .projectList article:nth-child(even) .projectImage { order: 0; } .projectImage { min-height: 290px; } }
+@media (max-width: 760px) { .portfolio { padding-top: 18px; } .hero { min-height: auto; grid-template-columns: 1fr; gap: 42px; padding: 56px 0 62px; } .heroCopy h1 { font-size: clamp(46px, 14vw, 72px); } .orbital { width: min(78vw, 360px); } .stackSection { grid-template-columns: 1fr; padding: 55px 0; } .stack { justify-content: flex-start; } .story { grid-template-columns: 1fr; gap: 28px; margin-block: 24px 68px; } .storyVisual { min-height: 270px; order: 2; } .storyCopy { order: 1; } .projectList article, .projectList article:nth-child(even) { grid-template-columns: 1fr; gap: 20px; } .projectList article:nth-child(even) .projectImage { order: 0; } .projectImage { min-height: 290px; } }

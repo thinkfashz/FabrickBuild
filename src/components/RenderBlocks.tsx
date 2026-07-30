@@ -282,7 +282,7 @@ export async function RenderBlocks({
             const frameSequence = getBlockFrameSequence(block)
             return (
               <section {...presentation(block, frameSequence ? 'portfolio-showcase portfolio-showcase--cinematic' : 'portfolio-showcase')} key={block.id || index}>
-                {frameSequence && <FrameSequenceBackground sequence={frameSequence} />}
+                {frameSequence && <FrameSequenceBackground sequence={frameSequence} forceScroll />}
                 <PortfolioExperience block={block} />
               </section>
             )
