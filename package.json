@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run assets:luxury && npm run generate:importmap && npm run db:prepare && npm run db:migrate && npm run components:seed && npm run frames:seed",
+    "prebuild": "npm run generate:importmap && npm run db:prepare && npm run db:migrate && npm run components:seed",
     "build": "next build",
     "build:code-only": "next build",
     "build:with-assets": "npm run assets:luxury && next build",
@@ -21,7 +21,6 @@
     "bootstrap:auto": "payload run src/scripts/autoBootstrap.ts",
     "bootstrap:vercel": "cross-env AUTO_BOOTSTRAP=true payload run src/scripts/autoBootstrap.ts",
     "components:seed": "payload run src/scripts/seedAnimatedComponents.ts",
-    "frames:seed": "payload run src/scripts/seedLuxuryFrames.ts",
     "seed": "payload run src/seed.ts",
     "db:prepare": "payload run src/scripts/prepareProductionMigrations.ts",
     "db:migrate": "payload migrate --force-accept-warning",
