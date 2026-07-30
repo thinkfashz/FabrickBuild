@@ -12,6 +12,7 @@ import {
   Content,
   CTA,
   Hero,
+  PortfolioShowcase,
   ProjectsGrid,
   ReusableComponent,
   ServicesGrid,
@@ -42,6 +43,7 @@ const getPreviewURL = (data: Record<string, unknown>) => {
 }
 
 const pageBlocks = [
+  PortfolioShowcase,
   Hero,
   ServicesGrid,
   ProjectsGrid,
@@ -99,7 +101,7 @@ export const Pages: CollectionConfig = {
               admin: {
                 initCollapsed: true,
                 description:
-                  'Cada bloque incluye su propio panel Apariencia y responsive. Evita repetir títulos o imágenes con el mismo objetivo comercial.',
+                  'Portfolio cinematográfico es el preset de fábrica. Cada bloque conserva su propio panel de apariencia y responsive.',
               },
             },
           ],
@@ -149,7 +151,7 @@ export const Pages: CollectionConfig = {
               filterOptions: { mimeType: { contains: 'video/' } },
               admin: {
                 condition: (_, siblingData) => siblingData?.backgroundSource === 'video',
-                description: 'Usa video MP4 o WebM corto, sin audio y con poster de respaldo.',
+                description: 'El video se procesa con la lógica de Multimedia para generar la cantidad de frames elegida.',
               },
             },
             {
@@ -172,7 +174,7 @@ export const Pages: CollectionConfig = {
               filterOptions: { status: { equals: 'ready' } },
               admin: {
                 condition: (_, siblingData) => siblingData?.backgroundSource === 'saved',
-                description: 'Selecciona una secuencia, imagen o URL preparada en Multimedia.',
+                description: 'Selecciona la secuencia generada desde un video. Se reproducen todos sus frames, sin máximo fijo.',
               },
             },
           ],
