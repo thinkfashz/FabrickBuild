@@ -130,6 +130,7 @@ export default buildConfig({
   editor: lexicalEditor({}),
   db: postgresAdapter({
     migrationDir: path.resolve(dirname, 'migrations'),
+    push: false,
     pool: {
       connectionString: databaseURL,
       max: poolMax,
