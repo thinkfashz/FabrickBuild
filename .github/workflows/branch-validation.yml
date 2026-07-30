@@ -1,0 +1,45 @@
+name: Validate CMS branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or commit to validate
+        required: false
+        default: agent/complete-cms-performance
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PAYLOAD_SECRET: validation-only-secret-not-for-production
+      PREVIEW_SECRET: validation-preview-secret
+      NEXT_PUBLIC_SERVER_URL: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Generate Payload import map
+        run: npm run generate:importmap
+
+      - name: TypeScript validation
+        run: npm run typecheck
+
+      - name: Next.js code build
+        run: npm run build:code-only
