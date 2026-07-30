@@ -20,6 +20,8 @@ const atlases = [
       'desktop-03.b64',
       'desktop-04.b64',
     ],
+    expectedBytes: 57_540,
+    expectedSHA256: 'cf13eb90a1e07d246036ca5462fb916e8c3530dcdbd5e3f33d033ff54ba8a0b8',
     width: 3_360,
     height: 810,
     columns: 7,
@@ -31,6 +33,8 @@ const atlases = [
   {
     name: 'mobile',
     chunks: ['mobile-00.b64', 'mobile-01.b64', 'mobile-02.b64', 'mobile-03.b64'],
+    expectedBytes: 45_390,
+    expectedSHA256: '363e8ebe6b0a3ed2478ca659c0dbfa4973d57c877bce1bd2caaaabdb79cd713b',
     width: 1_350,
     height: 1_920,
     columns: 5,
@@ -49,9 +53,18 @@ async function reconstructAtlas(spec) {
     spec.chunks.map(async (chunk) => (await readFile(path.join(sourceRoot, chunk), 'utf8')).replace(/\s+/g, '')),
   )
   const atlas = Buffer.from(parts.join(''), 'base64')
+  const hash = digest(atlas)
 
-  if (!atlas.length || atlas.length > LIMIT_BYTES) {
-    throw new Error(`${spec.name}: el atlas tiene un tamaño inválido de ${atlas.length} bytes.`)
+  if (atlas.length !== spec.expectedBytes) {
+    throw new Error(
+      `${spec.name}: tamaño inválido. Esperado ${spec.expectedBytes}, recibido ${atlas.length}.`,
+    )
+  }
+  if (hash !== spec.expectedSHA256) {
+    throw new Error(`${spec.name}: SHA-256 inválido. El atlas pudo corromperse.`)
+  }
+  if (atlas.length > LIMIT_BYTES) {
+    throw new Error(`${spec.name}: el atlas supera el límite de ${LIMIT_BYTES} bytes.`)
   }
 
   const metadata = await sharp(atlas).metadata()
@@ -61,7 +74,6 @@ async function reconstructAtlas(spec) {
     )
   }
 
-  console.log(`[Luxury frames] ${spec.name}: atlas validado, ${atlas.length} B, SHA-256 ${digest(atlas)}.`)
   return atlas
 }
 
@@ -103,7 +115,7 @@ async function materialize(spec) {
   const atlasStats = await stat(path.join(atlasDirectory, `${spec.name}.webp`))
   console.log(
     `[Luxury frames] ${spec.name}: ${spec.frames} frames, atlas ${atlasStats.size} B, ` +
-    `total ${totalBytes} B, mayor ${largestBytes} B.`,
+      `total ${totalBytes} B, mayor ${largestBytes} B, SHA-256 ${spec.expectedSHA256}.`,
   )
 }
 
