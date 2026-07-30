@@ -6,14 +6,12 @@ async function run() {
   const payload = await getPayload({ config })
 
   try {
-    const result = await payload.db.drizzle.execute(sql`
+    await payload.db.drizzle.execute(sql`
       DELETE FROM "payload_migrations"
       WHERE "batch" = -1;
     `)
 
-    payload.logger.info(
-      `MIGRATION_PREPARED: marcadores de desarrollo eliminados (${String(result.rowCount || 0)}).`,
-    )
+    payload.logger.info('MIGRATION_PREPARED: marcadores de desarrollo eliminados cuando existían.')
   } catch (error) {
     const code = (error as { code?: string })?.code
     if (code === '42P01') {
