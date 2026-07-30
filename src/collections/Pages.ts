@@ -4,6 +4,8 @@ import { publishedOrAuthenticated } from '@/access/publishedOrAuthenticated'
 import { slugField } from '@/fields/slug'
 import { seoFields } from '@/fields/seo'
 import { appearanceField, withAppearance } from '@/fields/appearance'
+import { normalizeLegacyBlockIDs } from '@/hooks/normalizeBlockIDs'
+import { revalidatePage, revalidatePageDelete } from '@/hooks/revalidateContent'
 import {
   BeforeAfter,
   ContactForm,
@@ -60,6 +62,11 @@ export const Pages: CollectionConfig = {
     create: authenticated,
     update: authenticated,
     delete: authenticated,
+  },
+  hooks: {
+    beforeValidate: [normalizeLegacyBlockIDs],
+    afterChange: [revalidatePage],
+    afterDelete: [revalidatePageDelete],
   },
   admin: {
     useAsTitle: 'title',
