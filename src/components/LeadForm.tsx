@@ -29,10 +29,11 @@ export function LeadForm({ services = [], successMessage, consentVersion = '2026
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const formElement = event.currentTarget
     setState('loading')
     setError('')
 
-    const form = new FormData(event.currentTarget)
+    const form = new FormData(formElement)
     const payload = {
       name: form.get('name'),
       phone: form.get('phone'),
@@ -56,7 +57,7 @@ export function LeadForm({ services = [], successMessage, consentVersion = '2026
       })
       const result = (await response.json().catch(() => ({}))) as { error?: string }
       if (!response.ok) throw new Error(result.error || 'No fue posible registrar la solicitud.')
-      event.currentTarget.reset()
+      formElement.reset()
       setState('success')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Ocurrió un error.')
