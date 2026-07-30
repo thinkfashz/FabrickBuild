@@ -13,6 +13,10 @@ const privateHeaders = [
   { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
 ]
 
+const previewHeaders = privateHeaders.map((header) =>
+  header.key === 'X-Frame-Options' ? { ...header, value: 'SAMEORIGIN' } : header,
+)
+
 const publicMediaHeaders = [
   { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -45,7 +49,7 @@ const nextConfig = {
       },
       {
         source: '/preview-page/:path*',
-        headers: privateHeaders,
+        headers: previewHeaders,
       },
       {
         source: '/studio/:path*',
