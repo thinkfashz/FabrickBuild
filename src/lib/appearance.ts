@@ -72,7 +72,7 @@ export function appearanceProps(value: unknown, extraClassName = '') {
   const mobileScale = appearance.mobileHeadingScale / 100
   const style: CSSVars = {
     '--cms-surface-color': appearance.surfaceColor,
-    '--cms-surface-opacity': appearance.surfaceOpacity / 100,
+    '--cms-surface-opacity': `${appearance.surfaceOpacity}%`,
     '--cms-blur': `${appearance.backdropBlur}px`,
     '--cms-heading': appearance.headingColor,
     '--cms-body': appearance.bodyColor,
@@ -84,9 +84,11 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     '--cms-radius': `${appearance.cornerRadius}px`,
     '--cms-pad-top': `${appearance.paddingTop}px`,
     '--cms-pad-bottom': `${appearance.paddingBottom}px`,
+    '--cms-mobile-pad-top': `${Math.round(appearance.paddingTop * 0.68)}px`,
+    '--cms-mobile-pad-bottom': `${Math.round(appearance.paddingBottom * 0.68)}px`,
     '--cms-font-size': `${(appearance.fontScale / 100).toFixed(2)}rem`,
     '--cms-overlay': appearance.overlayColor,
-    '--cms-overlay-opacity': appearance.overlayOpacity / 100,
+    '--cms-overlay-opacity': `${appearance.overlayOpacity}%`,
     '--cms-mobile-pad': `${appearance.mobilePadding}px`,
     '--cms-mobile-h1-max': `${(4.6 * mobileScale).toFixed(2)}rem`,
     '--cms-mobile-h2-max': `${(3.2 * mobileScale).toFixed(2)}rem`,
