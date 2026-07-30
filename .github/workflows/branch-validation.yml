@@ -8,11 +8,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      ref:
-        description: Branch or commit to validate
-        required: false
-        default: agent/complete-cms-performance
 
 permissions:
   contents: read
@@ -27,16 +22,13 @@ jobs:
       NEXT_PUBLIC_SERVER_URL: http://localhost:3000
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild
     steps:
-      - name: Checkout selected ref
+      - name: Checkout current commit
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
 
       - name: Use Node 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
