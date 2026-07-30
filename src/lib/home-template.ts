@@ -1,4 +1,4 @@
-export const PORTFOLIO_HOME_TEMPLATE_VERSION = 'portfolio-factory-2026-07-30'
+export const PORTFOLIO_HOME_TEMPLATE_VERSION = 'portfolio-factory-restored-2026-07-30'
 
 type Doc = Record<string, any>
 
