@@ -1,5 +1,4 @@
 import { unstable_cache } from 'next/cache'
-import { draftMode } from 'next/headers'
 
 import { getCMS } from './cms'
 
@@ -12,9 +11,7 @@ const publicPageBySlug = unstable_cache(
       depth: 3,
       limit: 1,
       overrideAccess: false,
-      where: {
-        and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }],
-      },
+      where: { and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }] },
     })
     return result.docs[0] || null
   },
@@ -24,9 +21,15 @@ const publicPageBySlug = unstable_cache(
 
 export async function getPageBySlug(slug: string) {
   try {
-    const draft = (await draftMode()).isEnabled
-    if (!draft) return publicPageBySlug(slug)
+    return await publicPageBySlug(slug)
+  } catch (error) {
+    console.error(`[queries] No fue posible cargar la página pública ${slug}.`, error)
+    return null
+  }
+}
 
+export async function getDraftPageBySlug(slug: string) {
+  try {
     const payload = await getCMS()
     const result = await payload.find({
       collection: 'pages',
@@ -38,7 +41,7 @@ export async function getPageBySlug(slug: string) {
     })
     return result.docs[0] || null
   } catch (error) {
-    console.error(`[queries] No fue posible cargar la página ${slug}.`, error)
+    console.error(`[queries] No fue posible cargar el borrador ${slug}.`, error)
     return null
   }
 }
@@ -72,35 +75,21 @@ export async function getServices(featuredOnly = false, limit = 20) {
 
 export async function getServiceBySlug(slug: string) {
   try {
-    const draft = (await draftMode()).isEnabled
-    if (!draft) {
-      return await unstable_cache(
-        async () => {
-          const payload = await getCMS()
-          const result = await payload.find({
-            collection: 'services',
-            draft: false,
-            depth: 3,
-            limit: 1,
-            where: { and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }] },
-          })
-          return result.docs[0] || null
-        },
-        ['fabrick-service', slug],
-        { revalidate: 300, tags: ['fabrick-services', `fabrick-service-${slug}`] },
-      )()
-    }
-
-    const payload = await getCMS()
-    const result = await payload.find({
-      collection: 'services',
-      draft: true,
-      depth: 3,
-      limit: 1,
-      overrideAccess: true,
-      where: { slug: { equals: slug } },
-    })
-    return result.docs[0] || null
+    return await unstable_cache(
+      async () => {
+        const payload = await getCMS()
+        const result = await payload.find({
+          collection: 'services',
+          draft: false,
+          depth: 3,
+          limit: 1,
+          where: { and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }] },
+        })
+        return result.docs[0] || null
+      },
+      ['fabrick-service', slug],
+      { revalidate: 300, tags: ['fabrick-services', `fabrick-service-${slug}`] },
+    )()
   } catch (error) {
     console.error(`[queries] No fue posible cargar el servicio ${slug}.`, error)
     return null
@@ -136,35 +125,21 @@ export async function getProjects(featuredOnly = false, limit = 20) {
 
 export async function getProjectBySlug(slug: string) {
   try {
-    const draft = (await draftMode()).isEnabled
-    if (!draft) {
-      return await unstable_cache(
-        async () => {
-          const payload = await getCMS()
-          const result = await payload.find({
-            collection: 'projects',
-            draft: false,
-            depth: 3,
-            limit: 1,
-            where: { and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }] },
-          })
-          return result.docs[0] || null
-        },
-        ['fabrick-project', slug],
-        { revalidate: 300, tags: ['fabrick-projects', `fabrick-project-${slug}`] },
-      )()
-    }
-
-    const payload = await getCMS()
-    const result = await payload.find({
-      collection: 'projects',
-      draft: true,
-      depth: 3,
-      limit: 1,
-      overrideAccess: true,
-      where: { slug: { equals: slug } },
-    })
-    return result.docs[0] || null
+    return await unstable_cache(
+      async () => {
+        const payload = await getCMS()
+        const result = await payload.find({
+          collection: 'projects',
+          draft: false,
+          depth: 3,
+          limit: 1,
+          where: { and: [{ slug: { equals: slug } }, { _status: { equals: 'published' } }] },
+        })
+        return result.docs[0] || null
+      },
+      ['fabrick-project', slug],
+      { revalidate: 300, tags: ['fabrick-projects', `fabrick-project-${slug}`] },
+    )()
   } catch (error) {
     console.error(`[queries] No fue posible cargar el proyecto ${slug}.`, error)
     return null
@@ -212,9 +187,15 @@ const publicGlobals = unstable_cache(
 
 export async function getGlobals() {
   try {
-    const draft = (await draftMode()).isEnabled
-    if (!draft) return await publicGlobals()
+    return await publicGlobals()
+  } catch (error) {
+    console.error('[queries] No fue posible cargar la configuración global.', error)
+    return { header: null, footer: null, settings: null }
+  }
+}
 
+export async function getDraftGlobals() {
+  try {
     const payload = await getCMS()
     const [header, footer, settings] = await Promise.all([
       payload.findGlobal({ slug: 'header', depth: 2 }),
@@ -223,7 +204,7 @@ export async function getGlobals() {
     ])
     return { header, footer, settings }
   } catch (error) {
-    console.error('[queries] No fue posible cargar la configuración global.', error)
+    console.error('[queries] No fue posible cargar la configuración para preview.', error)
     return { header: null, footer: null, settings: null }
   }
 }
