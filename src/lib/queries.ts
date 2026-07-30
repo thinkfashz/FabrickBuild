@@ -110,8 +110,26 @@ async function applySavedBackgroundToHome(payload: any, page: Doc) {
         layout: nextLayout,
       } as never,
     })
-  } catch {
-    return page
+  } catch (error) {
+    // Rendering must not go blank just because a legacy version row rejects
+    // the first persistence attempt. Keep the resolved background visible;
+    // the next successful native Payload save persists the same data.
+    console.error('[home-background] Could not persist saved background', error)
+    return {
+      ...page,
+      pageAppearance: {
+        ...portfolioPageAppearance,
+        ...existingAppearance,
+        backgroundMode: 'image',
+        savedBackground,
+        backgroundFit: fit,
+        surfaceColor: '#10110f',
+        surfaceOpacity: 100,
+        overlayColor: '#10110f',
+        overlayOpacity,
+      },
+      layout: nextLayout,
+    }
   }
 }
 
@@ -162,8 +180,17 @@ export async function getPortfolioHomePage() {
           homeTemplateVersion: PORTFOLIO_HOME_TEMPLATE_VERSION,
         } as never,
       })
-    } catch {
-      return page
+    } catch (error) {
+      // A legacy row can have an incomplete version relation. The public page
+      // remains a real portfolio immediately, while the exact server error is
+      // retained in Vercel logs for the schema doctor.
+      console.error('[home-template] Could not persist portfolio template', error)
+      page = {
+        ...page,
+        layout: portfolioHomeLayout(),
+        pageAppearance: portfolioPageAppearance,
+        homeTemplateVersion: PORTFOLIO_HOME_TEMPLATE_VERSION,
+      }
     }
   }
   return applySavedBackgroundToHome(payload, page as Doc)
