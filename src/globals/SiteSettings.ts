@@ -34,19 +34,19 @@ export const SiteSettings: GlobalConfig = {
               defaultValue: 'luxury',
               label: 'Experiencia de portada',
               options: [
-                { label: 'Portfolio cinematográfico — preestablecido de fábrica', value: 'luxury' },
+                { label: 'Fabrick Signature — diseño de fábrica', value: 'luxury' },
                 { label: 'Portada CMS tradicional', value: 'standard' },
                 { label: 'Solo bloques de la página', value: 'blocks' },
               ],
               admin: {
-                description: 'El preset de fábrica mantiene el diseño Obsidian Gold y reproduce todos los frames del Background multimedia seleccionado.',
+                description: 'El preset de fábrica conserva el diseño aprobado y reproduce todos los frames del Background seleccionado mediante ScrollTrigger.',
               },
             },
             {
               name: 'hideFirstHeroWhenLuxury',
               type: 'checkbox',
               defaultValue: true,
-              label: 'Ocultar la portada tradicional cuando se usa el portfolio cinematográfico',
+              label: 'Ocultar la portada tradicional cuando se usa Fabrick Signature',
             },
           ],
         },
