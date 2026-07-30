@@ -7,6 +7,21 @@ import { getMediaAlt, getMediaURL } from '@/lib/media'
 
 type NavItem = { id?: string | number; label?: string | null; url?: string | null }
 
+const defaultHeaderAppearance = {
+  surfaceMode: 'glass',
+  surfaceColor: '#f7f3ea',
+  surfaceOpacity: 88,
+  backdropBlur: 22,
+  headingColor: '#171713',
+  bodyColor: '#393830',
+  accentColor: '#c99e18',
+  buttonColor: '#f4c84b',
+  buttonTextColor: '#15130f',
+  paddingTop: 0,
+  paddingBottom: 0,
+  overlayOpacity: 0,
+}
+
 export function SiteHeader({
   header,
   settings,
@@ -28,7 +43,7 @@ export function SiteHeader({
   const desktopLogo = getMediaURL(desktopLogoDoc, 'thumbnail')
   const mobileLogo = getMediaURL(mobileLogoDoc, 'thumbnail')
   const backgroundMedia = getMediaURL(header?.backgroundMedia, 'hero')
-  const { className, style } = appearanceProps(header?.appearance, 'site-header')
+  const { className, style } = appearanceProps(header?.appearance || defaultHeaderAppearance, 'site-header')
   const logoSizeDesktop = Math.min(160, Math.max(28, Number(header?.logoSizeDesktop || 54)))
   const logoSizeMobile = Math.min(120, Math.max(28, Number(header?.logoSizeMobile || 48)))
   const logoAnimation = String(header?.logoAnimation || 'glow')
