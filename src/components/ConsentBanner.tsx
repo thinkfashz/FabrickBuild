@@ -57,7 +57,7 @@ export function ConsentBanner({ settings }: { settings?: ConsentSettings | null 
   }, [])
 
   useEffect(() => {
-    if (settings?.enabled === false) return
+    if (settings?.enabled === false || window.self !== window.top) return
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as ConsentChoice | null
       if (stored?.version === version && stored.necessary === true) {
