@@ -67,7 +67,7 @@ export function PortfolioExperience({ block }: { block: Doc }) {
           <p data-cinematic-copy>{block.description || 'Una narrativa digital inmersiva, pensada para guiar cada mirada desde el primer frame hasta la última decisión.'}</p>
           <div data-cinematic-copy className={styles.actions}><a className="button button-yellow" href={block.primaryCTA?.url || '#proyectos'}>{block.primaryCTA?.label || 'Ver proyectos'} <ArrowRight size={17} /></a><a className="button button-ghost" href={block.secondaryCTA?.url || '#contacto'}>{block.secondaryCTA?.label || 'Hablemos'}</a></div>
         </div>
-        <aside data-cinematic-copy className={styles.heroTelemetry}><span>01 / 60</span><strong>SCROLL PARA CONTINUAR</strong><i /></aside>
+        <aside data-cinematic-copy className={styles.heroTelemetry}><span>60 FRAMES</span><strong>SCROLL PARA CONTINUAR</strong><i /></aside>
       </section>
 
       <section className={`${styles.scene} ${styles.sceneRight}`} data-cinematic-scene data-side="right">
