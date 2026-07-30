@@ -111,6 +111,13 @@ export const Pages: CollectionConfig = {
           fields: [
             appearanceField('pageAppearance', 'Apariencia general de la página'),
             {
+              name: 'pageBackgroundQuickUpload',
+              type: 'ui',
+              admin: {
+                components: { Field: '@/components/admin/PageBackgroundQuickUpload' },
+              },
+            },
+            {
               name: 'backgroundSource',
               type: 'radio',
               defaultValue: 'color',
