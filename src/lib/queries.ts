@@ -33,6 +33,34 @@ const normalizedKey = (value: unknown) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
+async function findEveryFrame(payload: Awaited<ReturnType<typeof getCMS>>) {
+  const docs: FrameMedia[] = []
+  let page = 1
+
+  while (page <= 100) {
+    const result = await payload.find({
+      collection: 'media',
+      depth: 0,
+      limit: 100,
+      page,
+      sort: 'frameOrder',
+      overrideAccess: false,
+      where: {
+        or: [
+          { category: { equals: 'frame' } },
+          { filename: { contains: 'frame_' } },
+          { filename: { contains: 'frame-' } },
+        ],
+      } as any,
+    })
+    docs.push(...((result.docs || []) as FrameMedia[]))
+    if (!result.hasNextPage || !result.nextPage) break
+    page = Number(result.nextPage)
+  }
+
+  return docs
+}
+
 async function recoverCinematicFrames(payload: Awaited<ReturnType<typeof getCMS>>, background: BackgroundDoc | null) {
   if (!background) return null
   const currentDesktop = Array.isArray(background.desktopFrames) ? background.desktopFrames : []
@@ -46,21 +74,7 @@ async function recoverCinematicFrames(payload: Awaited<ReturnType<typeof getCMS>
     return background
   }
 
-  const result = await payload.find({
-    collection: 'media',
-    depth: 0,
-    limit: 200,
-    sort: 'frameOrder',
-    overrideAccess: false,
-    where: {
-      or: [
-        { category: { equals: 'frame' } },
-        { filename: { contains: 'frame_' } },
-        { filename: { contains: 'frame-' } },
-      ],
-    } as any,
-  })
-  const docs = (result.docs || []) as FrameMedia[]
+  const docs = await findEveryFrame(payload)
   if (!docs.length) {
     console.warn('[cinematic-background] No existen archivos de frame en la biblioteca multimedia.', {
       background: background.slug || background.name,
@@ -92,17 +106,15 @@ async function recoverCinematicFrames(payload: Awaited<ReturnType<typeof getCMS>
   }
   if (!selected) selected = Array.from(groups.values()).sort((a, b) => b.length - a.length)[0] || docs
 
-  const ordered = [...selected]
-    .sort((a, b) => {
-      const orderA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
-      const orderB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
-      if (orderA !== orderB) return orderA - orderB
-      const fileA = frameNumber(a.filename)
-      const fileB = frameNumber(b.filename)
-      if (fileA !== fileB) return fileA - fileB
-      return String(a.filename || '').localeCompare(String(b.filename || ''), 'es', { numeric: true })
-    })
-    .slice(0, 60)
+  const ordered = [...selected].sort((a, b) => {
+    const orderA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
+    const orderB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) return orderA - orderB
+    const fileA = frameNumber(a.filename)
+    const fileB = frameNumber(b.filename)
+    if (fileA !== fileB) return fileA - fileB
+    return String(a.filename || '').localeCompare(String(b.filename || ''), 'es', { numeric: true })
+  })
 
   const desktopFrames = ordered.filter((doc) => doc.device !== 'mobile')
   const mobileFrames = ordered.filter((doc) => doc.device === 'mobile')
@@ -114,7 +126,7 @@ async function recoverCinematicFrames(payload: Awaited<ReturnType<typeof getCMS>
     frameCountMobile: mobileFrames.length || currentMobile.length,
   }
 
-  console.info('[cinematic-background] Secuencia recuperada desde Multimedia.', {
+  console.info('[cinematic-background] Secuencia completa recuperada desde Multimedia.', {
     background: background.slug || background.name,
     candidates: docs.length,
     selected: ordered.length,
