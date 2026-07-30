@@ -1,21 +1,40 @@
 import config from '@payload-config'
-import { sql } from '@payloadcms/db-postgres'
 import { getPayload } from 'payload'
+
+const databaseErrorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined
+  const record = error as { code?: string; cause?: unknown; originalError?: unknown }
+  return record.code || databaseErrorCode(record.cause) || databaseErrorCode(record.originalError)
+}
 
 async function run() {
   const payload = await getPayload({ config })
 
   try {
-    await payload.db.drizzle.execute(sql`
-      DELETE FROM "payload_migrations"
-      WHERE "batch" = -1;
-    `)
+    const deleted = await payload.delete({
+      collection: 'payload-migrations',
+      where: { batch: { equals: -1 } },
+      overrideAccess: true,
+    })
 
-    payload.logger.info('MIGRATION_PREPARED: marcadores de desarrollo eliminados cuando existían.')
+    const remaining = await payload.count({
+      collection: 'payload-migrations',
+      where: { batch: { equals: -1 } },
+      overrideAccess: true,
+    })
+
+    if (remaining.totalDocs > 0) {
+      throw new Error(`MIGRATION_PREPARE_FAILED: permanecen ${remaining.totalDocs} marcadores batch=-1.`)
+    }
+
+    const removed = Array.isArray((deleted as { docs?: unknown[] }).docs)
+      ? (deleted as { docs: unknown[] }).docs.length
+      : 0
+
+    payload.logger.info(`MIGRATION_PREPARED: ${removed} marcador(es) de desarrollo eliminado(s).`)
   } catch (error) {
-    const code = (error as { code?: string })?.code
-    if (code === '42P01') {
-      payload.logger.info('MIGRATION_PREPARED: la tabla de migraciones aún no existe; no fue necesario limpiar marcadores.')
+    if (databaseErrorCode(error) === '42P01') {
+      payload.logger.info('MIGRATION_PREPARED: la tabla de migraciones aún no existe; no fue necesario limpiarla.')
     } else {
       throw error
     }
