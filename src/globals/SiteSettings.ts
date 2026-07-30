@@ -34,19 +34,19 @@ export const SiteSettings: GlobalConfig = {
               defaultValue: 'luxury',
               label: 'Experiencia de portada',
               options: [
-                { label: 'Fabrick Signature — diseño de fábrica', value: 'luxury' },
+                { label: 'Portfolio cinematográfico — preestablecido de fábrica', value: 'luxury' },
                 { label: 'Portada CMS tradicional', value: 'standard' },
                 { label: 'Solo bloques de la página', value: 'blocks' },
               ],
               admin: {
-                description: 'El preset de fábrica conserva el diseño aprobado y reproduce todos los frames del Background seleccionado mediante ScrollTrigger.',
+                description: 'Conserva el diseño del deployment aprobado y reproduce mediante ScrollTrigger todos los frames relacionados al Background seleccionado, sin un máximo fijo.',
               },
             },
             {
               name: 'hideFirstHeroWhenLuxury',
               type: 'checkbox',
               defaultValue: true,
-              label: 'Ocultar la portada tradicional cuando se usa Fabrick Signature',
+              label: 'Ocultar la portada tradicional cuando se usa el portfolio cinematográfico',
             },
           ],
         },
