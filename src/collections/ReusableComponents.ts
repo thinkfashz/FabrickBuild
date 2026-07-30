@@ -66,14 +66,20 @@ export const ReusableComponents: CollectionConfig = {
         condition: (_, siblingData) => !siblingData?.kind || siblingData?.kind === 'layout',
         description: 'Bloques internos del componente. La IA y el editor visual pueden completar esta estructura.',
       },
-      validate: (value: unknown, { siblingData }: { siblingData?: Record<string, unknown> }) =>
-        siblingData?.kind && siblingData.kind !== 'layout' ? true : Array.isArray(value) ? true : 'Agrega una composición de bloques.',
+      validate: (value, { siblingData }) =>
+        siblingData?.kind && siblingData.kind !== 'layout'
+          ? true
+          : Array.isArray(value)
+            ? true
+            : 'Agrega una composición de bloques.',
     },
     {
       type: 'group',
       name: 'animatedContent',
       label: 'Contenido del componente animado',
-      admin: { condition: (_, siblingData) => siblingData?.kind && siblingData.kind !== 'layout' },
+      admin: {
+        condition: (_, siblingData) => Boolean(siblingData?.kind && siblingData.kind !== 'layout'),
+      },
       fields: [
         { name: 'eyebrow', type: 'text', label: 'Texto superior' },
         { name: 'heading', type: 'text', label: 'Título' },
