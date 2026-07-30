@@ -69,6 +69,104 @@ async function repairSchema(payload: Payload): Promise<void> {
     sql`ALTER TABLE IF EXISTS "pages" ADD COLUMN IF NOT EXISTS "home_template_version" varchar;`,
     sql`ALTER TABLE IF EXISTS "_pages_v" ADD COLUMN IF NOT EXISTS "page_appearance" jsonb;`,
     sql`ALTER TABLE IF EXISTS "_pages_v" ADD COLUMN IF NOT EXISTS "home_template_version" varchar;`,
+    // The portfolio block was added after existing page versions had already
+    // been stored. Payload queries every configured block table, even when a
+    // version does not contain that block, so both live and version tables
+    // must exist before opening the Pages collection.
+    sql`
+      CREATE TABLE IF NOT EXISTS "pages_blocks_portfolio_showcase" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL,
+        "_path" varchar NOT NULL,
+        "eyebrow" varchar,
+        "heading" varchar,
+        "highlight" varchar,
+        "description" varchar,
+        "primary_c_t_a_label" varchar,
+        "primary_c_t_a_url" varchar,
+        "secondary_c_t_a_label" varchar,
+        "secondary_c_t_a_url" varchar,
+        "appearance" jsonb,
+        "_uuid" varchar,
+        "block_name" varchar
+      );
+    `,
+    sql`
+      CREATE TABLE IF NOT EXISTS "pages_blocks_portfolio_showcase_tech_stack" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL,
+        "label" varchar,
+        "_uuid" varchar
+      );
+    `,
+    sql`
+      CREATE TABLE IF NOT EXISTS "pages_blocks_portfolio_showcase_projects" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL,
+        "title" varchar,
+        "type" varchar,
+        "description" varchar,
+        "image_id" integer,
+        "image_u_r_l" varchar,
+        "url" varchar,
+        "_uuid" varchar
+      );
+    `,
+    sql`
+      CREATE TABLE IF NOT EXISTS "_pages_v_blocks_portfolio_showcase" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL,
+        "_path" varchar NOT NULL,
+        "eyebrow" varchar,
+        "heading" varchar,
+        "highlight" varchar,
+        "description" varchar,
+        "primary_c_t_a_label" varchar,
+        "primary_c_t_a_url" varchar,
+        "secondary_c_t_a_label" varchar,
+        "secondary_c_t_a_url" varchar,
+        "appearance" jsonb,
+        "_uuid" varchar,
+        "block_name" varchar
+      );
+    `,
+    sql`
+      CREATE TABLE IF NOT EXISTS "_pages_v_blocks_portfolio_showcase_tech_stack" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL,
+        "label" varchar,
+        "_uuid" varchar
+      );
+    `,
+    sql`
+      CREATE TABLE IF NOT EXISTS "_pages_v_blocks_portfolio_showcase_projects" (
+        "id" serial PRIMARY KEY,
+        "_order" integer NOT NULL,
+        "_parent_id" integer NOT NULL,
+        "title" varchar,
+        "type" varchar,
+        "description" varchar,
+        "image_id" integer,
+        "image_u_r_l" varchar,
+        "url" varchar,
+        "_uuid" varchar
+      );
+    `,
+    ...[
+      'pages_blocks_portfolio_showcase',
+      'pages_blocks_portfolio_showcase_tech_stack',
+      'pages_blocks_portfolio_showcase_projects',
+      '_pages_v_blocks_portfolio_showcase',
+      '_pages_v_blocks_portfolio_showcase_tech_stack',
+      '_pages_v_blocks_portfolio_showcase_projects',
+    ].map((table) =>
+      sql.raw(`CREATE INDEX IF NOT EXISTS "${table}_parent_id_idx" ON "${table}" ("_parent_id");`),
+    ),
     sql`
       ALTER TABLE IF EXISTS "pages_blocks_hero"
       ADD COLUMN IF NOT EXISTS "background_source" varchar DEFAULT 'upload';
