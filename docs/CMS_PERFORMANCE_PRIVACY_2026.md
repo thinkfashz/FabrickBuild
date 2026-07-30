@@ -36,6 +36,19 @@ next build
 
 La preparación elimina únicamente los marcadores históricos de desarrollo con `batch = -1`. El adaptador PostgreSQL queda con `push: false` para impedir que el esquema de producción vuelva a modificarse automáticamente fuera del sistema de migraciones.
 
+## Validación de entrega
+
+El commit final debe comprobar, en este orden:
+
+1. Generación del import map.
+2. Eliminación del marcador de desarrollo sin modificar datos comerciales.
+3. Aplicación idempotente de migraciones.
+4. Creación idempotente de los componentes Anime.js.
+5. TypeScript y compilación de Next.js.
+6. Apertura de portada, páginas legales, admin y preview móvil.
+7. Ausencia de errores de esquema en runtime.
+8. Cabeceras de caché públicas para visitantes y privadas para admin, preview y formularios.
+
 ## Despliegue
 
 Los cambios permanecen en una rama y PR draft. No deben fusionarse con `main` hasta validar el preview, las rutas legales, el administrador y los logs de runtime.
