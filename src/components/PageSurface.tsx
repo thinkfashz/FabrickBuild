@@ -16,6 +16,7 @@ export function PageSurface({ page, children }: { page?: Doc | null; children: R
   const mobileDoc = page?.mobileBackgroundMedia || desktopDoc
   const desktopImage = getMediaURL(desktopDoc, 'hero')
   const mobileImage = getMediaURL(mobileDoc, 'hero')
+  const resolvedMobileImage = mobileImage || desktopImage
   const videoDoc = source === 'video' ? page?.backgroundVideo : null
   const videoURL = getMediaURL(videoDoc)
   const external = source === 'url' && typeof page?.backgroundURL === 'string' ? page.backgroundURL : source === 'saved' ? saved?.externalURL : null
@@ -31,7 +32,7 @@ export function PageSurface({ page, children }: { page?: Doc | null; children: R
 
   return (
     <div className={className} style={style}>
-      {(desktopImage || mobileImage) && (
+      {(desktopImage || resolvedMobileImage) && (
         <div className="page-surface__media" aria-hidden="true">
           {desktopImage && (
             <Image
@@ -43,10 +44,10 @@ export function PageSurface({ page, children }: { page?: Doc | null; children: R
               priority={page?.slug === 'home'}
             />
           )}
-          {(mobileImage || desktopImage) && (
+          {resolvedMobileImage && (
             <Image
               className="page-surface__image page-surface__image--mobile"
-              src={mobileImage || desktopImage}
+              src={resolvedMobileImage}
               alt={getMediaAlt(mobileDoc, '')}
               fill
               sizes="100vw"
