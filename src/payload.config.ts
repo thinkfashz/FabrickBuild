@@ -2,7 +2,12 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
-import { buildConfig, type CollectionConfig, type GlobalConfig } from 'payload'
+import {
+  buildConfig,
+  type CollectionAfterChangeHook,
+  type CollectionConfig,
+  type GlobalConfig,
+} from 'payload'
 import { fileURLToPath } from 'url'
 
 import { AIChanges } from '@/collections/AIChanges'
@@ -71,7 +76,10 @@ const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 const poolMax = Math.min(20, Math.max(2, Number(process.env.POSTGRES_POOL_MAX || 8)))
 const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
 
-const appendAfterChange = (collection: CollectionConfig, hook: NonNullable<CollectionConfig['hooks']>['afterChange'][number]): CollectionConfig => ({
+const appendAfterChange = (
+  collection: CollectionConfig,
+  hook: CollectionAfterChangeHook,
+): CollectionConfig => ({
   ...collection,
   hooks: {
     ...collection.hooks,
