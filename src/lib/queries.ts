@@ -35,6 +35,93 @@ const compactBackground = (background: Doc) => ({
     : undefined,
 })
 
+type NativePool = {
+  query: <T = { id: string | number }>(statement: string, values?: unknown[]) => Promise<{ rows: T[] }>
+}
+
+const nativePool = (payload: unknown) => (payload as { db?: { pool?: NativePool } })?.db?.pool
+
+/**
+ * Last-resort migration for the one Home document created before the
+ * Portfolio block existed. It writes the exact native Payload block tables,
+ * but deliberately does not touch versions or any other page. Payload's
+ * normal update remains the primary path; this only runs when legacy version
+ * history blocks that one automatic migration.
+ */
+async function persistLegacyHomePortfolio(payload: unknown, page: Doc) {
+  const pool = nativePool(payload)
+  if (!pool || page.id === undefined || page.id === null) throw new Error('No hay conexión nativa para reparar Inicio.')
+
+  const [portfolio] = portfolioHomeLayout() as Doc[]
+  const oldPortfolio = await pool.query<{ id: number }>(
+    'SELECT "id" FROM "pages_blocks_portfolio_showcase" WHERE "_parent_id" = $1',
+    [page.id],
+  )
+  const oldIDs = oldPortfolio.rows.map((row) => row.id)
+  if (oldIDs.length) {
+    await pool.query('DELETE FROM "pages_blocks_portfolio_showcase_tech_stack" WHERE "_parent_id" = ANY($1::int[])', [oldIDs])
+    await pool.query('DELETE FROM "pages_blocks_portfolio_showcase_projects" WHERE "_parent_id" = ANY($1::int[])', [oldIDs])
+  }
+
+  // Home is the requested full portfolio replacement. Removing only its
+  // parent rows keeps every other Page and all media records intact.
+  for (const table of [
+    'pages_blocks_hero', 'pages_blocks_services_grid', 'pages_blocks_projects_grid',
+    'pages_blocks_content', 'pages_blocks_stats', 'pages_blocks_testimonials',
+    'pages_blocks_before_after', 'pages_blocks_cta', 'pages_blocks_contact_form',
+    'pages_blocks_reusable_component', 'pages_blocks_portfolio_showcase',
+  ]) {
+    await pool.query(`DELETE FROM "${table}" WHERE "_parent_id" = $1`, [page.id])
+  }
+
+  const inserted = await pool.query<{ id: number }>(
+    `INSERT INTO "pages_blocks_portfolio_showcase"
+      ("_order", "_parent_id", "_path", "eyebrow", "heading", "highlight", "description",
+       "primary_c_t_a_label", "primary_c_t_a_url", "secondary_c_t_a_label", "secondary_c_t_a_url", "appearance")
+     VALUES (1, $1, 'layout', $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
+     RETURNING "id"`,
+    [
+      page.id, portfolio.eyebrow, portfolio.heading, portfolio.highlight, portfolio.description,
+      portfolio.primaryCTA?.label, portfolio.primaryCTA?.url, portfolio.secondaryCTA?.label,
+      portfolio.secondaryCTA?.url, JSON.stringify(portfolio.appearance || {}),
+    ],
+  )
+  const blockID = inserted.rows[0]?.id
+  if (!blockID) throw new Error('No se pudo crear el bloque Portfolio de Inicio.')
+
+  for (const [index, item] of (portfolio.techStack || []).entries()) {
+    await pool.query(
+      'INSERT INTO "pages_blocks_portfolio_showcase_tech_stack" ("_order", "_parent_id", "label") VALUES ($1, $2, $3)',
+      [index + 1, blockID, item.label],
+    )
+  }
+  for (const [index, item] of (portfolio.projects || []).entries()) {
+    await pool.query(
+      `INSERT INTO "pages_blocks_portfolio_showcase_projects"
+        ("_order", "_parent_id", "title", "type", "description", "image_u_r_l", "url")
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [index + 1, blockID, item.title, item.type, item.description, item.imageURL, item.url],
+    )
+  }
+  await pool.query(
+    'UPDATE "pages" SET "page_appearance" = $1::jsonb, "home_template_version" = $2, "updated_at" = NOW() WHERE "id" = $3',
+    [JSON.stringify(portfolioPageAppearance), PORTFOLIO_HOME_TEMPLATE_VERSION, page.id],
+  )
+}
+
+async function persistHomeBackgroundNative(payload: unknown, page: Doc, pageAppearance: Doc, layout: Doc[]) {
+  const pool = nativePool(payload)
+  if (!pool || page.id === undefined || page.id === null) return false
+  const showcase = layout.find((block) => block.blockType === 'portfolioShowcase')
+  if (!showcase) return false
+  await pool.query('UPDATE "pages" SET "page_appearance" = $1::jsonb, "updated_at" = NOW() WHERE "id" = $2', [JSON.stringify(pageAppearance), page.id])
+  await pool.query(
+    'UPDATE "pages_blocks_portfolio_showcase" SET "appearance" = $1::jsonb WHERE "_parent_id" = $2',
+    [JSON.stringify(showcase.appearance || {}), page.id],
+  )
+  return true
+}
+
 async function applySavedBackgroundToHome(payload: any, page: Doc) {
   const existingAppearance = isDoc(page.pageAppearance) ? page.pageAppearance : {}
   const hasBackground = existingAppearance.backgroundMode === 'image' && isDoc(existingAppearance.savedBackground)
@@ -71,6 +158,17 @@ async function applySavedBackgroundToHome(payload: any, page: Doc) {
   const savedBackground = compactBackground(background)
   const fit = savedBackground.playback?.fit === 'contain' ? 'contain' : 'cover'
   const overlayOpacity = Number(savedBackground.playback?.overlayOpacity ?? 46)
+  const nextPageAppearance = {
+    ...portfolioPageAppearance,
+    ...existingAppearance,
+    backgroundMode: 'image',
+    savedBackground,
+    backgroundFit: fit,
+    surfaceColor: '#10110f',
+    surfaceOpacity: 100,
+    overlayColor: '#10110f',
+    overlayOpacity,
+  }
   const nextLayout = showcase
     ? layout.map((block, index) => index === showcaseIndex
       ? {
@@ -96,17 +194,7 @@ async function applySavedBackgroundToHome(payload: any, page: Doc) {
       draft: false,
       overrideAccess: true,
       data: {
-        pageAppearance: {
-          ...portfolioPageAppearance,
-          ...existingAppearance,
-          backgroundMode: 'image',
-          savedBackground,
-          backgroundFit: fit,
-          surfaceColor: '#10110f',
-          surfaceOpacity: 100,
-          overlayColor: '#10110f',
-          overlayOpacity,
-        },
+        pageAppearance: nextPageAppearance,
         layout: nextLayout,
       } as never,
     })
@@ -115,19 +203,12 @@ async function applySavedBackgroundToHome(payload: any, page: Doc) {
     // the first persistence attempt. Keep the resolved background visible;
     // the next successful native Payload save persists the same data.
     console.error('[home-background] Could not persist saved background', error)
+    await persistHomeBackgroundNative(payload, page, nextPageAppearance, nextLayout).catch((nativeError) => {
+      console.error('[home-background] Native persistence also failed', nativeError)
+    })
     return {
       ...page,
-      pageAppearance: {
-        ...portfolioPageAppearance,
-        ...existingAppearance,
-        backgroundMode: 'image',
-        savedBackground,
-        backgroundFit: fit,
-        surfaceColor: '#10110f',
-        surfaceOpacity: 100,
-        overlayColor: '#10110f',
-        overlayOpacity,
-      },
+      pageAppearance: nextPageAppearance,
       layout: nextLayout,
     }
   }
@@ -185,6 +266,9 @@ export async function getPortfolioHomePage() {
       // remains a real portfolio immediately, while the exact server error is
       // retained in Vercel logs for the schema doctor.
       console.error('[home-template] Could not persist portfolio template', error)
+      await persistLegacyHomePortfolio(payload, page as Doc).catch((nativeError) => {
+        console.error('[home-template] Native migration also failed', nativeError)
+      })
       page = {
         ...page,
         layout: portfolioHomeLayout(),
