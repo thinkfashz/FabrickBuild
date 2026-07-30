@@ -1,7 +1,7 @@
 import { AIPageStyle } from '@/components/AIPageStyle'
-import { CinematicScrollExperience } from '@/components/CinematicScrollExperience'
 import { PageSurface } from '@/components/PageSurface'
 import { RenderBlocks } from '@/components/RenderBlocks'
+import { portfolioLayoutFromPage } from '@/lib/home-template'
 import { getGlobals, getHeroBackground, getPageBySlug } from '@/lib/queries'
 
 const fallback = [
@@ -56,29 +56,33 @@ export default async function HomePage() {
   ])
   const settings = globals.settings as Record<string, any> | null
   const experience = String(settings?.homepageExperience || 'luxury')
-  const showLuxury = experience === 'luxury'
-  const sourceBlocks = ((page?.layout as Record<string, unknown>[]) || fallback)
-  const blocks = showLuxury && settings?.hideFirstHeroWhenLuxury !== false && sourceBlocks[0]?.blockType === 'hero'
-    ? sourceBlocks.slice(1)
-    : sourceBlocks
+  const usePortfolioFactory = experience === 'luxury' || experience === 'portfolio'
   const selectedBackground =
     page?.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
       ? page.savedBackground
       : defaultBackground
-  const backgroundVideo = page?.backgroundSource === 'video' ? page.backgroundVideo : null
 
+  if (usePortfolioFactory) {
+    const portfolioBlocks = portfolioLayoutFromPage(
+      (page?.layout as Record<string, any>[] | null | undefined),
+      selectedBackground as Record<string, any> | null,
+    )
+    return (
+      <>
+        <AIPageStyle css={page?.aiStyle as string | undefined} />
+        <main className="ai-page portfolio-factory-page">
+          <RenderBlocks blocks={portfolioBlocks} />
+        </main>
+      </>
+    )
+  }
+
+  const blocks = ((page?.layout as Record<string, unknown>[]) || fallback)
   return (
     <PageSurface page={page as Record<string, unknown> | null}>
       <AIPageStyle css={page?.aiStyle as string | undefined} />
       <div className="ai-page">
-        {showLuxury && (
-          <CinematicScrollExperience
-            background={selectedBackground as never}
-            backgroundVideo={backgroundVideo as never}
-            performance={settings?.performance as never}
-          />
-        )}
-        {experience !== 'blocks' || blocks.length ? <RenderBlocks blocks={blocks} /> : null}
+        <RenderBlocks blocks={blocks} />
       </div>
     </PageSurface>
   )
