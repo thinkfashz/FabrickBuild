@@ -2,6 +2,7 @@ import { AIPageStyle } from '@/components/AIPageStyle'
 import { PageSurface } from '@/components/PageSurface'
 import { RenderBlocks } from '@/components/RenderBlocks'
 import { portfolioLayoutFromPage } from '@/lib/home-template'
+import { repairLegacyBackgroundFrames } from '@/lib/legacy-background-recovery'
 import { getGlobals, getHeroBackground, getPageBySlug } from '@/lib/queries'
 
 const fallback = [
@@ -57,10 +58,13 @@ export default async function HomePage() {
   const settings = globals.settings as Record<string, any> | null
   const experience = String(settings?.homepageExperience || 'luxury')
   const usePortfolioFactory = experience === 'luxury' || experience === 'portfolio'
-  const selectedBackground =
+  const configuredBackground =
     page?.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
       ? page.savedBackground
       : defaultBackground
+  const selectedBackground = await repairLegacyBackgroundFrames(
+    configuredBackground as Record<string, any> | null,
+  )
 
   if (usePortfolioFactory) {
     const portfolioBlocks = portfolioLayoutFromPage(
