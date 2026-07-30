@@ -11,7 +11,7 @@ export function AnimatedReusablePreset({ slug }: { slug: string }) {
     if (!element.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const targets = element.current.querySelectorAll('[data-anime]')
     const animation = animate(targets, { opacity: [0, 1], translateY: [18, 0], delay: stagger(90), duration: 680, ease: 'outExpo' })
-    return () => animation.revert?.()
+    return () => { animation.revert?.() }
   }, [])
 
   if (slug === 'preset-animated-solid-cta') return <section ref={element} className="anime-preset anime-preset--solid"><span data-anime><Sparkles size={15} /> CTA ANIMADO</span><h2 data-anime>Una decisión clara merece una acción rápida.</h2><p data-anime>Botón sólido reutilizable: cambia colores, borde, radio y tipografía desde Apariencia visual.</p><Link data-anime href="#contacto">Solicitar propuesta <ArrowRight size={16} /></Link></section>
