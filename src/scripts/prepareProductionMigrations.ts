@@ -43,7 +43,9 @@ async function run() {
   }
 }
 
-run().catch((error) => {
+try {
+  await run()
+} catch (error) {
   console.error('MIGRATION_PREPARE_FAILED: no fue posible preparar PostgreSQL.', error)
   process.exitCode = 1
-})
+}
