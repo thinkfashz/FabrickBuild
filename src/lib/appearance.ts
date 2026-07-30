@@ -1,8 +1,21 @@
 import type { CSSProperties } from 'react'
 
 import { defaultAppearance, type AppearanceValue } from '@/fields/appearance'
+import { getMediaURL } from '@/lib/media'
 
 type CSSVars = CSSProperties & Record<`--${string}`, string | number>
+type Doc = Record<string, any>
+
+export type FrameSequence = {
+  desktopFrames: string[]
+  mobileFrames: string[]
+  poster: string | null
+  trigger: 'scroll' | 'autoplay' | 'loop'
+  fit: 'cover' | 'contain'
+  scrub: number
+  pin: boolean
+  overlayOpacity: number
+}
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => {
   const numeric = Number(value)
@@ -19,6 +32,69 @@ const safeBackgroundURL = (value: unknown) => {
   const normalized = value.trim()
   if (/^(https?:\/\/|\/)/i.test(normalized)) return normalized.replace(/["'()]/g, '')
   return ''
+}
+
+const asDoc = (value: unknown): Doc | null => value && typeof value === 'object' ? value as Doc : null
+
+function frameURLs(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const unique = new Set<string>()
+  for (const item of value) {
+    const url = getMediaURL(item, 'hero') || getMediaURL(item)
+    if (url) unique.add(url)
+  }
+  return Array.from(unique)
+}
+
+function backgroundPoster(background: Doc | null): string | null {
+  if (!background) return null
+  return (
+    getMediaURL(background.poster, 'hero') ||
+    getMediaURL(background.poster) ||
+    getMediaURL(background.image, 'hero') ||
+    getMediaURL(background.image) ||
+    getMediaURL(Array.isArray(background.desktopFrames) ? background.desktopFrames[0] : null, 'hero') ||
+    getMediaURL(Array.isArray(background.desktopFrames) ? background.desktopFrames[0] : null) ||
+    getMediaURL(Array.isArray(background.mobileFrames) ? background.mobileFrames[0] : null, 'hero') ||
+    getMediaURL(Array.isArray(background.mobileFrames) ? background.mobileFrames[0] : null) ||
+    null
+  )
+}
+
+/**
+ * Resuelve la secuencia desde el Background relacionado en Payload.
+ * No limita la cantidad: reproduce todos los frames generados y relacionados.
+ */
+export function getPortfolioFrameSequence(block: Doc): FrameSequence | null {
+  const appearance = asDoc(block.appearance) || {}
+  const candidates = [
+    asDoc(block.runtimeBackground),
+    asDoc(block.savedBackground),
+    asDoc(appearance.savedBackground),
+  ].filter((item): item is Doc => Boolean(item))
+
+  const background = candidates.find((item) => {
+    const desktop = Array.isArray(item.desktopFrames) ? item.desktopFrames.length : 0
+    const mobile = Array.isArray(item.mobileFrames) ? item.mobileFrames.length : 0
+    return item.kind === 'frames' || desktop > 0 || mobile > 0
+  }) || null
+
+  if (!background) return null
+  const desktopFrames = frameURLs(background.desktopFrames)
+  const mobileFrames = frameURLs(background.mobileFrames)
+  if (!desktopFrames.length && !mobileFrames.length) return null
+
+  const trigger = background.playback?.trigger
+  return {
+    desktopFrames,
+    mobileFrames,
+    poster: backgroundPoster(background),
+    trigger: trigger === 'autoplay' || trigger === 'loop' ? trigger : 'scroll',
+    fit: background.playback?.fit === 'contain' ? 'contain' : 'cover',
+    scrub: clamp(background.playback?.scrub, 0.08, 3, 0.32),
+    pin: background.playback?.pin !== false,
+    overlayOpacity: clamp(background.playback?.overlayOpacity, 0, 82, 24),
+  }
 }
 
 export function normalizeAppearance(value: unknown): Required<AppearanceValue> {
@@ -102,4 +178,22 @@ export function appearanceProps(value: unknown, extraClassName = '') {
   }
 
   return { appearance, className, style }
+}
+
+/** Variables de compatibilidad visual usadas por el preset aprobado. */
+export function portfolioAppearanceProps(block: Doc) {
+  const appearance = normalizeAppearance(block.appearance)
+  const style: CSSVars = {
+    '--fabrick-eyebrow': appearance.accentColor,
+    '--fabrick-heading': appearance.headingColor,
+    '--fabrick-copy': appearance.bodyColor,
+    '--fabrick-button-bg': appearance.buttonColor,
+    '--fabrick-button-text': appearance.buttonTextColor,
+    '--fabrick-font-scale': appearance.fontScale / 100,
+    '--fabrick-radius': `${appearance.cornerRadius}px`,
+  }
+  return {
+    className: `portfolio-showcase fabrick-block fabrick-width-${appearance.contentWidth}`,
+    style,
+  }
 }
