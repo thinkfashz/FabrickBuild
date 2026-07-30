@@ -17,19 +17,25 @@ export const Media: CollectionConfig = {
     useAsTitle: 'alt',
     defaultColumns: ['filename', 'alt', 'category', 'device', 'frameOrder', 'updatedAt'],
     description:
-      'Carga imágenes individuales o en grupo. Para secuencias usa nombres correlativos como frame_001, frame_002 y luego crea un Background multimedia.',
+      'Las imágenes nuevas se convierten a WebP y generan variantes thumbnail, card y hero. Para secuencias usa nombres correlativos como frame_001, frame_002.',
   },
   upload: {
     staticDir: 'media',
-    mimeTypes: ['image/*', 'application/pdf', 'video/mp4'],
+    bulkUpload: true,
+    displayPreview: true,
+    mimeTypes: ['image/*', 'application/pdf', 'video/mp4', 'video/webm'],
     ...(imageProcessingEnabled
       ? {
           adminThumbnail: 'thumbnail',
           focalPoint: true,
+          formatOptions: {
+            format: 'webp' as const,
+            options: { quality: 82, effort: 5 },
+          },
           imageSizes: [
-            { name: 'thumbnail', width: 480, height: 320, position: 'centre' as const },
-            { name: 'card', width: 900, height: 650, position: 'centre' as const },
-            { name: 'hero', width: 1920, height: 1080, position: 'centre' as const },
+            { name: 'thumbnail', width: 480, height: 320, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'card', width: 960, height: 720, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'hero', width: 1920, position: 'centre' as const, withoutEnlargement: true },
           ],
         }
       : {
@@ -65,7 +71,7 @@ export const Media: CollectionConfig = {
         { label: 'Móvil vertical', value: 'mobile' },
       ],
       admin: {
-        description: 'Marca los frames como Web o Móvil para filtrarlos fácilmente al crear un background.',
+        description: 'Marca los frames como Web o Móvil para cargar solo la secuencia adecuada en cada dispositivo.',
       },
     },
     {
