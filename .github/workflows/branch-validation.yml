@@ -1,6 +1,9 @@
 name: Validate CMS branch
 
 on:
+  push:
+    branches:
+      - agent/complete-cms-performance
   workflow_dispatch:
     inputs:
       ref:
