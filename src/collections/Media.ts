@@ -61,6 +61,15 @@ export const Media: CollectionConfig = {
     },
     { name: 'externalURL', type: 'text', label: 'URL externa del archivo', admin: { readOnly: true } },
     { name: 'storageKey', type: 'text', index: true, label: 'Clave remota', admin: { readOnly: true } },
+    // Database-backed uploads are deliberately private. Payload never returns
+    // this field in public REST responses; `/api/media-file/:id` streams it
+    // with the appropriate content type instead.
+    {
+      name: 'fileData',
+      type: 'textarea',
+      access: { read: () => false, create: () => false, update: () => false },
+      admin: { hidden: true },
+    },
     { name: 'storageIntegrationID', type: 'text', label: 'Integración de almacenamiento', admin: { readOnly: true } },
     {
       name: 'storageVisibility',

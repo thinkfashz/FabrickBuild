@@ -60,6 +60,13 @@ async function repairSchema(payload: Payload): Promise<void> {
       ALTER TABLE IF EXISTS "media"
       ADD COLUMN IF NOT EXISTS "storage_visibility" varchar DEFAULT 'private';
     `,
+    // Fallback for the native Payload uploader when no external object store
+    // has been configured yet. This avoids Vercel's non-persistent disk while
+    // keeping content private behind /api/media-file/:id.
+    sql`
+      ALTER TABLE IF EXISTS "media"
+      ADD COLUMN IF NOT EXISTS "file_data" text;
+    `,
     sql`CREATE INDEX IF NOT EXISTS "media_storage_provider_idx" ON "media" ("storage_provider");`,
     sql`CREATE INDEX IF NOT EXISTS "media_storage_key_idx" ON "media" ("storage_key");`,
     sql`CREATE INDEX IF NOT EXISTS "media_storage_folder_idx" ON "media" ("storage_folder");`,

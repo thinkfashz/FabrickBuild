@@ -21,7 +21,7 @@ export type ManagedAsset = {
   size?: number
   uploadedAt?: string
   contentType?: string
-  provider: Exclude<MediaSource, 'database'>
+  provider: MediaSource
 }
 
 type Credentials = Record<string, string>
@@ -364,22 +364,55 @@ export async function uploadSystemMedia(payload: Payload, args: {
   }
   const folder = cleanFolder(args.folder)
   const name = cleanFileName(args.file.name)
-  const result = await putBlob(`${folder}/${Date.now()}-${name}`, args.file, systemBlobToken())
-  const asset: ManagedAsset = {
-    key: result.pathname,
-    url: result.url,
-    name,
-    size: args.file.size,
-    contentType: args.file.type,
-    provider: 'vercel-blob',
+  const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
+
+  // Native Payload uploads must still persist when the project has not linked
+  // a Blob store. In that case the bytes live in PostgreSQL, not in Vercel's
+  // ephemeral filesystem. This keeps the default "Base de datos" choice
+  // truthful and makes the admin usable before configuring a provider.
+  const databaseFallback = !token
+  let asset: ManagedAsset
+  if (databaseFallback) {
+    asset = {
+      key: `${folder}/${Date.now()}-${name}`,
+      url: '',
+      name,
+      size: args.file.size,
+      contentType: args.file.type,
+      provider: 'database',
+    }
+  } else {
+    const result = await putBlob(`${folder}/${Date.now()}-${name}`, args.file, token)
+    asset = {
+      key: result.pathname,
+      url: result.url,
+      name,
+      size: args.file.size,
+      contentType: args.file.type,
+      provider: 'vercel-blob',
+    }
   }
-  const media = await createMediaRecord(payload, {
+
+  let media = await createMediaRecord(payload, {
     asset,
     folder,
     alt: args.alt,
     category: args.category,
     visibility: 'private',
   })
+  if (databaseFallback) {
+    media = await db(payload).update({
+      collection: 'media',
+      id: media.id,
+      depth: 0,
+      overrideAccess: true,
+      data: {
+        fileData: Buffer.from(await args.file.arrayBuffer()).toString('base64'),
+        externalURL: `/api/media-file/${media.id}`,
+        storageVisibility: 'private',
+      },
+    })
+  }
   const enriched = await db(payload).update({
     collection: 'media',
     id: media.id,
@@ -411,6 +444,22 @@ export async function readPrivateBlob(payload: Payload, mediaID: string | number
     throw Object.assign(new Error('El archivo ya no existe en el Blob.'), { status: 404 })
   }
   return { media, result }
+}
+
+/** Read a private media record no matter whether its bytes are in Blob or PostgreSQL. */
+export async function readStoredMedia(payload: Payload, mediaID: string | number) {
+  const media = await db(payload).findByID({ collection: 'media', id: mediaID, depth: 0, overrideAccess: true })
+  if (media.storageProvider === 'database') {
+    const encoded = typeof media.fileData === 'string' ? media.fileData : ''
+    if (!encoded) throw Object.assign(new Error('El archivo de base de datos no está disponible.'), { status: 404 })
+    return {
+      media,
+      data: Buffer.from(encoded, 'base64'),
+      contentType: media.mimeType || 'application/octet-stream',
+    }
+  }
+  const result = await readPrivateBlob(payload, mediaID)
+  return { media: result.media, result: result.result }
 }
 
 export async function removeManagedAsset(payload: Payload, args: {
