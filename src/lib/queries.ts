@@ -2,6 +2,128 @@ import { unstable_cache } from 'next/cache'
 
 import { getCMS } from './cms'
 
+type FrameMedia = {
+  id?: string | number
+  url?: string | null
+  filename?: string | null
+  category?: string | null
+  device?: string | null
+  frameOrder?: number | null
+  collectionKey?: string | null
+}
+
+type BackgroundDoc = Record<string, any> & {
+  name?: string | null
+  slug?: string | null
+  desktopFrames?: unknown[] | null
+  mobileFrames?: unknown[] | null
+}
+
+const frameNumber = (filename?: string | null) => {
+  const values = filename?.match(/\d+/g)
+  const number = values?.length ? Number(values[values.length - 1]) : Number.MAX_SAFE_INTEGER
+  return Number.isFinite(number) ? number : Number.MAX_SAFE_INTEGER
+}
+
+const normalizedKey = (value: unknown) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+async function recoverCinematicFrames(payload: Awaited<ReturnType<typeof getCMS>>, background: BackgroundDoc | null) {
+  if (!background) return null
+  const currentDesktop = Array.isArray(background.desktopFrames) ? background.desktopFrames : []
+  const currentMobile = Array.isArray(background.mobileFrames) ? background.mobileFrames : []
+  if (currentDesktop.length >= 2 || currentMobile.length >= 2) {
+    console.info('[cinematic-background] Relaciones existentes.', {
+      background: background.slug || background.name,
+      desktop: currentDesktop.length,
+      mobile: currentMobile.length,
+    })
+    return background
+  }
+
+  const result = await payload.find({
+    collection: 'media',
+    depth: 0,
+    limit: 200,
+    sort: 'frameOrder',
+    overrideAccess: false,
+    where: {
+      or: [
+        { category: { equals: 'frame' } },
+        { filename: { contains: 'frame_' } },
+        { filename: { contains: 'frame-' } },
+      ],
+    } as any,
+  })
+  const docs = (result.docs || []) as FrameMedia[]
+  if (!docs.length) {
+    console.warn('[cinematic-background] No existen archivos de frame en la biblioteca multimedia.', {
+      background: background.slug || background.name,
+    })
+    return background
+  }
+
+  const groups = new Map<string, FrameMedia[]>()
+  for (const doc of docs) {
+    const key = normalizedKey(doc.collectionKey) || 'sin-grupo'
+    const group = groups.get(key) || []
+    group.push(doc)
+    groups.set(key, group)
+  }
+
+  const preferredKeys = [normalizedKey(background.slug), normalizedKey(background.name)].filter(Boolean)
+  let selected: FrameMedia[] | undefined
+  for (const key of preferredKeys) {
+    const exact = groups.get(key)
+    if (exact?.length) {
+      selected = exact
+      break
+    }
+    const partial = Array.from(groups.entries()).find(([groupKey]) => groupKey.includes(key) || key.includes(groupKey))
+    if (partial?.[1]?.length) {
+      selected = partial[1]
+      break
+    }
+  }
+  if (!selected) selected = Array.from(groups.values()).sort((a, b) => b.length - a.length)[0] || docs
+
+  const ordered = [...selected]
+    .sort((a, b) => {
+      const orderA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
+      const orderB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
+      if (orderA !== orderB) return orderA - orderB
+      const fileA = frameNumber(a.filename)
+      const fileB = frameNumber(b.filename)
+      if (fileA !== fileB) return fileA - fileB
+      return String(a.filename || '').localeCompare(String(b.filename || ''), 'es', { numeric: true })
+    })
+    .slice(0, 60)
+
+  const desktopFrames = ordered.filter((doc) => doc.device !== 'mobile')
+  const mobileFrames = ordered.filter((doc) => doc.device === 'mobile')
+  const recovered = {
+    ...background,
+    desktopFrames: desktopFrames.length ? desktopFrames : currentDesktop,
+    mobileFrames: mobileFrames.length ? mobileFrames : currentMobile,
+    frameCountDesktop: desktopFrames.length || currentDesktop.length,
+    frameCountMobile: mobileFrames.length || currentMobile.length,
+  }
+
+  console.info('[cinematic-background] Secuencia recuperada desde Multimedia.', {
+    background: background.slug || background.name,
+    candidates: docs.length,
+    selected: ordered.length,
+    desktop: recovered.desktopFrames.length,
+    mobile: recovered.mobileFrames.length,
+  })
+  return recovered
+}
+
 const publicPageBySlug = unstable_cache(
   async (slug: string) => {
     const payload = await getCMS()
@@ -63,7 +185,7 @@ const publicHeroBackground = unstable_cache(
         ],
       },
     })
-    return result.docs[0] || null
+    return recoverCinematicFrames(payload, (result.docs[0] || null) as BackgroundDoc | null)
   },
   ['fabrick-hero-background'],
   { revalidate: 300, tags: ['fabrick-backgrounds'] },
