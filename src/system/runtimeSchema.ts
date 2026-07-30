@@ -21,9 +21,20 @@ async function repairSchema(payload: Payload): Promise<void> {
       ALTER TABLE IF EXISTS "payload_locked_documents_rels"
       ADD COLUMN IF NOT EXISTS "backgrounds_id" integer;
     `,
+    // Payload includes every collection in its document-lock relation query.
+    // Products was introduced after the original database, so its relation
+    // must exist before any document (including a user) can be updated.
+    sql`
+      ALTER TABLE IF EXISTS "payload_locked_documents_rels"
+      ADD COLUMN IF NOT EXISTS "products_id" integer;
+    `,
     sql`
       CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_backgrounds_id_idx"
       ON "payload_locked_documents_rels" ("backgrounds_id");
+    `,
+    sql`
+      CREATE INDEX IF NOT EXISTS "payload_locked_documents_rels_products_id_idx"
+      ON "payload_locked_documents_rels" ("products_id");
     `,
     sql`
       ALTER TABLE IF EXISTS "media"
