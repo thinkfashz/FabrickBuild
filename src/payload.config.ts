@@ -64,6 +64,7 @@ const rawDatabaseURL =
   process.env.POSTGRES_URL ||
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
 const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
+const poolMax = Math.min(20, Math.max(2, Number(process.env.POSTGRES_POOL_MAX || 8)))
 
 const blobToken =
   process.env.BLOB_READ_WRITE_TOKEN ||
@@ -92,8 +93,13 @@ export default buildConfig({
   },
   editor: lexicalEditor({}),
   db: postgresAdapter({
+    migrationDir: path.resolve(dirname, 'migrations'),
     pool: {
       connectionString: databaseURL,
+      max: poolMax,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 8_000,
+      allowExitOnIdle: true,
     },
   }),
   collections: [
