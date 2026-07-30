@@ -36,6 +36,22 @@ export const revalidatePageDelete: CollectionAfterDeleteHook = ({ doc }) => {
   return doc
 }
 
+export const revalidateBackgrounds: CollectionAfterChangeHook = ({ doc }) => {
+  refreshTag('fabrick-backgrounds')
+  refreshTag('fabrick-pages')
+  refreshPath('/')
+  return doc
+}
+
+export const revalidateMedia: CollectionAfterChangeHook = ({ doc }) => {
+  if (doc?.category === 'frame' || String(doc?.filename || '').toLowerCase().includes('frame')) {
+    refreshTag('fabrick-backgrounds')
+    refreshTag('fabrick-pages')
+    refreshPath('/')
+  }
+  return doc
+}
+
 export const revalidateServices: CollectionAfterChangeHook = ({ doc }) => {
   refreshTag('fabrick-services')
   if (typeof doc?.slug === 'string') refreshTag(`fabrick-service-${doc.slug}`)
