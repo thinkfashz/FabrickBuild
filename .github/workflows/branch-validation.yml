@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/complete-cms-performance
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       ref:
