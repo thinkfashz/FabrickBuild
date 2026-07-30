@@ -5,66 +5,7 @@ type DrizzleLike = {
   execute: (statement: unknown) => Promise<unknown>
 }
 
-type PayloadSchemaAdapter = {
-  drizzle: DrizzleLike
-  extensions?: Record<string, boolean>
-  requireDrizzleKit?: () => {
-    pushSchema: (
-      schema: unknown,
-      drizzle: DrizzleLike,
-      schemaNames?: string[],
-      tablesFilter?: string[],
-      extensionsFilter?: string[],
-    ) => Promise<{ statementsToExecute: string[] }>
-  }
-  schema: unknown
-  schemaName?: string
-  tablesFilter?: string[]
-}
-
 let schemaReady: Promise<void> | null = null
-
-function isDestructiveSchemaStatement(statement: string): boolean {
-  return /\b(DROP|DELETE|TRUNCATE|RENAME)\b|\bALTER\s+COLUMN\b/i.test(statement)
-}
-
-/**
- * Adds the Payload tables and columns introduced by the current application
- * schema without executing a destructive clean-up from Drizzle's diff.
- *
- * This runs on the first authenticated admin/API request, rather than inside
- * a Vercel build. It means a preview build can never mutate the shared data
- * store, and a legacy populated column can never block delivery of an
- * additive editor upgrade.
- */
-export async function synchronizeAdditivePayloadSchema(payload: Payload): Promise<void> {
-  const adapter = payload.db as unknown as PayloadSchemaAdapter
-  if (!adapter.drizzle || !adapter.requireDrizzleKit) return
-
-  const { pushSchema } = adapter.requireDrizzleKit()
-  const result = await pushSchema(
-    adapter.schema,
-    adapter.drizzle,
-    adapter.schemaName ? [adapter.schemaName] : undefined,
-    adapter.tablesFilter,
-    adapter.extensions?.postgis ? ['postgis'] : undefined,
-  )
-
-  const safeStatements = result.statementsToExecute.filter(
-    (statement) => !isDestructiveSchemaStatement(statement),
-  )
-  const skippedStatements = result.statementsToExecute.length - safeStatements.length
-
-  for (const statement of safeStatements) {
-    await adapter.drizzle.execute(sql.raw(statement))
-  }
-
-  if (skippedStatements > 0) {
-    payload.logger.warn(
-      `FabrickBuild conservó ${skippedStatements} cambio(s) destructivo(s) heredado(s) del esquema. No se eliminó contenido.`,
-    )
-  }
-}
 
 /**
  * Additive compatibility repair for installations that were deployed before
@@ -174,7 +115,6 @@ async function repairSchema(payload: Payload): Promise<void> {
   ]
 
   for (const statement of statements) await drizzle.execute(statement)
-  await synchronizeAdditivePayloadSchema(payload)
 }
 
 export function ensureRuntimeSchema(payload: Payload): Promise<void> {

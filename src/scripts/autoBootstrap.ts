@@ -1,7 +1,7 @@
 import { getPayload, type Payload } from 'payload'
 
 import { BootstrapError, readBootstrapState, runOneTimeBootstrap } from '../system/bootstrap'
-import { synchronizeAdditivePayloadSchema } from '../system/runtimeSchema'
+import { ensureRuntimeSchema } from '../system/runtimeSchema'
 import config from '../payload.config'
 
 async function verifyConfiguredAdmin(payload: Payload, email: string, password: string): Promise<void> {
@@ -33,7 +33,7 @@ async function verifyConfiguredAdmin(payload: Payload, email: string, password: 
 }
 
 async function synchronizeSafeSchema(payload: Payload): Promise<boolean> {
-  await synchronizeAdditivePayloadSchema(payload)
+  await ensureRuntimeSchema(payload)
   return true
 }
 
