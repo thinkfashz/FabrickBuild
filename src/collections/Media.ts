@@ -15,7 +15,7 @@ export const Media: CollectionConfig = {
   admin: {
     group: 'Multimedia',
     useAsTitle: 'alt',
-    defaultColumns: ['filename', 'alt', 'category', 'device', 'frameOrder', 'updatedAt'],
+    defaultColumns: ['filename', 'alt', 'collectionKey', 'storageFolder', 'storageProvider', 'device', 'frameOrder', 'updatedAt'],
     description:
       'Carga imágenes individuales o en grupo. Para secuencias usa nombres correlativos como frame_001, frame_002 y luego crea un Background multimedia.',
   },

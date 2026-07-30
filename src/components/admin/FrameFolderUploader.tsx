@@ -15,6 +15,81 @@ type PreviewFile = {
   order: number
 }
 
+const MAX_FRAME_BYTES = 190 * 1024
+
+const webpName = (name: string) => `${name.replace(/\.[^.]+$/, '') || 'frame'}.webp`
+
+async function openImage(file: File) {
+  const url = URL.createObjectURL(file)
+  try {
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = () => reject(new Error(`No se pudo procesar ${file.name}`))
+      image.src = url
+    })
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+async function asWebP(file: File, maxEdge: number): Promise<File> {
+  if (file.type === 'image/webp' && file.size <= MAX_FRAME_BYTES) return file
+  const image = await openImage(file)
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight)
+  let scale = Math.min(1, maxEdge / Math.max(1, longestSide))
+  let quality = 0.82
+  let output: Blob | null = null
+
+  // The loop gives a practical hard ceiling for cellular use while retaining
+  // enough detail for a canvas sequence. It falls back gracefully on browsers
+  // that do not support WebP encoding.
+  for (let attempt = 0; attempt < 18; attempt += 1) {
+    const width = Math.max(2, Math.round(image.naturalWidth * scale))
+    const height = Math.max(2, Math.round(image.naturalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('El navegador no pudo preparar el canvas de optimización.')
+    context.drawImage(image, 0, 0, width, height)
+    output = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', quality))
+    if (!output) return file
+    if (output.size <= MAX_FRAME_BYTES) break
+    if (quality > 0.48) quality = Math.max(0.48, quality - 0.09)
+    else { scale *= 0.82; quality = 0.76 }
+  }
+  return output ? new File([output], webpName(file.name), { type: 'image/webp', lastModified: file.lastModified }) : file
+}
+
+const videoMetadata = (video: HTMLVideoElement) => new Promise<void>((resolve, reject) => {
+  video.onloadedmetadata = () => resolve()
+  video.onerror = () => reject(new Error('No se pudo leer este vídeo. Usa MP4/H.264 o un vídeo compatible con el navegador.'))
+})
+
+const seekVideo = (video: HTMLVideoElement, time: number) => new Promise<void>((resolve, reject) => {
+  let fail: () => void
+  const done = () => { video.removeEventListener('seeked', done); video.removeEventListener('error', fail); resolve() }
+  fail = () => { video.removeEventListener('seeked', done); video.removeEventListener('error', fail); reject(new Error('No se pudo extraer un fotograma del vídeo.')) }
+  video.addEventListener('seeked', done, { once: true })
+  video.addEventListener('error', fail, { once: true })
+  video.currentTime = time
+})
+
+async function videoFrame(video: HTMLVideoElement, file: File, index: number, maxEdge: number) {
+  const scale = Math.min(1, maxEdge / Math.max(video.videoWidth, video.videoHeight, 1))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(2, Math.round(video.videoWidth * scale))
+  canvas.height = Math.max(2, Math.round(video.videoHeight * scale))
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('El navegador no pudo crear el canvas de vídeo.')
+  context.drawImage(video, 0, 0, canvas.width, canvas.height)
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82))
+  if (!blob) throw new Error('No se pudo convertir este vídeo a WebP.')
+  const name = `${cleanName(file.name).replace(/\s+/g, '-')}-${String(index + 1).padStart(3, '0')}.webp`
+  return asWebP(new File([blob], name, { type: 'image/webp', lastModified: file.lastModified }), maxEdge)
+}
+
 const naturalSort = (files: File[]) =>
   [...files].sort((a, b) => {
     const pathA = a.webkitRelativePath || a.name
@@ -34,11 +109,13 @@ const groupName = (files: File[]) => {
 export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
   const folderInput = useRef<HTMLInputElement | null>(null)
   const imageInput = useRef<HTMLInputElement | null>(null)
+  const videoInput = useRef<HTMLInputElement | null>(null)
   const [target, setTarget] = useState<UploadTarget>('desktopFrames')
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState('')
   const [preview, setPreview] = useState<PreviewFile[]>([])
+  const [album, setAlbum] = useState('secuencia')
   const desktop = useField<unknown[]>({ path: 'desktopFrames' })
   const mobile = useField<unknown[]>({ path: 'mobileFrames' })
 
@@ -54,7 +131,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
     setPreview([])
   }
 
-  function prepare(filesList: FileList | null) {
+  async function prepare(filesList: FileList | null) {
     if (!filesList?.length || busy) return
     const files = naturalSort(Array.from(filesList).filter((file) => file.type.startsWith('image/')))
     if (!files.length) {
@@ -62,15 +139,77 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
       return
     }
 
-    clearPreview()
-    setPreview(files.map((file, index) => ({ file, url: URL.createObjectURL(file), order: index + 1 })))
-    setMessage(`${files.length} imágenes detectadas para ${targetLabel}. Revisa el orden y pulsa “Subir y organizar”.`)
+    setBusy(true)
+    setMessage(`Optimizando ${files.length} imágenes a WebP para que cada frame use hasta 190 KB…`)
+    const sourceAlbum = groupName(files)
+    try {
+      const optimized: File[] = []
+      const maxEdge = target === 'desktopFrames' ? 1920 : 1080
+      for (let index = 0; index < files.length; index += 1) {
+        optimized.push(await asWebP(files[index], maxEdge))
+        setProgress(Math.round(((index + 1) / files.length) * 100))
+      }
+      clearPreview()
+      setAlbum(sourceAlbum)
+      setPreview(optimized.map((file, index) => ({ file, url: URL.createObjectURL(file), order: index + 1 })))
+      const totalKB = Math.round(optimized.reduce((total, file) => total + file.size, 0) / 1024)
+      setMessage(`${optimized.length} frames listos para ${targetLabel} en el álbum “${sourceAlbum}” (${totalKB} KB en total). Revisa el orden y pulsa “Subir y organizar”.`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudieron optimizar las imágenes seleccionadas.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function prepareVideo(file: File | null) {
+    if (!file || busy) return
+    if (!file.type.startsWith('video/')) {
+      setMessage('Selecciona un vídeo compatible, idealmente MP4/H.264.')
+      return
+    }
+    setBusy(true)
+    setProgress(0)
+    setMessage('Leyendo el vídeo y preparando hasta 61 fotogramas WebP…')
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'auto'
+    video.muted = true
+    video.playsInline = true
+    video.src = url
+    video.load()
+    try {
+      await videoMetadata(video)
+      if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('El vídeo no tiene una duración válida.')
+      const count = Math.min(61, Math.max(2, Math.ceil(video.duration)))
+      const frames: File[] = []
+      const maxEdge = target === 'desktopFrames' ? 1920 : 1080
+      for (let index = 0; index < count; index += 1) {
+        const time = count === 1 ? 0 : Math.min(video.duration - 0.04, Math.max(0.01, (video.duration * index) / (count - 1)))
+        await seekVideo(video, time)
+        frames.push(await videoFrame(video, file, index, maxEdge))
+        setProgress(Math.round(((index + 1) / count) * 100))
+      }
+      clearPreview()
+      const sourceAlbum = cleanName(file.name).replace(/\s+/g, '-').toLowerCase() || 'video-secuencia'
+      setAlbum(sourceAlbum)
+      setPreview(frames.map((frameFile, index) => ({ file: frameFile, url: URL.createObjectURL(frameFile), order: index + 1 })))
+      const totalKB = Math.round(frames.reduce((total, frameFile) => total + frameFile.size, 0) / 1024)
+      setMessage(`${frames.length} frames extraídos de “${file.name}” en el álbum “${sourceAlbum}” (${totalKB} KB). Revisa y súbelos cuando estés listo.`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudieron extraer los fotogramas del vídeo.')
+    } finally {
+      URL.revokeObjectURL(url)
+      video.removeAttribute('src')
+      video.load()
+      setBusy(false)
+      if (videoInput.current) videoInput.current.value = ''
+    }
   }
 
   async function upload() {
     if (!preview.length || busy) return
     const files = preview.map((item) => item.file)
-    const collectionKey = groupName(files)
+    const collectionKey = album || groupName(files)
 
     setBusy(true)
     setProgress(0)
@@ -134,12 +273,14 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
       <div className="frame-folder-uploader__actions">
         <button type="button" disabled={busy} onClick={() => folderInput.current?.click()}>Subir carpeta</button>
         <button type="button" disabled={busy} onClick={() => imageInput.current?.click()}>Seleccionar imágenes</button>
+        <button type="button" disabled={busy} onClick={() => videoInput.current?.click()}>Extraer vídeo (hasta 61 frames)</button>
         {preview.length > 0 && <button type="button" className="primary" disabled={busy} onClick={() => void upload()}>Subir y organizar</button>}
         {preview.length > 0 && <button type="button" className="ghost" disabled={busy} onClick={clearPreview}>Cancelar</button>}
       </div>
 
-      <input ref={(element) => { folderInput.current = element; element?.setAttribute('webkitdirectory', ''); element?.setAttribute('directory', '') }} hidden type="file" multiple accept="image/*" onChange={(event) => prepare(event.target.files)} />
-      <input ref={imageInput} hidden type="file" multiple accept="image/*" onChange={(event) => prepare(event.target.files)} />
+      <input ref={(element) => { folderInput.current = element; element?.setAttribute('webkitdirectory', ''); element?.setAttribute('directory', '') }} hidden type="file" multiple accept="image/*" onChange={(event) => { void prepare(event.target.files) }} />
+      <input ref={imageInput} hidden type="file" multiple accept="image/*" onChange={(event) => { void prepare(event.target.files) }} />
+      <input ref={videoInput} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(event) => { void prepareVideo(event.target.files?.[0] || null) }} />
 
       {preview.length > 0 && (
         <div className="frame-folder-uploader__preview" aria-label="Vista previa del orden de frames">

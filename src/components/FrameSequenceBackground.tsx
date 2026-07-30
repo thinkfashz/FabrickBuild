@@ -49,31 +49,55 @@ export function FrameSequenceBackground({ sequence }: Props) {
     let animationFrame = 0
     let interval: number | undefined
     let activeFrame = -1
-    let images: HTMLImageElement[] = []
+    let images: Array<HTMLImageElement | undefined> = []
+    let urls: string[] = []
+    let loading = new Set<number>()
+    let cursor = 0
 
     const chooseFrames = () => {
       const useMobile = window.matchMedia('(max-width: 767px)').matches
       return useMobile && sequence.mobileFrames.length ? sequence.mobileFrames : sequence.desktopFrames.length ? sequence.desktopFrames : sequence.mobileFrames
     }
 
+    function requestFrame(index: number) {
+      if (index < 0 || index >= urls.length || images[index] || loading.has(index)) return
+      loading.add(index)
+      const image = new window.Image()
+      image.decoding = 'async'
+      image.addEventListener('load', () => {
+        loading.delete(index)
+        if (!stopped && (index === 0 || index === activeFrame)) draw(index)
+        if (!stopped) warmFrames(index)
+      })
+      image.addEventListener('error', () => {
+        loading.delete(index)
+        if (!stopped) warmFrames(index)
+      })
+      images[index] = image
+      image.src = urls[index]
+    }
+
+    function warmFrames(center: number) {
+      // A 61-frame sequence stays sharp, but it should not open 61 network
+      // requests at once on a phone. Keep the current neighbourhood warm and
+      // progressively fill the rest of the album in the background.
+      for (let index = center - 1; index <= center + 4; index += 1) requestFrame(index)
+      while (loading.size < 3 && cursor < urls.length) requestFrame(cursor++)
+    }
+
     const loadFrames = () => {
-      const urls = chooseFrames()
-      images = urls.map((url) => {
-        const image = new window.Image()
-        image.decoding = 'async'
-        image.src = url
-        return image
-      })
-      images.forEach((image, index) => {
-        image.addEventListener('load', () => {
-          if (!stopped && (index === 0 || index === activeFrame)) draw(index)
-        })
-      })
+      urls = chooseFrames()
+      images = Array(urls.length)
+      loading = new Set<number>()
+      cursor = 0
       activeFrame = -1
+      warmFrames(0)
       draw(0)
     }
 
     const draw = (index: number) => {
+      requestFrame(index)
+      warmFrames(index)
       const image = images[index]
       if (!image || !image.complete) return
       activeFrame = index

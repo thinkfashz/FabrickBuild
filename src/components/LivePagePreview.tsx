@@ -87,8 +87,15 @@ function LiveBlock({ block, depth = 0 }: { block: Doc; depth?: number }) {
       if (component?.layout) return <section {...presentation(block, '')}>{onlyDocs(component.layout).map((nested, index) => <LiveBlock key={nested.id || index} block={nested} depth={depth + 1} />)}</section>
       return <section {...presentation(block, 'section')}><div className="shell"><div className="live-component-card"><Layers3 size={20} /><div><span className="eyebrow">COMPONENTE REUTILIZABLE</span><h2>{component?.title || component?.name || 'Selecciona un componente'}</h2><p>Su contenido se mostrará al guardar o cuando la relación esté disponible.</p></div></div></div></section>
     }
-    case 'portfolioShowcase':
-      return <PortfolioExperience block={block} />
+    case 'portfolioShowcase': {
+      const sequence = getBlockFrameSequence(block)
+      return (
+        <section {...presentation(block, sequence ? 'portfolio-showcase portfolio-showcase--cinematic' : 'portfolio-showcase')}>
+          {sequence && <FrameSequenceBackground sequence={sequence} />}
+          <PortfolioExperience block={block} />
+        </section>
+      )
+    }
     default:
       return <section {...presentation(block, 'section')}><div className="shell"><div className="live-component-card"><Code2 size={20} /><div><span className="eyebrow">BLOQUE</span><h2>{block.blockType}</h2><p>Este bloque aparecerá actualizado al guardar.</p></div></div></div></section>
   }

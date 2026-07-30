@@ -278,8 +278,15 @@ export async function RenderBlocks({
             return <ServicesBlock block={block} key={block.id || index} />
           case 'projectsGrid':
             return <ProjectsBlock block={block} key={block.id || index} />
-          case 'portfolioShowcase':
-            return <section {...presentation(block, '')} key={block.id || index}><PortfolioExperience block={block} /></section>
+          case 'portfolioShowcase': {
+            const frameSequence = getBlockFrameSequence(block)
+            return (
+              <section {...presentation(block, frameSequence ? 'portfolio-showcase portfolio-showcase--cinematic' : 'portfolio-showcase')} key={block.id || index}>
+                {frameSequence && <FrameSequenceBackground sequence={frameSequence} />}
+                <PortfolioExperience block={block} />
+              </section>
+            )
+          }
           case 'content': {
             const media = getMediaURL(block.media, 'hero')
             return (

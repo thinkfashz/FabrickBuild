@@ -76,6 +76,11 @@ async function repairSchema(payload: Payload): Promise<void> {
     sql`ALTER TABLE IF EXISTS "pages" ADD COLUMN IF NOT EXISTS "home_template_version" varchar;`,
     sql`ALTER TABLE IF EXISTS "_pages_v" ADD COLUMN IF NOT EXISTS "page_appearance" jsonb;`,
     sql`ALTER TABLE IF EXISTS "_pages_v" ADD COLUMN IF NOT EXISTS "home_template_version" varchar;`,
+    // Version records prefix every field with `version_`. The earlier
+    // compatibility repair added the live names here, which left the admin
+    // list query failing before it could render any Page.
+    sql`ALTER TABLE IF EXISTS "_pages_v" ADD COLUMN IF NOT EXISTS "version_page_appearance" jsonb;`,
+    sql`ALTER TABLE IF EXISTS "_pages_v" ADD COLUMN IF NOT EXISTS "version_home_template_version" varchar;`,
     // The portfolio block was added after existing page versions had already
     // been stored. Payload queries every configured block table, even when a
     // version does not contain that block, so both live and version tables

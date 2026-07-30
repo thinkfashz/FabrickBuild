@@ -144,7 +144,12 @@ export async function getPortfolioHomePage() {
   if (!page) return null
 
   const payload = await getCMS()
-  if ((page as { homeTemplateVersion?: string }).homeTemplateVersion !== PORTFOLIO_HOME_TEMPLATE_VERSION) {
+  const hasPortfolioShowcase = Array.isArray((page as Doc).layout)
+    && (page as Doc).layout.some((block: unknown) => isDoc(block) && block.blockType === 'portfolioShowcase')
+  // Some existing installs already have the marker from a partial deployment
+  // but retain the former plain Hero. Treat the real block as the source of
+  // truth so Home becomes the requested portfolio exactly once.
+  if ((page as { homeTemplateVersion?: string }).homeTemplateVersion !== PORTFOLIO_HOME_TEMPLATE_VERSION || !hasPortfolioShowcase) {
     try {
       page = await payload.update({
         collection: 'pages',

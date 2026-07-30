@@ -188,6 +188,10 @@ export const Backgrounds: CollectionConfig = {
           label: 'Animación cinematográfica',
           fields: [
             {
+              name: 'backgroundPreview', type: 'ui',
+              admin: { components: { Field: '@/components/admin/BackgroundPreviewPanel' } },
+            },
+            {
               name: 'engine', type: 'select', defaultValue: 'gsap-three', required: true,
               options: [
                 { label: 'GSAP ScrollTrigger + Three.js', value: 'gsap-three' },
