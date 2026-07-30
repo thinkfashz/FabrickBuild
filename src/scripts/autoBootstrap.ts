@@ -28,6 +28,15 @@ async function verifyConfiguredAdmin(payload: Payload, email: string, password: 
       data: { password, role: 'admin' },
     })
 
+    // A failed-password lock is stored separately from the account. Clearing
+    // it only after the configured server-side password has been verified
+    // lets an administrator recover without opening a public reset route.
+    await payload.unlock({
+      collection: 'users',
+      data: { email },
+      overrideAccess: true,
+    })
+
     await payload.login({ collection: 'users', data: { email, password } })
   }
 }
