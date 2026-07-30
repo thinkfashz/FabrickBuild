@@ -38,6 +38,11 @@ export function SiteLoader({ settings, fallbackLogo }: { settings?: LoaderSettin
 
   useEffect(() => {
     if (settings?.enabled === false) return
+    if (window.self !== window.top) {
+      setVisible(false)
+      return
+    }
+
     const root = rootRef.current
     const startedAt = performance.now()
     let loaded = document.readyState === 'complete'
