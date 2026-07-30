@@ -1,12 +1,15 @@
 import type { Metadata } from 'next'
 import React from 'react'
-import { getGlobals } from '@/lib/queries'
+
+import { ConsentBanner } from '@/components/ConsentBanner'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
+import { SiteLoader } from '@/components/SiteLoader'
+import { getGlobals } from '@/lib/queries'
 import './globals.css'
 import './generated.css'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 export async function generateMetadata(): Promise<Metadata> {
   const { settings } = await getGlobals()
@@ -15,22 +18,28 @@ export async function generateMetadata(): Promise<Metadata> {
     title: seo.title || 'FabrickBuild | Construcción inteligente',
     description:
       seo.description ||
-      'Construcción, remodelación y reparación con planificación y transparencia.'
+      'Construcción, remodelación y reparación con planificación y transparencia.',
   }
 }
 
 export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
   const { header, footer, settings } = await getGlobals()
+  const contact = (settings?.contact || {}) as { whatsapp?: string }
+  const loader = (settings?.loader || {}) as Record<string, unknown>
+  const consent = (settings?.consent || {}) as Record<string, unknown>
+
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body>
+        <SiteLoader settings={loader} fallbackLogo={settings?.logo} />
         <SiteHeader header={header} settings={settings} />
         <main>{children}</main>
         <SiteFooter footer={footer} settings={settings} />
-        {typeof (settings?.contact as { whatsapp?: string } | undefined)?.whatsapp === 'string' && (settings?.contact as { whatsapp?: string }).whatsapp && (
+        <ConsentBanner settings={consent} />
+        {typeof contact.whatsapp === 'string' && contact.whatsapp && (
           <a
             className="whatsapp-float"
-            href={`https://wa.me/${(settings?.contact as { whatsapp: string }).whatsapp.replace(/\D/g, '')}`}
+            href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
             target="_blank"
             rel="noreferrer"
             aria-label="Contactar por WhatsApp"
