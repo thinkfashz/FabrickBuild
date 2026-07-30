@@ -8,6 +8,21 @@ import { PrivacySettingsButton } from './PrivacySettingsButton'
 type Item = { id?: string | number; label?: string | null; url?: string | null }
 type Social = { id?: string | number; platform?: string | null; url?: string | null }
 
+const defaultFooterAppearance = {
+  surfaceMode: 'solid',
+  surfaceColor: '#10110f',
+  surfaceOpacity: 100,
+  backdropBlur: 0,
+  headingColor: '#f7f4ec',
+  bodyColor: '#c8c3b8',
+  accentColor: '#f4c84b',
+  buttonColor: '#f4c84b',
+  buttonTextColor: '#15130f',
+  paddingTop: 76,
+  paddingBottom: 24,
+  overlayOpacity: 0,
+}
+
 export function SiteFooter({
   footer,
   settings,
@@ -23,7 +38,7 @@ export function SiteFooter({
   const logoDoc = footer?.logo || settings?.logo
   const logo = getMediaURL(logoDoc, 'thumbnail')
   const backgroundMedia = getMediaURL(footer?.backgroundMedia, 'hero')
-  const { className, style } = appearanceProps(footer?.appearance, 'site-footer')
+  const { className, style } = appearanceProps(footer?.appearance || defaultFooterAppearance, 'site-footer')
 
   if (backgroundMedia) style.backgroundImage = `url("${backgroundMedia}")`
 
