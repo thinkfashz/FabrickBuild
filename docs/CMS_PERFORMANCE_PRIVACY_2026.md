@@ -63,10 +63,11 @@ El preview final del 30 de julio de 2026 comprobó:
 
 ## Preview validado
 
-- Commit desplegado: `01e519bf1f4021128be0dbaad01cc607412d8917`.
+- Revisión de código desplegada: `01e519bf1f4021128be0dbaad01cc607412d8917`.
 - Deployment: `dpl_3CxtgcnGmJVrR9L5WqEu8d1MDyPJ`.
 - Estado: `READY`.
 - URL: `fabrickbuild-s2gsb0bno-think-fastzs-projects.vercel.app`.
+- Los commits posteriores marcados con `[skip ci]` solo documentan esta validación y no cambian el código ejecutable desplegado.
 - Estado multimedia: el Background `Casa / home` sigue relacionado con `0` frames de escritorio y `0` móviles; debe volver a cargarse desde Backgrounds/Multimedia.
 
 ## Despliegue
