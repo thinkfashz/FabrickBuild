@@ -2,6 +2,11 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnly } from '@/access/adminOnly'
 
+const getKind = (value: unknown): string | undefined =>
+  value && typeof value === 'object' && 'kind' in value
+    ? String((value as { kind?: unknown }).kind || '') || undefined
+    : undefined
+
 export const ReusableComponents: CollectionConfig = {
   slug: 'reusable-components',
   labels: { singular: 'Componente reutilizable', plural: 'Componentes reutilizables' },
@@ -63,22 +68,21 @@ export const ReusableComponents: CollectionConfig = {
       name: 'layout',
       type: 'json',
       admin: {
-        condition: (_, siblingData) => !siblingData?.kind || siblingData?.kind === 'layout',
+        condition: (_, siblingData) => !getKind(siblingData) || getKind(siblingData) === 'layout',
         description: 'Bloques internos del componente. La IA y el editor visual pueden completar esta estructura.',
       },
-      validate: (value, { siblingData }) =>
-        siblingData?.kind && siblingData.kind !== 'layout'
-          ? true
-          : Array.isArray(value)
-            ? true
-            : 'Agrega una composición de bloques.',
+      validate: (value, { siblingData }) => {
+        const kind = getKind(siblingData)
+        if (kind && kind !== 'layout') return true
+        return Array.isArray(value) ? true : 'Agrega una composición de bloques.'
+      },
     },
     {
       type: 'group',
       name: 'animatedContent',
       label: 'Contenido del componente animado',
       admin: {
-        condition: (_, siblingData) => Boolean(siblingData?.kind && siblingData.kind !== 'layout'),
+        condition: (_, siblingData) => Boolean(getKind(siblingData) && getKind(siblingData) !== 'layout'),
       },
       fields: [
         { name: 'eyebrow', type: 'text', label: 'Texto superior' },
@@ -116,7 +120,7 @@ export const ReusableComponents: CollectionConfig = {
       name: 'styles',
       type: 'textarea',
       admin: {
-        condition: (_, siblingData) => !siblingData?.kind || siblingData?.kind === 'layout',
+        condition: (_, siblingData) => !getKind(siblingData) || getKind(siblingData) === 'layout',
         description: 'CSS aislado para el componente generado.',
       },
     },
