@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const BeforeAfter: Block = {
   slug: 'beforeAfter',
@@ -9,6 +10,7 @@ export const BeforeAfter: Block = {
     { name: 'heading', type: 'text', required: true },
     { name: 'description', type: 'textarea' },
     { name: 'before', type: 'upload', relationTo: 'media', required: true },
-    { name: 'after', type: 'upload', relationTo: 'media', required: true }
+    { name: 'after', type: 'upload', relationTo: 'media', required: true },
+    appearanceField,
   ]
 }

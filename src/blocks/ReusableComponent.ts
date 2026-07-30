@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const ReusableComponent: Block = {
   slug: 'reusableComponent',
@@ -12,6 +13,7 @@ export const ReusableComponent: Block = {
       required: true,
       filterOptions: { status: { equals: 'active' } },
     },
+    appearanceField,
     { name: 'anchor', type: 'text', label: 'ID o ancla opcional' },
     {
       name: 'background',

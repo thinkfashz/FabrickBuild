@@ -6,13 +6,13 @@ CMS, CRM, frontend y estudio de IA para Soluciones Fabrick.
 
 - **Payload CMS 3** integrado en Next.js 16.
 - Panel privado en `/admin` con usuarios `admin` y `editor`.
-- Constructor visual de páginas por bloques.
+- Editor nativo de Payload con bloques, inspector visual y Live Preview responsivo.
 - Páginas, servicios, proyectos, testimonios y biblioteca multimedia.
 - CRM de cotizaciones con estado, prioridad, responsable y notas internas.
 - Borradores, historial, autosave, publicación programada y Live Preview.
 - SEO por documento y configuración general del sitio.
 - PostgreSQL/Neon y Vercel Blob.
-- FabrickBuild AI Studio con chat multi-modelo y previews reversibles.
+- Asistente de IA y propuestas reversibles dentro de las colecciones de Payload.
 - Integraciones cifradas para IA, Resend y Cloudinary.
 
 ## Rutas
@@ -21,8 +21,8 @@ CMS, CRM, frontend y estudio de IA para Soluciones Fabrick.
 |---|---|
 | Sitio público | `/` |
 | Administrador | `/admin` |
-| FabrickBuild AI Studio | `/studio/ia` |
-| Integraciones | `/studio/integraciones` |
+| Páginas y Live Preview | `/admin/collections/pages` |
+| Integraciones | `/admin/collections/integrations` |
 | Historial de cambios IA | `/admin/collections/ai-changes` |
 | Integraciones en Payload | `/admin/collections/integrations` |
 | Salud del sistema | `/api/system/health` |

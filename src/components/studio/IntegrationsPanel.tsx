@@ -98,6 +98,10 @@ type FormState = {
   apiKey: string
   apiSecret: string
   cloudName: string
+  bucket: string
+  region: string
+  endpoint: string
+  publicBaseURL: string
 }
 
 type ConnectionState = 'idle' | 'waiting' | 'connecting' | 'connected' | 'error'
@@ -182,6 +186,17 @@ const PROVIDERS: ProviderDefinition[] = [
     keyPlaceholder: 're_…',
   },
   {
+    id: 'vercel-blob',
+    label: 'Vercel Blob',
+    short: 'Blob',
+    description: 'Archivos persistentes de Vercel, con biblioteca, carpeta, movimiento y eliminación desde el CMS.',
+    baseURL: 'https://blob.vercel-storage.com',
+    kind: 'media',
+    icon: <Cloud size={19} />,
+    keyLabel: 'Blob read/write token',
+    keyPlaceholder: 'vercel_blob_rw_…',
+  },
+  {
     id: 'cloudinary',
     label: 'Cloudinary',
     short: 'Cloudinary',
@@ -191,6 +206,17 @@ const PROVIDERS: ProviderDefinition[] = [
     icon: <Cloud size={19} />,
     keyLabel: 'API key',
     keyPlaceholder: 'API key de Cloudinary',
+  },
+  {
+    id: 's3',
+    label: 'Amazon S3 / S3 compatible',
+    short: 'S3',
+    description: 'Amazon S3, Cloudflare R2, MinIO u otro endpoint S3. Los archivos se gestionan desde la biblioteca.',
+    baseURL: 'https://s3.amazonaws.com',
+    kind: 'media',
+    icon: <Cloud size={19} />,
+    keyLabel: 'Access key ID',
+    keyPlaceholder: 'AKIA…',
   },
 ]
 
@@ -212,6 +238,10 @@ function emptyForm(providerID = 'ollama'): FormState {
     apiKey: '',
     apiSecret: '',
     cloudName: '',
+    bucket: '',
+    region: 'us-east-1',
+    endpoint: '',
+    publicBaseURL: '',
   }
 }
 
@@ -239,6 +269,8 @@ function credentialStrength(form: FormState) {
   if (form.provider === 'custom-openai' && !form.apiKey) return 4
   const secret = form.provider === 'cloudinary'
     ? `${form.cloudName}${form.apiKey}${form.apiSecret}`
+    : form.provider === 's3'
+      ? `${form.bucket}${form.region}${form.apiKey}${form.apiSecret}`
     : form.apiKey
   if (!secret) return 0
   if (secret.length < 12) return 1
@@ -250,6 +282,9 @@ function credentialStrength(form: FormState) {
 function credentialsComplete(form: FormState) {
   if (form.provider === 'cloudinary') {
     return form.cloudName.trim().length >= 2 && form.apiKey.trim().length >= 4 && form.apiSecret.trim().length >= 8
+  }
+  if (form.provider === 's3') {
+    return form.bucket.trim().length >= 3 && form.region.trim().length >= 2 && form.apiKey.trim().length >= 8 && form.apiSecret.trim().length >= 8
   }
   if (form.provider === 'custom-openai') {
     return /^https?:\/\//i.test(form.baseURL.trim())
@@ -286,6 +321,7 @@ export default function IntegrationsPanel() {
 
   const provider = useMemo(() => providerByID(form.provider), [form.provider])
   const isCloudinary = form.provider === 'cloudinary'
+  const isS3 = form.provider === 's3'
   const isAI = provider.kind === 'ai'
   const complete = credentialsComplete(form)
   const strength = credentialStrength(form)
@@ -318,7 +354,7 @@ export default function IntegrationsPanel() {
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
-    if (['apiKey', 'apiSecret', 'cloudName', 'baseURL'].includes(key)) {
+    if (['apiKey', 'apiSecret', 'cloudName', 'bucket', 'region', 'endpoint', 'publicBaseURL', 'baseURL'].includes(key)) {
       setDirtyCredentials(true)
       setConnectionState('waiting')
     }
@@ -348,6 +384,10 @@ export default function IntegrationsPanel() {
       apiKey: '',
       apiSecret: '',
       cloudName: '',
+      bucket: '',
+      region: 'us-east-1',
+      endpoint: '',
+      publicBaseURL: '',
     })
     setDirtyCredentials(false)
     setConnectionState(integration.status === 'connected' ? 'connected' : 'idle')
@@ -378,6 +418,15 @@ export default function IntegrationsPanel() {
             apiKey: form.apiKey,
             apiSecret: form.apiSecret,
           }
+        : isS3
+          ? {
+              accessKeyId: form.apiKey,
+              secretAccessKey: form.apiSecret,
+              bucket: form.bucket,
+              region: form.region,
+              endpoint: form.endpoint,
+              publicBaseURL: form.publicBaseURL,
+            }
         : { apiKey: form.apiKey }
 
       const response = await fetch('/api/integrations/connect', {
@@ -428,7 +477,7 @@ export default function IntegrationsPanel() {
     } finally {
       setSaving(false)
     }
-  }, [autoConnect, form, isCloudinary, load, provider.label, saving])
+  }, [autoConnect, form, isCloudinary, isS3, load, provider.label, saving])
 
   useEffect(() => {
     if (!autoConnect || !dirtyCredentials || !complete || saving) return
@@ -439,6 +488,10 @@ export default function IntegrationsPanel() {
       form.apiKey,
       form.apiSecret,
       form.cloudName,
+      form.bucket,
+      form.region,
+      form.endpoint,
+      form.publicBaseURL,
     ])
     if (signature === autoSignature.current) return
 
@@ -655,18 +708,39 @@ export default function IntegrationsPanel() {
               {provider.optionalKey && <small>La clave puede quedar vacía para un Ollama local sin autenticación.</small>}
             </div>
 
-            {isCloudinary && (
+            {(isCloudinary || isS3) && (
               <div className="studio-field">
-                <label>API secret</label>
+                <label>{isS3 ? 'Secret access key' : 'API secret'}</label>
                 <div className="vault-secret-input">
                   <LockKeyhole size={18} />
                   <input
                     value={form.apiSecret}
                     onChange={(event) => setField('apiSecret', event.target.value)}
                     type={showSecret ? 'text' : 'password'}
-                    placeholder={form.id ? 'Pega un secreto nuevo para rotarlo' : 'API secret de Cloudinary'}
+                    placeholder={form.id ? 'Pega un secreto nuevo para rotarlo' : isS3 ? 'Secret access key de AWS / R2' : 'API secret de Cloudinary'}
                     autoComplete="new-password"
                   />
+                </div>
+              </div>
+            )}
+
+            {isS3 && (
+              <div className="studio-form-grid">
+                <div className="studio-field">
+                  <label>Bucket</label>
+                  <input className="studio-input" value={form.bucket} onChange={(event) => setField('bucket', event.target.value)} placeholder="fabrickbuild-media" autoComplete="off" />
+                </div>
+                <div className="studio-field">
+                  <label>Región</label>
+                  <input className="studio-input" value={form.region} onChange={(event) => setField('region', event.target.value)} placeholder="us-east-1" autoComplete="off" />
+                </div>
+                <div className="studio-field">
+                  <label>Endpoint S3 compatible (opcional)</label>
+                  <input className="studio-input" value={form.endpoint} onChange={(event) => setField('endpoint', event.target.value)} placeholder="https://…r2.cloudflarestorage.com" autoComplete="off" />
+                </div>
+                <div className="studio-field">
+                  <label>URL pública (recomendado)</label>
+                  <input className="studio-input" value={form.publicBaseURL} onChange={(event) => setField('publicBaseURL', event.target.value)} placeholder="https://cdn.tudominio.com" autoComplete="off" />
                 </div>
               </div>
             )}

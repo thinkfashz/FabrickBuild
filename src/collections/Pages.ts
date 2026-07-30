@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { authenticated } from '@/access/authenticated'
 import { publishedOrAuthenticated } from '@/access/publishedOrAuthenticated'
+import { pageAppearanceField } from '@/fields/appearance'
 import { slugField } from '@/fields/slug'
 import { seoFields } from '@/fields/seo'
 import {
@@ -9,6 +10,7 @@ import {
   Content,
   CTA,
   Hero,
+  PortfolioShowcase,
   ProjectsGrid,
   ReusableComponent,
   ServicesGrid,
@@ -25,8 +27,9 @@ const pagePath = (data: Record<string, unknown>) => {
   return slug === 'home' ? '/' : `/${slug}`
 }
 
-const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) =>
-  `${getServerURL()}${pagePath(data)}`
+// A relative URL keeps Payload's iframe on the exact Vercel preview deployment
+// currently being edited instead of accidentally pointing to production.
+const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) => pagePath(data)
 
 const getPreviewURL = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
@@ -74,6 +77,7 @@ export const Pages: CollectionConfig = {
               required: true,
               blocks: [
                 Hero,
+                PortfolioShowcase,
                 ServicesGrid,
                 ProjectsGrid,
                 Content,
@@ -84,6 +88,34 @@ export const Pages: CollectionConfig = {
                 ContactForm,
                 ReusableComponent,
               ],
+            },
+          ],
+        },
+        {
+          label: 'Diseño y vista previa',
+          description: 'Personaliza la página completa y usa el botón “Live Preview” de Payload para editarla en vivo.',
+          fields: [
+            {
+              type: 'collapsible',
+              label: 'Lienzo de la página',
+              admin: { initCollapsed: false },
+              fields: [
+                pageAppearanceField,
+                {
+                  type: 'ui',
+                  name: 'pageBackgroundQuickUpload',
+                  admin: { components: { Field: '@/components/admin/PageBackgroundQuickUpload' } },
+                },
+              ],
+            },
+            {
+              type: 'ui',
+              name: 'pageEditingGuide',
+              admin: {
+                components: {
+                  Field: '@/components/admin/PageEditingGuide',
+                },
+              },
             },
           ],
         },
@@ -104,6 +136,11 @@ export const Pages: CollectionConfig = {
     },
     {
       name: 'aiDesignVersion',
+      type: 'text',
+      admin: { hidden: true },
+    },
+    {
+      name: 'homeTemplateVersion',
       type: 'text',
       admin: { hidden: true },
     },

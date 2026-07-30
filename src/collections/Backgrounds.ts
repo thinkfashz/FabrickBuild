@@ -167,7 +167,7 @@ export const Backgrounds: CollectionConfig = {
               label: 'Frames web / escritorio', filterOptions: imageFilter,
               admin: {
                 condition: (_, siblingData) => siblingData?.kind === 'frames' && ['desktop', 'responsive'].includes(siblingData?.device),
-                description: 'Puedes subir una carpeta o seleccionar imágenes. Se ordenan automáticamente al guardar.',
+                description: 'La secuencia usa los primeros 60 frames ordenados. Puedes subir una carpeta o seleccionar imágenes; se ordenan automáticamente al guardar.',
               },
             },
             {
@@ -175,7 +175,7 @@ export const Backgrounds: CollectionConfig = {
               label: 'Frames móvil vertical', filterOptions: imageFilter,
               admin: {
                 condition: (_, siblingData) => siblingData?.kind === 'frames' && ['mobile', 'responsive'].includes(siblingData?.device),
-                description: 'La secuencia móvil se ordena independientemente.',
+                description: 'La secuencia móvil usa los primeros 60 frames ordenados de forma independiente.',
               },
             },
             { name: 'poster', type: 'upload', relationTo: 'media', label: 'Portada mientras cargan los frames', admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' } },
@@ -187,6 +187,10 @@ export const Backgrounds: CollectionConfig = {
         {
           label: 'Animación cinematográfica',
           fields: [
+            {
+              name: 'backgroundPreview', type: 'ui',
+              admin: { components: { Field: '@/components/admin/BackgroundPreviewPanel' } },
+            },
             {
               name: 'engine', type: 'select', defaultValue: 'gsap-three', required: true,
               options: [

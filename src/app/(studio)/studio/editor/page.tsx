@@ -1,5 +1,5 @@
-import VisualBuilder from '@/components/studio/VisualBuilder'
+import { redirect } from 'next/navigation'
 
 export default function VisualEditorPage() {
-  return <VisualBuilder />
+  redirect('/admin/collections/pages')
 }

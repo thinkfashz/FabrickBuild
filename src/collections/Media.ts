@@ -15,12 +15,16 @@ export const Media: CollectionConfig = {
   admin: {
     group: 'Multimedia',
     useAsTitle: 'alt',
-    defaultColumns: ['filename', 'alt', 'category', 'device', 'frameOrder', 'updatedAt'],
+    defaultColumns: ['filename', 'alt', 'collectionKey', 'storageFolder', 'storageProvider', 'device', 'frameOrder', 'updatedAt'],
     description:
       'Carga imágenes individuales o en grupo. Para secuencias usa nombres correlativos como frame_001, frame_002 y luego crea un Background multimedia.',
   },
   upload: {
     staticDir: 'media',
+    // Files are written through /api/media and /api/media-library so the same
+    // flow works with private Vercel Blob, Cloudinary and S3 on serverless.
+    disableLocalStorage: true,
+    filesRequiredOnCreate: false,
     mimeTypes: ['image/*', 'application/pdf', 'video/mp4'],
     ...(imageProcessingEnabled
       ? {
@@ -39,6 +43,46 @@ export const Media: CollectionConfig = {
   },
   fields: [
     { name: 'alt', type: 'text', required: true, label: 'Texto alternativo' },
+    {
+      name: 'storageProvider',
+      type: 'select',
+      defaultValue: 'database',
+      index: true,
+      label: 'Origen del archivo',
+      options: [
+        { label: 'Base de datos + almacenamiento de Payload', value: 'database' },
+        { label: 'Vercel Blob', value: 'vercel-blob' },
+        { label: 'Cloudinary', value: 'cloudinary' },
+        { label: 'Amazon S3 / S3 compatible', value: 's3' },
+      ],
+      admin: {
+        description: 'El registro y los metadatos siempre quedan en PostgreSQL. Los proveedores externos guardan el archivo y esta URL se usa en el sitio.',
+      },
+    },
+    { name: 'externalURL', type: 'text', label: 'URL externa del archivo', admin: { readOnly: true } },
+    { name: 'storageKey', type: 'text', index: true, label: 'Clave remota', admin: { readOnly: true } },
+    // Database-backed uploads are deliberately private. Payload never returns
+    // this field in public REST responses; `/api/media-file/:id` streams it
+    // with the appropriate content type instead.
+    {
+      name: 'fileData',
+      type: 'textarea',
+      access: { read: () => false, create: () => false, update: () => false },
+      admin: { hidden: true },
+    },
+    { name: 'storageIntegrationID', type: 'text', label: 'Integración de almacenamiento', admin: { readOnly: true } },
+    {
+      name: 'storageVisibility',
+      type: 'select',
+      defaultValue: 'private',
+      label: 'Visibilidad remota',
+      options: [
+        { label: 'Privada, servida por FabrickBuild', value: 'private' },
+        { label: 'Pública', value: 'public' },
+      ],
+      admin: { readOnly: true },
+    },
+    { name: 'storageFolder', type: 'text', index: true, label: 'Carpeta multimedia', defaultValue: 'general' },
     {
       name: 'category',
       type: 'select',

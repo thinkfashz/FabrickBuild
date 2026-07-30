@@ -1,6 +1,7 @@
 import { getPayload, type Payload } from 'payload'
 
 import { BootstrapError, readBootstrapState, runOneTimeBootstrap } from '../system/bootstrap'
+import { ensureRuntimeSchema } from '../system/runtimeSchema'
 import config from '../payload.config'
 
 async function verifyConfiguredAdmin(payload: Payload, email: string, password: string): Promise<void> {
@@ -27,48 +28,21 @@ async function verifyConfiguredAdmin(payload: Payload, email: string, password: 
       data: { password, role: 'admin' },
     })
 
+    // A failed-password lock is stored separately from the account. Clearing
+    // it only after the configured server-side password has been verified
+    // lets an administrator recover without opening a public reset route.
+    await payload.unlock({
+      collection: 'users',
+      data: { email },
+      overrideAccess: true,
+    })
+
     await payload.login({ collection: 'users', data: { email, password } })
   }
 }
 
 async function synchronizeSafeSchema(payload: Payload): Promise<boolean> {
-  const adapter = payload.db as unknown as {
-    drizzle: unknown
-    extensions?: Record<string, boolean>
-    requireDrizzleKit: () => {
-      pushSchema: (
-        schema: unknown,
-        drizzle: unknown,
-        schemaNames?: string[],
-        tablesFilter?: string[],
-        extensionsFilter?: string[],
-      ) => Promise<{ apply: () => Promise<void>; hasDataLoss: boolean; warnings: string[] }>
-    }
-    schema: unknown
-    schemaName?: string
-    tablesFilter?: string[]
-  }
-
-  if (typeof adapter.requireDrizzleKit !== 'function') {
-    throw new Error('El adaptador PostgreSQL no permite sincronizar el esquema.')
-  }
-
-  const { pushSchema } = adapter.requireDrizzleKit()
-  const result = await pushSchema(
-    adapter.schema,
-    adapter.drizzle,
-    adapter.schemaName ? [adapter.schemaName] : undefined,
-    adapter.tablesFilter,
-    adapter.extensions?.postgis ? ['postgis'] : undefined,
-  )
-
-  if (result.hasDataLoss || result.warnings.length > 0) {
-    throw new Error(
-      `La migración automática se detuvo por seguridad: ${result.warnings.join(' ') || 'posible pérdida de datos'}`,
-    )
-  }
-
-  await result.apply()
+  await ensureRuntimeSchema(payload)
   return true
 }
 

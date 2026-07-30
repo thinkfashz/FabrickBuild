@@ -1,0 +1,36 @@
+.inspector { display: grid; gap: 12px; max-width: 980px; margin: 6px 0 18px; padding: 14px; border: 1px solid color-mix(in srgb, var(--theme-elevation-150) 76%, #f4c84b 24%); border-radius: 14px; background: linear-gradient(145deg, color-mix(in srgb, var(--theme-elevation-50) 94%, #f4c84b 6%), var(--theme-elevation-50)); }
+.header { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.header > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.header strong { font-size: 14px; }
+.header small { color: var(--theme-elevation-500); font-size: 11px; }
+.icon, .reset { width: 34px; height: 34px; display: grid; flex: 0 0 auto; place-items: center; border-radius: 10px; color: #15130f; background: #f4c84b; }
+.reset { margin-left: auto; border: 1px solid var(--theme-elevation-150); color: var(--theme-text); background: var(--theme-elevation-50); cursor: pointer; }
+.quickPalettes { display: flex; flex-wrap: wrap; gap: 8px; }
+.palette { display: inline-flex; min-height: 34px; align-items: center; gap: 4px; padding: 5px 8px; border: 1px solid var(--theme-elevation-150); border-radius: 9px; color: var(--theme-text); background: var(--theme-elevation-50); cursor: pointer; font: inherit; font-size: 11px; }
+.palette:disabled { opacity: .55; cursor: not-allowed; }
+.palette i { width: 11px; height: 11px; border: 1px solid rgba(255,255,255,.34); border-radius: 50%; }
+.palette span { margin-left: 3px; }
+.details { overflow: hidden; border: 1px solid var(--theme-elevation-150); border-radius: 11px; background: color-mix(in srgb, var(--theme-elevation-50) 96%, transparent); }
+.details summary { display: flex; min-height: 42px; align-items: center; gap: 8px; padding: 0 11px; cursor: pointer; font-size: 12px; font-weight: 700; list-style: none; }
+.details summary::-webkit-details-marker { display: none; }
+.details summary::after { content: '⌄'; margin-left: auto; color: var(--theme-elevation-500); font-size: 15px; }
+.details[open] summary::after { transform: rotate(180deg); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 11px 12px; }
+.field { display: grid; gap: 5px; min-width: 0; color: var(--theme-text); font-size: 11px; font-weight: 650; }
+.field > span { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--theme-elevation-650); }
+.field :is(select, input:not([type="color"]):not([type="range"])) { width: 100%; min-height: 38px; padding: 0 9px; border: 1px solid var(--theme-elevation-150); border-radius: 8px; color: var(--theme-text); outline: none; background: var(--theme-input-bg); font: inherit; font-size: 12px; }
+.field select:focus, .field input:focus { border-color: #f4c84b; box-shadow: 0 0 0 2px rgba(244,200,75,.18); }
+.colorField { grid-template-columns: minmax(0, 1fr) 38px; align-items: end; }
+.colorField > span { grid-column: 1 / -1; }
+.colorField input { width: 38px; height: 38px; padding: 3px; border: 1px solid var(--theme-elevation-150); border-radius: 8px; background: var(--theme-input-bg); cursor: pointer; }
+.colorField code { height: 38px; display: grid; place-items: center; border: 1px solid var(--theme-elevation-150); border-radius: 8px; color: var(--theme-elevation-600); background: var(--theme-input-bg); font-size: 10px; }
+.rangeField { grid-column: span 1; }
+.rangeField span { justify-content: space-between; }
+.rangeField b { color: #c99000; font-size: 10px; }
+.rangeField input { width: 100%; accent-color: #e6ae00; }
+.uploadAsset { display:grid; align-content:end; gap:6px; }
+.uploadAsset button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:40px; border:1px solid var(--theme-elevation-250); border-radius:8px; background:var(--theme-elevation-100); color:var(--theme-text); font-weight:700; cursor:pointer; }
+.uploadAsset button:disabled { opacity:.56; cursor:wait; }
+.uploadAsset small { color:var(--theme-elevation-600); font-size:11px; }
+@media (max-width: 700px) { .inspector { padding: 11px; border-radius: 12px; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 0 9px 10px; } .quickPalettes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .palette { justify-content: center; min-width: 0; } }
+@media (max-width: 420px) { .grid { grid-template-columns: 1fr; } .rangeField { grid-column: auto; } .header small { max-width: 210px; } }

@@ -2,12 +2,12 @@
 
 import {
   ArrowDown,
-  ArrowRight,
   ArrowUp,
   Blocks,
   Code2,
   Copy,
   GripVertical,
+  ImagePlus,
   Laptop,
   Loader2,
   Monitor,
@@ -21,16 +21,20 @@ import {
   Trash2,
   Undo2,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { DragEvent, ReactNode } from 'react'
+import type { CSSProperties, DragEvent, ReactNode } from 'react'
 
 type Block = Record<string, any> & { blockType: string; id?: string }
 type Page = { id: string | number; title: string; slug: string; _status?: string; layout?: Block[]; aiStyle?: string }
 type ComponentDoc = { id: string | number; name: string; slug: string; status?: string; category?: string; version?: number; layout?: Block[] }
+type MediaDoc = { id: string | number; alt?: string; filename?: string; url?: string; externalURL?: string; mimeType?: string; category?: string }
+type BackgroundDoc = { id: string | number; name: string; slug?: string; kind?: string; status?: string; poster?: MediaDoc; image?: MediaDoc; externalURL?: string; desktopFrames?: MediaDoc[]; mobileFrames?: MediaDoc[] }
 type Proposal = { id?: string; title?: string; css?: string; layout?: Block[] }
 type Change = { id: string | number; title: string; proposals?: Proposal[] }
 type Device = 'mobile' | 'tablet' | 'desktop' | 'wide'
 type CodeTab = 'layout' | 'css' | 'html'
+type MobilePanel = 'none' | 'outline' | 'inspector'
 type Field = { path: string; label: string; kind?: 'text' | 'textarea' | 'number' | 'select'; options?: string[] }
 
 const LABELS: Record<string, string> = {
@@ -166,6 +170,108 @@ function blockHTML(block: Block) {
   return `<section class="${escapeHTML(block.blockType)}"><h2>${escapeHTML(block.heading)}</h2><p>${escapeHTML(block.description || block.intro || richTextToPlain(block.content))}</p></section>`
 }
 
+function getAssetURL(value: unknown): string {
+  if (value && typeof value === 'object') {
+    const media = value as MediaDoc
+    if (typeof media.externalURL === 'string' && media.externalURL) return media.externalURL
+    if (typeof media.url === 'string' && media.url) return media.url
+  }
+  return ''
+}
+
+function previewAppearanceStyle(block: Block): CSSProperties {
+  const appearance = block.appearance || {}
+  const media = getAssetURL(appearance.backgroundMedia)
+  const saved = appearance.savedBackground as BackgroundDoc | undefined
+  const savedURL = saved?.kind === 'url' ? saved.externalURL : getAssetURL(saved?.image) || getAssetURL(saved?.poster) || getAssetURL(saved?.desktopFrames?.[0])
+  const image = media || savedURL || appearance.backgroundURL
+  const opacity = Math.max(0, Math.min(100, Number(appearance.surfaceOpacity ?? 100))) / 100
+  const surface = typeof appearance.surfaceColor === 'string' ? appearance.surfaceColor : '#f7f5ef'
+  const overlay = typeof appearance.overlayColor === 'string' ? appearance.overlayColor : '#000000'
+  const overlayOpacity = Math.max(0, Math.min(100, Number(appearance.overlayOpacity ?? 0))) / 100
+  const style: CSSProperties = {
+    '--builder-preview-heading': appearance.headingColor || '#15130f',
+    '--builder-preview-copy': appearance.bodyColor || '#4f493f',
+    '--builder-preview-accent': appearance.buttonColor || '#f2b90c',
+    '--builder-preview-scale': Math.max(.8, Math.min(1.4, Number(appearance.fontScale || 100) / 100)),
+    '--builder-preview-radius': `${Math.max(0, Math.min(32, Number(appearance.cornerRadius || 0)))}px`,
+    backgroundColor: appearance.backgroundMode === 'none' ? undefined : `${surface}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+  } as CSSProperties
+  if (appearance.backgroundMode === 'image' && image) {
+    style.backgroundImage = `linear-gradient(${overlay}${Math.round(overlayOpacity * 255).toString(16).padStart(2, '0')}, ${overlay}${Math.round(overlayOpacity * 255).toString(16).padStart(2, '0')}), url(${JSON.stringify(image)})`
+    style.backgroundSize = appearance.backgroundFit === 'contain' ? 'contain' : 'cover'
+    style.backgroundPosition = appearance.backgroundPosition || 'center'
+  }
+  return style
+}
+
+function ColorControl({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="builder-color-control">
+      <span>{label}</span>
+      <input aria-label={label} type="color" value={/^#[0-9a-f]{6}$/i.test(value) ? value : '#ffffff'} onChange={(event) => onChange(event.target.value)} />
+      <input className="studio-input" value={value} maxLength={7} onChange={(event) => onChange(event.target.value)} placeholder="#FFFFFF" />
+    </label>
+  )
+}
+
+function MediaSelect({ label, value, media, onChange }: { label: string; value: unknown; media: MediaDoc[]; onChange: (value: MediaDoc | undefined) => void }) {
+  const selected = relationID(value)
+  return (
+    <label className="studio-field">
+      <span>{label}</span>
+      <select className="studio-select" value={String(selected)} onChange={(event) => onChange(media.find((item) => String(item.id) === event.target.value))}>
+        <option value="">Sin imagen</option>
+        {media.map((item) => <option key={item.id} value={String(item.id)}>{item.alt || item.filename || `Archivo ${item.id}`}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function AppearanceEditor({ block, media, backgrounds, uploading, onChange, onUpload }: {
+  block: Block
+  media: MediaDoc[]
+  backgrounds: BackgroundDoc[]
+  uploading: boolean
+  onChange: (block: Block) => void
+  onUpload: (file: File) => Promise<void>
+}) {
+  const appearance = block.appearance || {}
+  const setAppearance = (path: string, value: unknown) => {
+    const next = clone(block)
+    next.appearance = { ...(next.appearance || {}) }
+    setPath(next.appearance, path, value)
+    onChange(next)
+  }
+  const setMedia = (path: string, value: MediaDoc | undefined) => {
+    const next = clone(block)
+    setPath(next, path, value || undefined)
+    onChange(next)
+  }
+
+  return (
+    <section className="builder-appearance-editor">
+      <div className="builder-inspector-title"><strong>Diseño del bloque</strong><small>Colores, fondo y multimedia</small></div>
+      <label className="studio-field"><span>Fondo</span><select className="studio-select" value={appearance.backgroundMode || 'none'} onChange={(event) => setAppearance('backgroundMode', event.target.value)}><option value="none">Sin fondo / transparente</option><option value="color">Color translúcido</option><option value="image">Imagen o multimedia</option></select></label>
+      {appearance.backgroundMode !== 'none' && <><ColorControl label="Color de superficie" value={appearance.surfaceColor || '#ffffff'} onChange={(value) => setAppearance('surfaceColor', value)} /><label className="studio-field"><span>Opacidad del fondo · {Number(appearance.surfaceOpacity ?? 100)}%</span><input type="range" min="0" max="100" value={Number(appearance.surfaceOpacity ?? 100)} onChange={(event) => setAppearance('surfaceOpacity', Number(event.target.value))} /></label></>}
+      {appearance.backgroundMode === 'image' && <>
+        <MediaSelect label="Imagen desde la biblioteca" value={appearance.backgroundMedia} media={media} onChange={(value) => setAppearance('backgroundMedia', value)} />
+        <label className="studio-field"><span>Background multimedia guardado</span><select className="studio-select" value={String(relationID(appearance.savedBackground))} onChange={(event) => setAppearance('savedBackground', backgrounds.find((item) => String(item.id) === event.target.value))}><option value="">No usar background guardado</option>{backgrounds.map((item) => <option key={item.id} value={String(item.id)}>{item.name} · {item.kind}</option>)}</select></label>
+        <label className="studio-field"><span>URL externa HTTPS</span><input className="studio-input" value={appearance.backgroundURL || ''} onChange={(event) => setAppearance('backgroundURL', event.target.value)} placeholder="https://..." /></label>
+        <div className="builder-upload-inline"><label className="studio-button studio-button-violet"><ImagePlus size={15} /> {uploading ? 'Subiendo…' : 'Subir imagen'}<input type="file" accept="image/*" hidden disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void onUpload(file); event.currentTarget.value = '' }} /></label><small>Se guarda de forma permanente en Vercel Blob y la biblioteca multimedia.</small></div>
+        <label className="studio-field"><span>Ajuste de imagen</span><select className="studio-select" value={appearance.backgroundFit || 'cover'} onChange={(event) => setAppearance('backgroundFit', event.target.value)}><option value="cover">Cubrir</option><option value="contain">Contener</option></select></label>
+        <label className="studio-field"><span>Posición</span><select className="studio-select" value={appearance.backgroundPosition || 'center'} onChange={(event) => setAppearance('backgroundPosition', event.target.value)}><option value="center">Centro</option><option value="top">Arriba</option><option value="bottom">Abajo</option><option value="left">Izquierda</option><option value="right">Derecha</option></select></label>
+        <ColorControl label="Color de capa" value={appearance.overlayColor || '#000000'} onChange={(value) => setAppearance('overlayColor', value)} />
+        <label className="studio-field"><span>Opacidad de capa · {Number(appearance.overlayOpacity ?? 0)}%</span><input type="range" min="0" max="90" value={Number(appearance.overlayOpacity ?? 0)} onChange={(event) => setAppearance('overlayOpacity', Number(event.target.value))} /></label>
+      </>}
+      <div className="builder-color-grid"><ColorControl label="Texto superior" value={appearance.eyebrowColor || '#c98d00'} onChange={(value) => setAppearance('eyebrowColor', value)} /><ColorControl label="Títulos" value={appearance.headingColor || '#15130f'} onChange={(value) => setAppearance('headingColor', value)} /><ColorControl label="Párrafos" value={appearance.bodyColor || '#4f493f'} onChange={(value) => setAppearance('bodyColor', value)} /><ColorControl label="Botones" value={appearance.buttonColor || '#f2b90c'} onChange={(value) => setAppearance('buttonColor', value)} /><ColorControl label="Texto botón" value={appearance.buttonTextColor || '#15130f'} onChange={(value) => setAppearance('buttonTextColor', value)} /></div>
+      <div className="builder-layout-controls"><label className="studio-field"><span>Escala tipográfica · {Number(appearance.fontScale || 100)}%</span><input type="range" min="80" max="140" value={Number(appearance.fontScale || 100)} onChange={(event) => setAppearance('fontScale', Number(event.target.value))} /></label><label className="studio-field"><span>Espaciado vertical</span><select className="studio-select" value={appearance.verticalSpacing || 'normal'} onChange={(event) => setAppearance('verticalSpacing', event.target.value)}><option value="compact">Compacto</option><option value="normal">Normal</option><option value="large">Amplio</option></select></label><label className="studio-field"><span>Ancho de contenido</span><select className="studio-select" value={appearance.contentWidth || 'standard'} onChange={(event) => setAppearance('contentWidth', event.target.value)}><option value="standard">Estándar</option><option value="wide">Amplio</option><option value="full">Pantalla completa</option></select></label><label className="studio-field"><span>Redondez · {Number(appearance.cornerRadius || 0)}px</span><input type="range" min="0" max="32" value={Number(appearance.cornerRadius || 0)} onChange={(event) => setAppearance('cornerRadius', Number(event.target.value))} /></label></div>
+      {block.blockType === 'content' && <MediaSelect label="Imagen de contenido" value={block.media} media={media} onChange={(value) => setMedia('media', value)} />}
+      {block.blockType === 'beforeAfter' && <><MediaSelect label="Imagen antes" value={block.before} media={media} onChange={(value) => setMedia('before', value)} /><MediaSelect label="Imagen después" value={block.after} media={media} onChange={(value) => setMedia('after', value)} /></>}
+    </section>
+  )
+}
+
 function Preview({ block, components, depth = 0 }: { block: Block; components: ComponentDoc[]; depth?: number }): ReactNode {
   if (depth > 3) return <div className="builder-preview-placeholder">Límite de anidación</div>
   if (block.blockType === 'hero') return <section className={`builder-preview-hero builder-preview-hero-${block.theme || 'dark'}`}><span>{block.eyebrow}</span><h1>{block.heading}<em>{block.highlight}</em></h1><p>{block.description}</p><div className="builder-preview-actions"><button>{block.primaryCTA?.label}</button><button>{block.secondaryCTA?.label}</button></div><div className="builder-preview-stats">{(block.stats || []).map((item: any, index: number) => <div key={index}><strong>{item.value}</strong><small>{item.label}</small></div>)}</div></section>
@@ -178,6 +284,11 @@ function Preview({ block, components, depth = 0 }: { block: Block; components: C
   if (block.blockType === 'reusableComponent') {
     const component = components.find((item) => String(item.id) === String(relationID(block.component))) || (typeof block.component === 'object' ? block.component as ComponentDoc : undefined)
     if (!component) return <div className="builder-preview-placeholder">Componente no encontrado</div>
+    if (component.slug === 'core-signature-experience') return <section className="builder-preview-reusable builder-preview-signature"><header><Blocks size={14} /> Recorrido Signature Home</header><div><strong>Experiencia cinematográfica</strong><span>Secuencia, calculadora y terminaciones movibles como un bloque de portada.</span></div></section>
+    if (component.slug === 'preset-action-buttons') return <section className="builder-preview-preset"><header><Blocks size={14} /> Panel de botones</header><span>PATRÓN EDITABLE</span><h2>Un llamado claro para cada decisión.</h2><p>Color, tamaño, fondo y opacidad se modifican en vivo.</p><div><button>Hablar con un experto</button><button>Ver proyectos</button></div></section>
+    if (component.slug === 'preset-project-table') return <section className="builder-preview-preset builder-preview-table"><header><Blocks size={14} /> Tabla de proyecto</header><h2>Alcance visible.</h2><div><b>Etapa</b><b>Entrega</b><b>Estado</b><span>Diagnóstico</span><span>Presupuesto</span><em>Listo</em><span>Ejecución</span><span>Seguimiento</span><em>En curso</em></div></section>
+    if (component.slug === 'preset-navigation-menu') return <section className="builder-preview-preset builder-preview-menu"><header><b>FabrickBuild</b><span>Servicios · Proyectos · Nosotros</span><button>☰</button></header><h2>Navegación responsive.</h2><button>Cotizar</button></section>
+    if (component.slug === 'preset-text-drawer') return <section className="builder-preview-preset builder-preview-drawer"><header><Blocks size={14} /> Cajón de texto</header><h2>Explica el proceso sin perder foco.</h2><div><strong>¿Qué incluye el diagnóstico?</strong><p>Visita, alcance y una hoja de ruta clara.</p></div><div><strong>¿Cómo se actualiza?</strong></div></section>
     return <section className="builder-preview-reusable"><header><Blocks size={14} /> {component.name} · v{component.version || 1}</header>{(component.layout || []).map((child, index) => <Preview key={child.id || index} block={child} components={components} depth={depth + 1} />)}</section>
   }
   return <div className="builder-preview-placeholder">{block.blockType}</div>
@@ -200,6 +311,8 @@ export default function VisualBuilder() {
   const [pages, setPages] = useState<Page[]>([])
   const [page, setPage] = useState<Page | null>(null)
   const [components, setComponents] = useState<ComponentDoc[]>([])
+  const [media, setMedia] = useState<MediaDoc[]>([])
+  const [backgrounds, setBackgrounds] = useState<BackgroundDoc[]>([])
   const [changes, setChanges] = useState<Change[]>([])
   const [layout, setLayout] = useState<Block[]>([])
   const [style, setStyle] = useState('')
@@ -210,6 +323,7 @@ export default function VisualBuilder() {
   const [codeError, setCodeError] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [publish, setPublish] = useState(false)
   const [notice, setNotice] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
@@ -218,6 +332,8 @@ export default function VisualBuilder() {
   const [changeID, setChangeID] = useState('')
   const [proposalIndex, setProposalIndex] = useState(0)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('none')
+  const [externalSaveRequest, setExternalSaveRequest] = useState(0)
   const [past, setPast] = useState<Block[][]>([])
   const [future, setFuture] = useState<Block[][]>([])
 
@@ -233,10 +349,13 @@ export default function VisualBuilder() {
       setPages(data.pages || [])
       setPage(data.page || null)
       setComponents(data.components || [])
+      setMedia(data.media || [])
+      setBackgrounds(data.backgrounds || [])
       setChanges(data.changes || [])
       setLayout(clone(data.page?.layout || []))
       setStyle(String(data.page?.aiStyle || ''))
       setSelected(0)
+      setMobilePanel('none')
       setPublish(data.page?._status === 'published')
       setDirty(false)
       setPast([])
@@ -249,6 +368,23 @@ export default function VisualBuilder() {
   }, [])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const handleEditorAction = (event: Event) => {
+      const action = (event as CustomEvent<string>).detail
+      if (action === 'blocks') {
+        setLibrary(false)
+        setMobilePanel((current) => current === 'outline' ? 'none' : 'outline')
+      }
+      if (action === 'add') {
+        setLibrary(true)
+        setMobilePanel('outline')
+      }
+      if (action === 'design' || action === 'edit') setMobilePanel('inspector')
+      if (action === 'save') setExternalSaveRequest((current) => current + 1)
+    }
+    window.addEventListener('fabrick:editor-action', handleEditorAction)
+    return () => window.removeEventListener('fabrick:editor-action', handleEditorAction)
+  }, [])
   useEffect(() => {
     setCode(codeTab === 'layout' ? JSON.stringify(layout, null, 2) : codeTab === 'css' ? style : `<main class="ai-page">\n${layout.map(blockHTML).join('\n')}\n</main>`)
     setCodeError('')
@@ -290,6 +426,38 @@ export default function VisualBuilder() {
     updateBlock(next)
   }
 
+  async function uploadBackground(file: File) {
+    if (!block || uploading) return
+    if (!file.type.startsWith('image/')) {
+      setNotice({ type: 'error', text: 'Selecciona una imagen válida.' })
+      return
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      setNotice({ type: 'error', text: 'La imagen supera el límite de 25 MB.' })
+      return
+    }
+
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('_payload', JSON.stringify({ alt: file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '), category: 'background', device: 'universal' }))
+      const response = await fetch('/api/media', { method: 'POST', credentials: 'include', body: form })
+      const result = await response.json().catch(() => null)
+      const document = result?.doc as MediaDoc | undefined
+      if (!response.ok || !document?.id) throw new Error(result?.errors?.[0]?.message || 'No se pudo guardar la imagen en la biblioteca.')
+      setMedia((current) => [document, ...current.filter((item) => String(item.id) !== String(document.id))])
+      const next = clone(block)
+      next.appearance = { ...(next.appearance || {}), backgroundMode: 'image', backgroundMedia: document }
+      updateBlock(next)
+      setNotice({ type: 'success', text: `“${document.alt || file.name}” quedó guardada en la biblioteca multimedia.` })
+    } catch (error) {
+      setNotice({ type: 'error', text: error instanceof Error ? error.message : 'No se pudo subir la imagen.' })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function savePage() {
     if (!page || saving) return
     setSaving(true)
@@ -305,6 +473,10 @@ export default function VisualBuilder() {
       setSaving(false)
     }
   }
+
+  useEffect(() => {
+    if (externalSaveRequest) void savePage()
+  }, [externalSaveRequest])
 
   async function saveComponent() {
     if (!block || !componentName.trim()) return
@@ -323,17 +495,16 @@ export default function VisualBuilder() {
     }
   }
 
-  const fields = block ? FIELDS[block.blockType] || [] : []
-
   return (
     <main className="studio-page builder-page">
-      <div className="studio-page-head builder-page-head"><div><p className="studio-kicker">Canvas en vivo / Bloques / Componentes</p><h1>Edita antes de guardar.</h1><p>Selecciona, mueve, modifica, duplica o elimina bloques. PostgreSQL solo cambia al pulsar Guardar.</p></div><div className="studio-toolbar"><span className={`studio-pill ${dirty ? 'studio-pill-error' : 'studio-pill-ok'}`}>{dirty ? 'Sin guardar' : 'Sincronizado'}</span><button className="studio-button" type="button" disabled={!past.length} onClick={() => { const previous = past[past.length - 1]; if (!previous) return; setFuture((current) => [clone(layout), ...current]); setPast((current) => current.slice(0, -1)); setLayout(previous); setDirty(true) }}><Undo2 size={15} /> Deshacer</button><button className="studio-button" type="button" disabled={!future.length} onClick={() => { const next = future[0]; if (!next) return; setPast((current) => [...current, clone(layout)]); setFuture((current) => current.slice(1)); setLayout(next); setDirty(true) }}><Redo2 size={15} /> Rehacer</button><button className="studio-button studio-button-primary" type="button" disabled={!dirty || saving} onClick={() => void savePage()}>{saving ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Guardar</button></div></div>
+      <div className="studio-page-head builder-page-head"><div><p className="studio-kicker">Editor principal / Canvas en vivo / Bloques</p><h1>{page?.title || 'Página principal'}<span> en vivo.</span></h1><p>Trabaja directamente sobre la página: toca un bloque, cambia sus propiedades y guarda cuando esté listo.</p></div><div className="studio-toolbar"><span className={`studio-pill ${dirty ? 'studio-pill-error' : 'studio-pill-ok'}`}>{dirty ? 'Cambios sin guardar' : 'Todo sincronizado'}</span><button className="studio-button" type="button" disabled={!past.length} onClick={() => { const previous = past[past.length - 1]; if (!previous) return; setFuture((current) => [clone(layout), ...current]); setPast((current) => current.slice(0, -1)); setLayout(previous); setDirty(true) }}><Undo2 size={15} /> Deshacer</button><button className="studio-button" type="button" disabled={!future.length} onClick={() => { const next = future[0]; if (!next) return; setPast((current) => [...current, clone(layout)]); setFuture((current) => current.slice(1)); setLayout(next); setDirty(true) }}><Redo2 size={15} /> Rehacer</button><button className="studio-button studio-button-primary" type="button" disabled={!dirty || saving} onClick={() => void savePage()}>{saving ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Guardar</button></div></div>
       {notice && <div className={`studio-notice studio-notice-${notice.type}`} style={{ marginBottom: 16 }}>{notice.text}</div>}
-      <section className="builder-topbar studio-card"><div className="studio-field"><label>Página</label><select className="studio-select" value={String(page?.id || '')} onChange={(event) => void load(event.target.value)}>{pages.map((item) => <option key={item.id} value={String(item.id)}>{item.title} · /{item.slug === 'home' ? '' : item.slug}</option>)}</select></div><div className="studio-field builder-ai-source"><label>Propuesta de IA</label><div><select className="studio-select" value={changeID} onChange={(event) => { setChangeID(event.target.value); setProposalIndex(0) }}><option value="">Seleccionar</option>{changes.filter((item) => item.proposals?.length).map((item) => <option key={item.id} value={String(item.id)}>{item.title}</option>)}</select>{aiChange && <select className="studio-select" value={proposalIndex} onChange={(event) => setProposalIndex(Number(event.target.value))}>{(aiChange.proposals || []).map((proposal, index) => <option key={proposal.id || index} value={index}>{proposal.title || `Opción ${index + 1}`}</option>)}</select>}<button className="studio-button studio-button-violet" type="button" disabled={!aiChange} onClick={() => { const proposal = aiChange?.proposals?.[proposalIndex]; if (!proposal?.layout?.length) return; commit(clone(proposal.layout), 0); setStyle(String(proposal.css || '')); setNotice({ type: 'success', text: 'Propuesta cargada en el canvas sin guardar.' }) }}><Sparkles size={15} /> Cargar</button></div></div><label className="ai-checkbox builder-publish-toggle"><input type="checkbox" checked={publish} onChange={(event) => setPublish(event.target.checked)} /> Publicar</label></section>
-      {loading ? <div className="studio-skeleton" style={{ minHeight: 620 }} /> : <div className="builder-workspace">
+      {!loading && !page && <section className="studio-card builder-no-page"><Blocks size={26} /><div><strong>Aún no hay una página disponible para editar.</strong><p>Crea una página con al menos un bloque en Payload y vuelve a abrir el editor; no se mostrará un canvas vacío sin explicación.</p></div><Link className="studio-button studio-button-primary" href="/admin/collections/pages/create">Crear página</Link></section>}
+      <section className="builder-topbar studio-card"><div className="studio-field"><label>Pagina activa</label><select className="studio-select" value={String(page?.id || '')} onChange={(event) => void load(event.target.value)}>{pages.map((item) => <option key={item.id} value={String(item.id)}>{item.slug === 'home' ? 'Inicio · /' : `${item.title} · /${item.slug}`}</option>)}</select><small>Cada página creada en Payload aparece aquí automáticamente.</small></div><div className="studio-field builder-ai-source"><label>Propuesta de IA (opcional)</label><div><select className="studio-select" value={changeID} onChange={(event) => { setChangeID(event.target.value); setProposalIndex(0) }}><option value="">Sin propuesta</option>{changes.filter((item) => item.proposals?.length).map((item) => <option key={item.id} value={String(item.id)}>{item.title}</option>)}</select>{aiChange && <select className="studio-select" value={proposalIndex} onChange={(event) => setProposalIndex(Number(event.target.value))}>{(aiChange.proposals || []).map((proposal, index) => <option key={proposal.id || index} value={index}>{proposal.title || `Opción ${index + 1}`}</option>)}</select>}<button className="studio-button studio-button-violet" type="button" disabled={!aiChange} onClick={() => { const proposal = aiChange?.proposals?.[proposalIndex]; if (!proposal?.layout?.length) return; commit(clone(proposal.layout), 0); setStyle(String(proposal.css || '')); setNotice({ type: 'success', text: 'Propuesta cargada en el canvas sin guardar.' }) }}><Sparkles size={15} /> Usar en canvas</button></div></div><label className="ai-checkbox builder-publish-toggle"><input type="checkbox" checked={publish} onChange={(event) => setPublish(event.target.checked)} /> Publicar cambios</label></section>
+      {loading ? <div className="studio-skeleton" style={{ minHeight: 620 }} /> : <div className={`builder-workspace builder-mobile-${mobilePanel}`}>
         <aside className="studio-card builder-outline"><div className="studio-card-head"><div><h2>Estructura</h2><p>{layout.length} bloques</p></div><button className="studio-button" type="button" onClick={() => setLibrary((current) => !current)}><Plus size={15} /> Añadir</button></div>{library && <div className="builder-library studio-enter"><strong>Bloques</strong><div className="builder-library-grid">{Object.keys(LABELS).filter((type) => type !== 'reusableComponent').map((type) => <button type="button" key={type} onClick={() => { const next = [...clone(layout), defaultBlock(type)]; commit(next, next.length - 1); setLibrary(false) }}><Blocks size={15} /><span>{LABELS[type]}</span></button>)}</div><strong>Componentes</strong><div className="builder-component-list">{components.filter((item) => item.status === 'active').map((item) => <button type="button" key={item.id} onClick={() => { const next = [...clone(layout), { id: uid(), blockType: 'reusableComponent', component: item.id, background: 'inherit', spacing: 'normal' }]; commit(next, next.length - 1); setLibrary(false) }}><Blocks size={15} /><span><b>{item.name}</b><small>v{item.version || 1}</small></span></button>)}</div></div>}<div className="builder-outline-list">{layout.map((item, index) => <button type="button" key={item.id || index} className={selected === index ? 'selected' : ''} onClick={() => setSelected(index)} draggable onDragStart={() => setDragIndex(index)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => drop(event, index)}><GripVertical size={15} /><span><Blocks size={15} /><b>{LABELS[item.blockType] || item.blockType}</b><small>{String(item.heading || LABELS[item.blockType] || '')}</small></span><em>{index + 1}</em></button>)}</div></aside>
-        <section className="studio-card builder-canvas-card"><div className="studio-card-head builder-canvas-head"><div><h2>Preview en vivo</h2><p>Haz clic para seleccionar.</p></div><div className="builder-device-switcher"><button type="button" className={device === 'mobile' ? 'active' : ''} onClick={() => setDevice('mobile')}><Smartphone size={16} /></button><button type="button" className={device === 'tablet' ? 'active' : ''} onClick={() => setDevice('tablet')}><Tablet size={16} /></button><button type="button" className={device === 'desktop' ? 'active' : ''} onClick={() => setDevice('desktop')}><Laptop size={16} /></button><button type="button" className={device === 'wide' ? 'active' : ''} onClick={() => setDevice('wide')}><Monitor size={16} /></button></div></div><div className="builder-canvas-scroll"><div className={`builder-canvas builder-device-${device}`}><style>{style}</style><div className="ai-page builder-preview-page">{layout.map((item, index) => <div key={item.id || index} className={`builder-preview-block ${selected === index ? 'selected' : ''}`} onClick={() => setSelected(index)} draggable onDragStart={() => setDragIndex(index)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => drop(event, index)}><div className="builder-block-floating-tools"><span><GripVertical size={13} /> {LABELS[item.blockType]}</span><button type="button" disabled={index === 0} onClick={(event) => { event.stopPropagation(); move(index, index - 1) }}><ArrowUp size={13} /></button><button type="button" disabled={index === layout.length - 1} onClick={(event) => { event.stopPropagation(); move(index, index + 1) }}><ArrowDown size={13} /></button><button type="button" onClick={(event) => { event.stopPropagation(); const next = clone(layout); next.splice(index + 1, 0, { ...clone(item), id: uid() }); commit(next, index + 1) }}><Copy size={13} /></button><button type="button" onClick={(event) => { event.stopPropagation(); if (layout.length > 1) commit(layout.filter((_, itemIndex) => itemIndex !== index), Math.max(0, index - 1)) }}><Trash2 size={13} /></button></div><Preview block={item} components={components} /></div>)}</div></div></div></section>
-        <aside className="studio-card builder-inspector"><div className="studio-card-head"><div><h2>Inspector</h2><p>{block ? LABELS[block.blockType] : 'Selecciona un bloque'}</p></div></div>{block ? <div className="builder-inspector-body"><div className="builder-inspector-actions"><button type="button" disabled={selected === 0} onClick={() => move(selected, selected - 1)}><ArrowUp size={14} /> Subir</button><button type="button" disabled={selected === layout.length - 1} onClick={() => move(selected, selected + 1)}><ArrowDown size={14} /> Bajar</button><button type="button" onClick={() => { const next = clone(layout); next.splice(selected + 1, 0, { ...clone(block), id: uid() }); commit(next, selected + 1) }}><Copy size={14} /> Duplicar</button><button type="button" className="danger" onClick={() => layout.length > 1 && commit(layout.filter((_, index) => index !== selected), Math.max(0, selected - 1))}><Trash2 size={14} /> Eliminar</button></div>{block.blockType === 'reusableComponent' && <div className="studio-field"><label>Componente</label><select className="studio-select" value={String(relationID(block.component))} onChange={(event) => { const next = clone(block); next.component = event.target.value; updateBlock(next) }}>{components.map((item) => <option key={item.id} value={String(item.id)}>{item.name}</option>)}</select></div>}{(FIELDS[block.blockType] || []).map((field) => { const raw = field.path === '__plainContent' ? richTextToPlain(block.content) : getPath(block, field.path); const value: string | number = typeof raw === 'number' || typeof raw === 'string' ? raw : ''; return <div className="studio-field" key={field.path}><label>{field.label}</label>{field.kind === 'select' ? <select className="studio-select" value={String(value)} onChange={(event) => editField(field, event.target.value)}>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.kind === 'textarea' ? <textarea className="studio-textarea" value={String(value)} onChange={(event) => editField(field, event.target.value)} /> : <input className="studio-input" type={field.kind === 'number' ? 'number' : 'text'} value={value} onChange={(event) => editField(field, field.kind === 'number' ? Number(event.target.value) : event.target.value)} />}</div> })}<ItemEditor block={block} onChange={updateBlock} /><div className="builder-save-component"><strong>Guardar como componente</strong><input className="studio-input" value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nombre" /><button className="studio-button studio-button-violet" type="button" disabled={!componentName.trim() || saving} onClick={() => void saveComponent()}><Save size={15} /> Guardar bloque</button></div></div> : <div className="builder-empty-inspector"><MousePointer2 size={28} /><p>Selecciona un bloque.</p></div>}</aside>
+        <section className="studio-card builder-canvas-card"><div className="studio-card-head builder-canvas-head"><div><h2>Visor de página</h2><p>{page?.slug === 'home' ? 'Inicio · selecciona un bloque para editarlo.' : `/${page?.slug || ''} · selecciona un bloque para editarlo.`}</p></div><div className="builder-device-switcher"><button type="button" aria-label="Vista móvil" className={device === 'mobile' ? 'active' : ''} onClick={() => setDevice('mobile')}><Smartphone size={16} /></button><button type="button" aria-label="Vista tablet" className={device === 'tablet' ? 'active' : ''} onClick={() => setDevice('tablet')}><Tablet size={16} /></button><button type="button" aria-label="Vista escritorio" className={device === 'desktop' ? 'active' : ''} onClick={() => setDevice('desktop')}><Laptop size={16} /></button><button type="button" aria-label="Vista completa" className={device === 'wide' ? 'active' : ''} onClick={() => setDevice('wide')}><Monitor size={16} /></button></div></div><div className="builder-canvas-scroll"><div className={`builder-canvas builder-device-${device}`}><style>{style}</style><div className="ai-page builder-preview-page">{layout.map((item, index) => <div key={item.id || index} className={`builder-preview-block ${selected === index ? 'selected' : ''}`} onClick={() => { setSelected(index); setMobilePanel('inspector') }} draggable onDragStart={() => setDragIndex(index)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => drop(event, index)}><div className="builder-block-floating-tools"><span><GripVertical size={13} /> {LABELS[item.blockType]}</span><button type="button" disabled={index === 0} onClick={(event) => { event.stopPropagation(); move(index, index - 1) }}><ArrowUp size={13} /></button><button type="button" disabled={index === layout.length - 1} onClick={(event) => { event.stopPropagation(); move(index, index + 1) }}><ArrowDown size={13} /></button><button type="button" onClick={(event) => { event.stopPropagation(); const next = clone(layout); next.splice(index + 1, 0, { ...clone(item), id: uid() }); commit(next, index + 1) }}><Copy size={13} /></button><button type="button" onClick={(event) => { event.stopPropagation(); if (layout.length > 1) commit(layout.filter((_, itemIndex) => itemIndex !== index), Math.max(0, index - 1)) }}><Trash2 size={13} /></button></div><div className="builder-preview-appearance" style={previewAppearanceStyle(item)}><Preview block={item} components={components} /></div></div>)}</div></div></div></section>
+        <aside className="studio-card builder-inspector"><div className="studio-card-head"><div><h2>Inspector</h2><p>{block ? LABELS[block.blockType] : 'Selecciona un bloque'}</p></div></div>{block ? <div className="builder-inspector-body"><div className="builder-inspector-actions"><button type="button" disabled={selected === 0} onClick={() => move(selected, selected - 1)}><ArrowUp size={14} /> Subir</button><button type="button" disabled={selected === layout.length - 1} onClick={() => move(selected, selected + 1)}><ArrowDown size={14} /> Bajar</button><button type="button" onClick={() => { const next = clone(layout); next.splice(selected + 1, 0, { ...clone(block), id: uid() }); commit(next, selected + 1) }}><Copy size={14} /> Duplicar</button><button type="button" className="danger" onClick={() => layout.length > 1 && commit(layout.filter((_, index) => index !== selected), Math.max(0, selected - 1))}><Trash2 size={14} /> Eliminar</button></div>{block.blockType === 'reusableComponent' && <div className="studio-field"><label>Componente</label><select className="studio-select" value={String(relationID(block.component))} onChange={(event) => { const next = clone(block); next.component = event.target.value; updateBlock(next) }}>{components.map((item) => <option key={item.id} value={String(item.id)}>{item.name}</option>)}</select></div>}{(FIELDS[block.blockType] || []).map((field) => { const raw = field.path === '__plainContent' ? richTextToPlain(block.content) : getPath(block, field.path); const value: string | number = typeof raw === 'number' || typeof raw === 'string' ? raw : ''; return <div className="studio-field" key={field.path}><label>{field.label}</label>{field.kind === 'select' ? <select className="studio-select" value={String(value)} onChange={(event) => editField(field, event.target.value)}>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.kind === 'textarea' ? <textarea className="studio-textarea" value={String(value)} onChange={(event) => editField(field, event.target.value)} /> : <input className="studio-input" type={field.kind === 'number' ? 'number' : 'text'} value={value} onChange={(event) => editField(field, field.kind === 'number' ? Number(event.target.value) : event.target.value)} />}</div> })}<AppearanceEditor block={block} media={media} backgrounds={backgrounds} uploading={uploading} onChange={updateBlock} onUpload={uploadBackground} /><ItemEditor block={block} onChange={updateBlock} /><div className="builder-save-component"><strong>Guardar como componente</strong><input className="studio-input" value={componentName} onChange={(event) => setComponentName(event.target.value)} placeholder="Nombre" /><button className="studio-button studio-button-violet" type="button" disabled={!componentName.trim() || saving} onClick={() => void saveComponent()}><Save size={15} /> Guardar bloque</button></div></div> : <div className="builder-empty-inspector"><MousePointer2 size={28} /><p>Selecciona un bloque.</p></div>}</aside>
       </div>}
       <section className="studio-card builder-code-panel"><div className="studio-card-head"><div><h2>Código sincronizado</h2><p>JSON, CSS y HTML de referencia.</p></div><div className="ai-code-tabs"><button type="button" className={codeTab === 'layout' ? 'active' : ''} onClick={() => setCodeTab('layout')}>JSON</button><button type="button" className={codeTab === 'css' ? 'active' : ''} onClick={() => setCodeTab('css')}>CSS</button><button type="button" className={codeTab === 'html' ? 'active' : ''} onClick={() => setCodeTab('html')}>HTML</button></div></div><div className="builder-code-body"><textarea value={code} readOnly={codeTab === 'html'} onChange={(event) => setCode(event.target.value)} spellCheck={false} /><div className="builder-code-actions">{codeError && <span className="studio-notice studio-notice-error">{codeError}</span>}<button className="studio-button studio-button-primary" type="button" disabled={codeTab === 'html'} onClick={() => { try { if (codeTab === 'layout') { const parsed = JSON.parse(code); if (!Array.isArray(parsed)) throw new Error('El layout debe ser una lista.'); commit(parsed, 0) } else { setStyle(code); setDirty(true) } setCodeError('') } catch (error) { setCodeError(error instanceof Error ? error.message : 'Código inválido.') } }}><Code2 size={15} /> Aplicar al canvas</button></div></div></section>
     </main>

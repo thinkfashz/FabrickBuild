@@ -1,4 +1,5 @@
 import type { Block } from 'payload'
+import { appearanceField } from '@/fields/appearance'
 
 export const CTA: Block = {
   slug: 'cta',
@@ -15,6 +16,7 @@ export const CTA: Block = {
         { name: 'label', type: 'text', defaultValue: 'Cotizar ahora' },
         { name: 'url', type: 'text', defaultValue: '#contacto' }
       ]
-    }
+    },
+    appearanceField,
   ]
 }

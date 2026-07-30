@@ -2,7 +2,7 @@
   --header-offset: 76px;
   position: relative;
   height: 780vh;
-  background: #0b0b0b;
+  background: var(--fabrick-surface, #0b0b0b);
 }
 
 .stickyStage {
@@ -12,8 +12,8 @@
   min-height: 560px;
   overflow: hidden;
   isolation: isolate;
-  background: #0b0b0b;
-  color: #fff;
+  background: var(--fabrick-surface, #0b0b0b);
+  color: var(--fabrick-heading, #fff);
 }
 
 .canvas,
@@ -142,13 +142,14 @@
   font-size: clamp(31px, 4vw, 58px);
   line-height: .98;
   letter-spacing: -.055em;
+  color: var(--fabrick-heading, #111);
 }
 
 .cardText {
   position: relative;
   max-width: 480px;
   margin-top: 18px;
-  color: #343734;
+  color: var(--fabrick-copy, #343734);
   font-size: clamp(14px, 1.35vw, 18px);
   line-height: 1.66;
 }
@@ -161,8 +162,8 @@
   margin-top: 22px;
   padding: 0 17px;
   border-radius: 999px;
-  color: #fff;
-  background: #111;
+  color: var(--fabrick-button-text, #fff);
+  background: var(--fabrick-button-bg, #111);
   font-size: 13px;
   font-weight: 780;
 }
@@ -241,8 +242,8 @@
 
 .calculatorSection {
   padding: clamp(70px, 9vw, 140px) 0;
-  color: #141414;
-  background: radial-gradient(circle at 10% 15%, rgba(242,185,12,.16), transparent 28rem), #e8e9e5;
+  color: var(--fabrick-heading, #141414);
+  background: radial-gradient(circle at 10% 15%, rgba(242,185,12,.16), transparent 28rem), var(--fabrick-surface, #e8e9e5);
 }
 
 .calculatorShell,
@@ -264,12 +265,13 @@
   font-size: clamp(38px, 6vw, 78px);
   line-height: .98;
   letter-spacing: -.06em;
+  color: var(--fabrick-heading, #141414);
 }
 
 .calculatorIntro > div:not(.badges) {
   max-width: 590px;
   margin-top: 24px;
-  color: #4b4e4b;
+  color: var(--fabrick-copy, #4b4e4b);
   font-size: clamp(16px, 1.7vw, 21px);
   line-height: 1.65;
 }
@@ -346,8 +348,8 @@
 .resultHero {
   padding: 22px;
   border-radius: 22px;
-  color: #fff;
-  background: #111;
+  color: var(--fabrick-button-text, #fff);
+  background: var(--fabrick-button-bg, #111);
 }
 
 .resultHero span,
@@ -423,8 +425,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 14px;
-  color: #111;
-  background: #f2b90c;
+  color: var(--fabrick-button-text, #111);
+  background: var(--fabrick-button-bg, #f2b90c);
   font-size: 14px;
   font-weight: 820;
 }
@@ -475,11 +477,12 @@
   font-size: 27px;
   line-height: 1.05;
   letter-spacing: -.04em;
+  color: var(--fabrick-heading, #141414);
 }
 
 .productCard > div {
   margin-top: 17px;
-  color: #555;
+  color: var(--fabrick-copy, #555);
   line-height: 1.6;
 }
 
@@ -495,8 +498,8 @@
   margin-top: 13px;
   border: 0;
   border-radius: 12px;
-  color: #fff;
-  background: #111;
+  color: var(--fabrick-button-text, #fff);
+  background: var(--fabrick-button-bg, #111);
   cursor: pointer;
   font-weight: 780;
 }

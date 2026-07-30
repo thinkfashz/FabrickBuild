@@ -1,5 +1,6 @@
 'use client'
 
+import { ArrowUpRight, Blocks, Image, PanelsTopLeft, Settings2, Sparkles, SwatchBook } from 'lucide-react'
 import { useState } from 'react'
 
 type Health = {
@@ -14,6 +15,15 @@ type Health = {
     superAdmin: boolean
   }
 }
+
+const workstations = [
+  { href: '/admin/collections/pages', title: 'Páginas y visor', detail: 'Edita bloques y abre Live Preview sin salir de Payload.', label: 'CANVAS EN VIVO', icon: PanelsTopLeft, featured: true },
+  { href: '/admin/collections/media', title: 'Biblioteca multimedia', detail: 'Organiza imágenes, folders y proveedores en un solo lugar.', label: 'ACTIVOS', icon: Image },
+  { href: '/admin/collections/integrations', title: 'Conexiones', detail: 'Guarda claves y conecta Blob, Cloudinary, S3 e IA.', label: 'BÓVEDA', icon: Settings2 },
+  { href: '/admin/collections/ai-changes', title: 'Asistente de IA', detail: 'Revisa propuestas antes de aplicarlas a una página.', label: 'PROPUESTAS', icon: Sparkles },
+  { href: '/admin/globals/site-settings', title: 'Marca y configuración', detail: 'Identidad, SEO, navegación y pie de página.', label: 'SISTEMA', icon: SwatchBook },
+  { href: '/admin/collections/reusable-components', title: 'Componentes', detail: 'Secciones versionadas para reutilizar en cada página.', label: 'BIBLIOTECA', icon: Blocks },
+]
 
 export default function BeforeDashboard() {
   const [health, setHealth] = useState<Health | null>(null)
@@ -38,73 +48,32 @@ export default function BeforeDashboard() {
     }
   }
 
-  const linkStyle = {
-    color: 'inherit',
-    textDecoration: 'none',
-    border: '1px solid var(--theme-elevation-150)',
-    borderRadius: 12,
-    padding: '15px 16px',
-    background: 'var(--theme-elevation-50)',
-    display: 'grid',
-    gap: 5,
-    minWidth: 0,
-  } as const
-
   return (
     <section
+      className="fabrick-control-hub"
       style={{
-        border: '1px solid var(--theme-elevation-150)',
-        borderRadius: 14,
         marginBottom: 24,
-        padding: 'clamp(16px, 4vw, 26px)',
-        background:
-          'linear-gradient(135deg, var(--theme-elevation-50), var(--theme-elevation-100))',
-        overflow: 'hidden',
       }}
     >
-      <p style={{ margin: 0, opacity: 0.65, fontSize: 12, letterSpacing: '.14em' }}>
+      <p className="fabrick-control-hub__eyebrow">
         FABRICKBUILD / CONTROL
       </p>
-      <h2 style={{ margin: '8px 0 10px', fontSize: 'clamp(24px, 5vw, 32px)' }}>
+      <h2 className="fabrick-control-hub__title">
         Administra la obra digital.
       </h2>
-      <p style={{ margin: 0, maxWidth: 820, lineHeight: 1.6 }}>
+      <p className="fabrick-control-hub__intro">
         Edita páginas, construye componentes reutilizables, conecta proveedores de IA, publica
         proyectos y controla el contenido desde una interfaz preparada para móvil y escritorio.
       </p>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
-          gap: 10,
-          marginTop: 18,
-        }}
-      >
-        <a href="/studio/ia" style={linkStyle}>
-          <strong>Chat y propuestas de IA →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Chat multi-modelo, razonamiento compatible y dos propuestas antes de modificar.
-          </small>
-        </a>
-        <a href="/studio/editor" style={linkStyle}>
-          <strong>Editor visual en vivo →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Selecciona, mueve, duplica, modifica o elimina bloques antes de guardar.
-          </small>
-        </a>
-        <a href="/studio/integraciones" style={linkStyle}>
-          <strong>Bóveda de integraciones →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Selecciona proveedor, pega la clave y conecta automáticamente con cifrado por registro.
-          </small>
-        </a>
-        <a href="/admin/collections/reusable-components" style={linkStyle}>
-          <strong>Componentes reutilizables →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Biblioteca versionada de secciones creadas manualmente o con IA.
-          </small>
-        </a>
+      <div className="fabrick-control-hub__grid">
+        {workstations.map(({ href, title, detail, label, icon: Icon, featured }) => (
+          <a href={href} className={`fabrick-control-hub__action${featured ? ' is-featured' : ''}`} key={href}>
+            <span className="fabrick-control-hub__icon"><Icon size={19} /></span>
+            <span className="fabrick-control-hub__copy"><small>{label}</small><strong>{title}</strong><em>{detail}</em></span>
+            <ArrowUpRight className="fabrick-control-hub__arrow" size={17} />
+          </a>
+        ))}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>

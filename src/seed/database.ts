@@ -1,4 +1,5 @@
 import type { Payload } from 'payload'
+import { portfolioHomeLayout, portfolioPageAppearance, PORTFOLIO_HOME_TEMPLATE_VERSION } from '@/lib/home-template'
 
 const serviceSeed = [
   {
@@ -95,57 +96,9 @@ export async function seedDatabase(payload: Payload) {
         title: 'Inicio',
         slug: 'home',
         _status: 'published',
-        layout: [
-          {
-            blockType: 'hero',
-            theme: 'dark',
-            eyebrow: 'Construcción inteligente en Chile',
-            heading: 'Construimos casas.',
-            highlight: 'Dios construye hogares.',
-            description:
-              'Planificamos, construimos y remodelamos con información clara, seguimiento real y terminaciones responsables.',
-            primaryCTA: { label: 'Solicitar cotización', url: '#contacto' },
-            secondaryCTA: { label: 'Ver proyectos', url: '/proyectos' },
-            stats: [
-              { value: '8+', label: 'años de experiencia' },
-              { value: '360°', label: 'servicio integral' },
-              { value: '100%', label: 'trazabilidad del proyecto' }
-            ]
-          },
-          {
-            blockType: 'servicesGrid',
-            eyebrow: 'Servicios',
-            heading: 'Una solución para cada etapa de tu obra.',
-            intro: 'Desde una reparación puntual hasta una casa completamente nueva.',
-            services: serviceDocs.map((item) => item.id),
-            limit: 6
-          },
-          {
-            blockType: 'stats',
-            heading: 'Más claridad antes, durante y después de construir.',
-            items: [
-              { value: '01', label: 'Diagnóstico', description: 'Revisamos el problema y el alcance real.' },
-              { value: '02', label: 'Presupuesto', description: 'Detallamos etapas, materiales y condiciones.' },
-              { value: '03', label: 'Ejecución', description: 'Registramos avances y decisiones importantes.' },
-              { value: '04', label: 'Entrega', description: 'Validamos terminaciones y pendientes.' }
-            ]
-          },
-          {
-            blockType: 'cta',
-            eyebrow: 'Tu próximo proyecto',
-            heading: 'Conversemos antes de que una mala decisión se vuelva más costosa.',
-            description: 'Cuéntanos qué necesitas y organizaremos el siguiente paso.',
-            button: { label: 'Cotizar ahora', url: '#contacto' }
-          },
-          {
-            blockType: 'contactForm',
-            eyebrow: 'Cotización',
-            heading: 'Describe tu proyecto.',
-            description: 'Completa los datos principales y te contactaremos para revisar el alcance.',
-            services: serviceDocs.map((item) => item.id),
-            successMessage: 'Recibimos tu solicitud. Te contactaremos pronto.'
-          }
-        ],
+        layout: portfolioHomeLayout(),
+        pageAppearance: portfolioPageAppearance,
+        homeTemplateVersion: PORTFOLIO_HOME_TEMPLATE_VERSION,
         seo: {
           title: 'FabrickBuild | Construcción, remodelación y reparación',
           description:
@@ -154,6 +107,18 @@ export async function seedDatabase(payload: Payload) {
       }
     })
     created.pages = 1
+  }
+
+  const reusable = [
+    { name: 'CTA sólido animado', slug: 'preset-animated-solid-cta', category: 'pattern', description: 'Llamado a la acción sólido con entrada Anime.js.', tags: [{ value: 'animejs' }, { value: 'botón' }, { value: 'cta' }] },
+    { name: 'Cards translúcidas animadas', slug: 'preset-animated-glass-cards', category: 'pattern', description: 'Tres cards de contenido con glass y entrada Anime.js.', tags: [{ value: 'animejs' }, { value: 'cards' }, { value: 'glass' }] },
+  ]
+  for (const item of reusable) {
+    const existing = await payload.find({ collection: 'reusable-components', limit: 1, where: { slug: { equals: item.slug } } })
+    if (!existing.docs.length) {
+      await payload.create({ collection: 'reusable-components', data: { ...item, status: 'active', layout: [], source: 'manual', version: 1 } })
+      created.reusableComponents = (created.reusableComponents || 0) + 1
+    }
   }
 
   return { ok: true, created }

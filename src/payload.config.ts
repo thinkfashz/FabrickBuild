@@ -1,6 +1,6 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
+import { lexicalEditor, TextStateFeature } from '@payloadcms/richtext-lexical'
+import { es } from '@payloadcms/translations/languages/es'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -12,6 +12,7 @@ import { Leads } from '@/collections/Leads'
 import { Media } from '@/collections/Media'
 import { Pages } from '@/collections/Pages'
 import { Projects } from '@/collections/Projects'
+import { Products } from '@/collections/Products'
 import { ReusableComponents } from '@/collections/ReusableComponents'
 import { Services } from '@/collections/Services'
 import { Testimonials } from '@/collections/Testimonials'
@@ -19,6 +20,7 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
+import { textStateConfig } from '@/fields/textStateConfig'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -65,11 +67,13 @@ const rawDatabaseURL =
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
 const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 
-const blobToken =
-  process.env.BLOB_READ_WRITE_TOKEN ||
-  process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
-
 export default buildConfig({
+  // Rendering the admin in Spanish prevents Chrome Translate from mutating
+  // React-managed nodes (the source of the client-side removeChild error).
+  i18n: {
+    fallbackLanguage: 'es',
+    supportedLanguages: { es },
+  },
   admin: {
     user: Users.slug,
     importMap: {
@@ -83,6 +87,10 @@ export default buildConfig({
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
     livePreview: {
+      // The Pages collection supplies the dynamic URL. Declaring the
+      // collection here guarantees the native Payload toggle is available in
+      // every document view, including documents created on mobile.
+      collections: ['pages'],
       breakpoints: [
         { label: 'Móvil', name: 'mobile', width: 390, height: 844 },
         { label: 'Tablet', name: 'tablet', width: 768, height: 1024 },
@@ -90,7 +98,15 @@ export default buildConfig({
       ],
     },
   },
-  editor: lexicalEditor({}),
+  // The floating Payload toolbar now lets the editor select only part of a
+  // sentence and apply an approved color. This is intentionally a palette,
+  // not arbitrary CSS, so public rendering is predictable and safe.
+  editor: lexicalEditor({
+    features: ({ defaultFeatures }) => [
+      ...defaultFeatures,
+      TextStateFeature({ state: textStateConfig }),
+    ],
+  }),
   db: postgresAdapter({
     pool: {
       connectionString: databaseURL,
@@ -103,6 +119,7 @@ export default buildConfig({
     Pages,
     Services,
     Projects,
+    Products,
     Testimonials,
     Leads,
     Integrations,
@@ -110,18 +127,10 @@ export default buildConfig({
     ReusableComponents,
   ],
   globals: [Header, Footer, SiteSettings],
-  plugins: [
-    vercelBlobStorage({
-      enabled: Boolean(blobToken),
-      collections: {
-        media: {
-          prefix: 'fabrickbuild',
-        },
-      },
-      clientUploads: true,
-      token: blobToken,
-    }),
-  ],
+  // Payload's current Vercel Blob adapter only supports public stores. The
+  // application uploader below supports both public and private stores and
+  // keeps PostgreSQL as the source of truth for every asset.
+  plugins: [],
   cors: allowedOrigins,
   csrf: allowedOrigins,
   maxDepth: 4,

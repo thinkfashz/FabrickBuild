@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 import { authenticated } from '@/access/authenticated'
+import { chromeAppearanceField } from '@/fields/appearance'
 
 export const Footer: GlobalConfig = {
   slug: 'footer',
@@ -9,6 +10,7 @@ export const Footer: GlobalConfig = {
     update: authenticated
   },
   fields: [
+    chromeAppearanceField('Apariencia del pie de página'),
     {
       name: 'description',
       type: 'textarea',

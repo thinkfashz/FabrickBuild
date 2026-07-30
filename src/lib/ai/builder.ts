@@ -46,9 +46,56 @@ function safeURL(value: unknown, fallback = '#contacto'): string {
   return fallback
 }
 
+function safeAssetURL(value: unknown): string | undefined {
+  const url = text(value, 1200).trim()
+  if (!url) return undefined
+  return url.startsWith('/') || /^https:\/\//i.test(url) ? url : undefined
+}
+
 function safeID(value: unknown): string | undefined {
   const id = text(value, 100).replace(/[^a-zA-Z0-9_-]/g, '')
   return id || undefined
+}
+
+function appearance(value: unknown) {
+  const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+  const mode = ['none', 'color', 'image'].includes(String(source.backgroundMode))
+    ? String(source.backgroundMode)
+    : 'none'
+  const color = (item: unknown) => {
+    const result = text(item, 16)
+    return /^#[0-9a-f]{6}$/i.test(result) ? result : undefined
+  }
+  const backgroundMedia = relationID(source.backgroundMedia)
+  const savedBackground = relationID(source.savedBackground)
+
+  return {
+    backgroundMode: mode,
+    ...(color(source.surfaceColor) ? { surfaceColor: color(source.surfaceColor) } : {}),
+    surfaceOpacity: number(source.surfaceOpacity, 0, 100, 100),
+    ...(color(source.overlayColor) ? { overlayColor: color(source.overlayColor) } : {}),
+    overlayOpacity: number(source.overlayOpacity, 0, 100, 0),
+    ...(backgroundMedia !== undefined ? { backgroundMedia } : {}),
+    ...(savedBackground !== undefined ? { savedBackground } : {}),
+    ...(safeAssetURL(source.backgroundURL) ? { backgroundURL: safeAssetURL(source.backgroundURL) } : {}),
+    backgroundFit: source.backgroundFit === 'contain' ? 'contain' : 'cover',
+    backgroundPosition: ['center', 'top', 'bottom', 'left', 'right'].includes(String(source.backgroundPosition))
+      ? String(source.backgroundPosition)
+      : 'center',
+    ...(color(source.eyebrowColor) ? { eyebrowColor: color(source.eyebrowColor) } : {}),
+    ...(color(source.headingColor) ? { headingColor: color(source.headingColor) } : {}),
+    ...(color(source.bodyColor) ? { bodyColor: color(source.bodyColor) } : {}),
+    ...(color(source.buttonColor) ? { buttonColor: color(source.buttonColor) } : {}),
+    ...(color(source.buttonTextColor) ? { buttonTextColor: color(source.buttonTextColor) } : {}),
+    fontScale: number(source.fontScale, 80, 140, 100),
+    verticalSpacing: ['compact', 'normal', 'large'].includes(String(source.verticalSpacing))
+      ? String(source.verticalSpacing)
+      : 'normal',
+    contentWidth: ['standard', 'wide', 'full'].includes(String(source.contentWidth))
+      ? String(source.contentWidth)
+      : 'standard',
+    cornerRadius: number(source.cornerRadius, 0, 32, 0),
+  }
 }
 
 function stripPrototypeKeys(value: unknown): unknown {
@@ -106,7 +153,13 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       heading: text(block.heading, 260) || 'FabrickBuild',
       highlight: optionalText(block.highlight, 260),
       description: text(block.description, 1600) || 'Construcción y soluciones integrales.',
+      backgroundSource: ['upload', 'url', 'saved'].includes(block.backgroundSource)
+        ? block.backgroundSource
+        : 'upload',
       ...(relationID(block.media) !== undefined ? { media: relationID(block.media) } : {}),
+      ...(safeAssetURL(block.backgroundURL) ? { backgroundURL: safeAssetURL(block.backgroundURL) } : {}),
+      ...(relationID(block.savedBackground) !== undefined ? { savedBackground: relationID(block.savedBackground) } : {}),
+      appearance: appearance(block.appearance),
       primaryCTA: {
         label: text(block.primaryCTA?.label, 100) || 'Solicitar cotización',
         url: safeURL(block.primaryCTA?.url),
@@ -132,6 +185,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       heading: text(block.heading, 260) || (blockType === 'servicesGrid' ? 'Nuestros servicios' : 'Proyectos'),
       intro: optionalText(block.intro, 1200),
       limit: number(block.limit, 1, 12, 6),
+      appearance: appearance(block.appearance),
       ...(selected.length ? { [relationName]: selected } : {}),
     }
   }
@@ -144,6 +198,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       content: richText(block.content),
       ...(relationID(block.media) !== undefined ? { media: relationID(block.media) } : {}),
       mediaPosition: ['right', 'left', 'top'].includes(block.mediaPosition) ? block.mediaPosition : 'right',
+      appearance: appearance(block.appearance),
     }
   }
 
@@ -170,6 +225,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       ...base({ ...block, blockType }),
       heading: optionalText(block.heading, 260),
       items,
+      appearance: appearance(block.appearance),
     }
   }
 
@@ -180,6 +236,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       eyebrow: optionalText(block.eyebrow, 160),
       heading: text(block.heading, 260) || 'Lo que dicen nuestros clientes',
       ...(items.length ? { items } : {}),
+      appearance: appearance(block.appearance),
     }
   }
 
@@ -191,6 +248,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       description: optionalText(block.description, 1000),
       ...(relationID(block.before) !== undefined ? { before: relationID(block.before) } : {}),
       ...(relationID(block.after) !== undefined ? { after: relationID(block.after) } : {}),
+      appearance: appearance(block.appearance),
     }
   }
 
@@ -204,6 +262,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
         label: text(block.button?.label, 100) || 'Cotizar ahora',
         url: safeURL(block.button?.url),
       },
+      appearance: appearance(block.appearance),
     }
   }
 
@@ -216,6 +275,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       description: optionalText(block.description, 1200),
       successMessage: optionalText(block.successMessage, 700),
       ...(services.length ? { services } : {}),
+      appearance: appearance(block.appearance),
     }
   }
 
@@ -228,6 +288,7 @@ function sanitizeBlock(input: unknown): BuilderBlock {
       anchor: safeID(block.anchor),
       background: ['inherit', 'light', 'dark', 'yellow'].includes(block.background) ? block.background : 'inherit',
       spacing: ['compact', 'normal', 'large'].includes(block.spacing) ? block.spacing : 'normal',
+      appearance: appearance(block.appearance),
     }
   }
 

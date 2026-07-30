@@ -1,5 +1,6 @@
 import type { GlobalConfig } from 'payload'
 import { authenticated } from '@/access/authenticated'
+import { chromeAppearanceField } from '@/fields/appearance'
 
 export const Header: GlobalConfig = {
   slug: 'header',
@@ -9,6 +10,7 @@ export const Header: GlobalConfig = {
     update: authenticated
   },
   fields: [
+    chromeAppearanceField('Apariencia de la barra de navegación'),
     {
       name: 'navItems',
       type: 'array',

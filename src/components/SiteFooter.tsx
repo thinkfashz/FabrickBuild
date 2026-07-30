@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { blockAppearanceProps } from '@/lib/appearance'
 
 type Item = { id?: string | number; label?: string | null; url?: string | null }
 type Social = { id?: string | number; platform?: string | null; url?: string | null }
@@ -17,9 +18,10 @@ export function SiteFooter({
     email?: string
     address?: string
   }
+  const presentation = blockAppearanceProps({ appearance: footer?.appearance || {} })
 
   return (
-    <footer className="site-footer">
+    <footer className={`site-footer ${presentation.className}`} style={presentation.style}>
       <div className="shell footer-grid">
         <div>
           <Link href="/" className="brand brand-light">
@@ -57,7 +59,7 @@ export function SiteFooter({
       </div>
       <div className="shell footer-bottom">
         <span>© {new Date().getFullYear()} FabrickBuild.</span>
-        <span>Base CMS bajo licencia MIT; atribución original preservada.</span>
+        <span><Link href="/privacidad">Privacidad</Link> · <Link href="/cookies">Cookies</Link> · <Link href="/terminos">Términos</Link></span>
       </div>
     </footer>
   )
