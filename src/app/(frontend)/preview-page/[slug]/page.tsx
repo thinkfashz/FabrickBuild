@@ -5,6 +5,7 @@ import { AIPageStyle } from '@/components/AIPageStyle'
 import { PageSurface } from '@/components/PageSurface'
 import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 import { RenderBlocks } from '@/components/RenderBlocks'
+import { recoverBackgroundFromBlob } from '@/lib/blob-frame-recovery'
 import { portfolioLayoutFromPage } from '@/lib/home-template'
 import { getDraftGlobals, getDraftPageBySlug, getHeroBackground } from '@/lib/queries'
 
@@ -31,10 +32,13 @@ export default async function PreviewPage({ params, searchParams }: Args) {
   const settings = globals.settings as Record<string, any> | null
   const experience = String(settings?.homepageExperience || 'luxury')
   const usePortfolioFactory = slug === 'home' && (experience === 'luxury' || experience === 'portfolio')
-  const selectedBackground =
+  const selectedBackgroundCandidate =
     page.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
       ? page.savedBackground
       : defaultBackground
+  const selectedBackground = slug === 'home'
+    ? await recoverBackgroundFromBlob(selectedBackgroundCandidate as Record<string, any> | null)
+    : selectedBackgroundCandidate
 
   if (usePortfolioFactory) {
     const portfolioBlocks = portfolioLayoutFromPage(
