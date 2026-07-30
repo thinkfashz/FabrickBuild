@@ -5,6 +5,8 @@ import styles from './LuxuryScrollExperience.module.css'
 
 const DESKTOP_FRAMES = 21
 const MOBILE_FRAMES = 20
+const INITIAL_FRAME_BATCH = 5
+const BACKGROUND_BATCH = 6
 const HEADER_DESKTOP = 76
 const HEADER_MOBILE = 64
 
@@ -84,6 +86,20 @@ type CartItem = {
   quantity: number
 }
 
+type ConnectionNavigator = Navigator & {
+  connection?: EventTarget & {
+    saveData?: boolean
+    effectiveType?: string
+  }
+}
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number
+  cancelIdleCallback?: (id: number) => void
+}
+
+type ScheduledTask = { id: number; idle: boolean }
+
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value))
 }
@@ -107,12 +123,37 @@ function isPortraitExperience() {
   return window.innerWidth < 900 || window.innerHeight > window.innerWidth
 }
 
+function connectionPreferences() {
+  if (typeof window === 'undefined') return { saveData: false, reduceMotion: false }
+  const connection = (navigator as ConnectionNavigator).connection
+  return {
+    saveData: Boolean(connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType || '')),
+    reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  }
+}
+
+function nearestLoaded(loaded: Set<number>, requested: number) {
+  let nearest = -1
+  let distance = Number.POSITIVE_INFINITY
+  for (const index of loaded) {
+    const nextDistance = Math.abs(index - requested)
+    if (nextDistance < distance) {
+      nearest = index
+      distance = nextDistance
+    }
+  }
+  return nearest
+}
+
 export function LuxuryScrollExperience() {
   const sectionRef = useRef<HTMLElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const imagesRef = useRef<HTMLImageElement[]>([])
+  const imagesRef = useRef<Array<HTMLImageElement | undefined>>([])
+  const loadedFramesRef = useRef<Set<number>>(new Set())
   const requestedFrameRef = useRef(0)
   const animationFrameRef = useRef<number | null>(null)
+  const loadFrameRef = useRef<(index: number, priority?: boolean) => void>(() => undefined)
+  const reduceMotionRef = useRef(false)
   const [frameSet, setFrameSet] = useState<FrameSet>(() => ({
     kind: 'desktop',
     count: DESKTOP_FRAMES,
@@ -120,6 +161,7 @@ export function LuxuryScrollExperience() {
   }))
   const [progress, setProgress] = useState(0)
   const [loaded, setLoaded] = useState(false)
+  const [lightweight, setLightweight] = useState(false)
   const [m2, setM2] = useState(100)
   const [cartCount, setCartCount] = useState(0)
   const [cartMessage, setCartMessage] = useState('')
@@ -148,7 +190,9 @@ export function LuxuryScrollExperience() {
     if (!context) return
 
     const rect = canvas.getBoundingClientRect()
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const { saveData } = connectionPreferences()
+    const dprCap = window.innerWidth < 900 || saveData ? 1.35 : 2
+    const dpr = Math.min(window.devicePixelRatio || 1, dprCap)
     const width = Math.max(1, Math.round(rect.width * dpr))
     const height = Math.max(1, Math.round(rect.height * dpr))
 
@@ -169,58 +213,114 @@ export function LuxuryScrollExperience() {
   }, [])
 
   useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const connection = (navigator as ConnectionNavigator).connection
+
     const updateMode = () => {
       const mobile = isPortraitExperience()
+      const preferences = connectionPreferences()
+      reduceMotionRef.current = preferences.reduceMotion
+      setLightweight(preferences.saveData || preferences.reduceMotion)
       setFrameSet((current) => {
         const kind = mobile ? 'mobile' : 'desktop'
         const count = mobile ? MOBILE_FRAMES : DESKTOP_FRAMES
-        if (current.kind === kind) return current
+        if (current.kind === kind && current.count === count) return current
         return { kind, count, paths: buildFrames(kind, count) }
       })
     }
 
     updateMode()
     window.addEventListener('resize', updateMode, { passive: true })
-    return () => window.removeEventListener('resize', updateMode)
+    media.addEventListener?.('change', updateMode)
+    connection?.addEventListener?.('change', updateMode)
+    return () => {
+      window.removeEventListener('resize', updateMode)
+      media.removeEventListener?.('change', updateMode)
+      connection?.removeEventListener?.('change', updateMode)
+    }
   }, [])
 
   useEffect(() => {
     let cancelled = false
+    let firstPainted = false
+    const pending = new Set<number>()
+    const tasks: ScheduledTask[] = []
+    const idleWindow = window as IdleWindow
+
     setLoaded(false)
-    imagesRef.current = []
+    imagesRef.current = new Array(frameSet.count)
+    loadedFramesRef.current = new Set()
 
-    const images = frameSet.paths.map((path) => {
-      const image = new Image()
+    const loadFrame = (index: number, priority = false) => {
+      if (cancelled || index < 0 || index >= frameSet.count) return
+      if (imagesRef.current[index] || pending.has(index)) return
+
+      pending.add(index)
+      const image = new window.Image()
       image.decoding = 'async'
-      image.src = path
-      return image
-    })
+      image.loading = priority ? 'eager' : 'lazy'
+      ;(image as HTMLImageElement & { fetchPriority?: 'high' | 'low' | 'auto' }).fetchPriority = priority ? 'high' : 'low'
+      imagesRef.current[index] = image
 
-    imagesRef.current = images
+      image.onload = () => {
+        pending.delete(index)
+        if (cancelled) return
+        loadedFramesRef.current.add(index)
 
-    const firstReady = () => {
-      if (cancelled) return
-      setLoaded(true)
-      drawFrame(requestedFrameRef.current)
+        if (!firstPainted) {
+          firstPainted = true
+          setLoaded(true)
+          drawFrame(index)
+        }
+
+        if (index === requestedFrameRef.current) drawFrame(index)
+      }
+      image.onerror = () => {
+        pending.delete(index)
+        if (!cancelled && index === 0 && !firstPainted) setLoaded(true)
+      }
+      image.src = frameSet.paths[index]
     }
 
-    if (images[0]?.complete) firstReady()
-    else images[0]?.addEventListener('load', firstReady, { once: true })
+    loadFrameRef.current = loadFrame
 
-    images.forEach((image, index) => {
-      image.addEventListener(
-        'load',
-        () => {
-          if (!cancelled && index === requestedFrameRef.current) drawFrame(index)
-        },
-        { once: true },
-      )
-    })
+    const initialCount = lightweight ? Math.min(2, frameSet.count) : Math.min(INITIAL_FRAME_BATCH, frameSet.count)
+    for (let index = 0; index < initialCount; index += 1) loadFrame(index, index === 0)
+
+    const scheduleBatch = (start: number) => {
+      if (cancelled || lightweight || start >= frameSet.count) return
+      const run = () => {
+        if (cancelled) return
+        const end = Math.min(frameSet.count, start + BACKGROUND_BATCH)
+        for (let index = start; index < end; index += 1) loadFrame(index)
+        scheduleBatch(end)
+      }
+
+      if (idleWindow.requestIdleCallback) {
+        const id = idleWindow.requestIdleCallback(run, { timeout: 1200 })
+        tasks.push({ id, idle: true })
+      } else {
+        const id = window.setTimeout(run, 180)
+        tasks.push({ id, idle: false })
+      }
+    }
+
+    scheduleBatch(initialCount)
 
     return () => {
       cancelled = true
+      loadFrameRef.current = () => undefined
+      for (const task of tasks) {
+        if (task.idle) idleWindow.cancelIdleCallback?.(task.id)
+        else window.clearTimeout(task.id)
+      }
+      for (const image of imagesRef.current) {
+        if (!image) continue
+        image.onload = null
+        image.onerror = null
+      }
     }
-  }, [drawFrame, frameSet])
+  }, [drawFrame, frameSet, lightweight])
 
   useEffect(() => {
     const update = () => {
@@ -233,11 +333,20 @@ export function LuxuryScrollExperience() {
       const viewport = Math.max(1, window.innerHeight - headerHeight)
       const scrollable = Math.max(1, section.offsetHeight - viewport)
       const nextProgress = clamp((headerHeight - rect.top) / scrollable)
-      const frame = Math.min(frameSet.count - 1, Math.round(nextProgress * (frameSet.count - 1)))
+      const requested = reduceMotionRef.current
+        ? 0
+        : Math.min(frameSet.count - 1, Math.round(nextProgress * (frameSet.count - 1)))
 
-      requestedFrameRef.current = frame
+      requestedFrameRef.current = requested
       setProgress((current) => (Math.abs(current - nextProgress) > 0.001 ? nextProgress : current))
-      drawFrame(frame)
+
+      if (loadedFramesRef.current.has(requested)) {
+        drawFrame(requested)
+      } else {
+        if (!reduceMotionRef.current) loadFrameRef.current(requested, true)
+        const fallback = nearestLoaded(loadedFramesRef.current, requested)
+        if (fallback >= 0) drawFrame(fallback)
+      }
     }
 
     const requestUpdate = () => {
@@ -285,7 +394,12 @@ export function LuxuryScrollExperience() {
 
   return (
     <>
-      <section ref={sectionRef} className={styles.sequence} aria-label="Recorrido de una vivienda FabrickBuild">
+      <section
+        ref={sectionRef}
+        className={styles.sequence}
+        aria-label="Recorrido de una vivienda FabrickBuild"
+        data-lightweight={lightweight ? 'true' : 'false'}
+      >
         <div className={styles.stickyStage}>
           <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
           <div className={styles.imageShade} />
@@ -299,7 +413,7 @@ export function LuxuryScrollExperience() {
 
           <div className={styles.topline}>
             <span>FabrickBuild Signature Home</span>
-            <span>{frameSet.kind === 'mobile' ? 'Experiencia móvil' : 'Experiencia panorámica'}</span>
+            <span>{lightweight ? 'Experiencia optimizada' : frameSet.kind === 'mobile' ? 'Experiencia móvil' : 'Experiencia panorámica'}</span>
           </div>
 
           <div className={styles.storyViewport}>
