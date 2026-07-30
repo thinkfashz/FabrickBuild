@@ -109,5 +109,17 @@ export async function seedDatabase(payload: Payload) {
     created.pages = 1
   }
 
+  const reusable = [
+    { name: 'CTA sólido animado', slug: 'preset-animated-solid-cta', category: 'pattern', description: 'Llamado a la acción sólido con entrada Anime.js.', tags: [{ value: 'animejs' }, { value: 'botón' }, { value: 'cta' }] },
+    { name: 'Cards translúcidas animadas', slug: 'preset-animated-glass-cards', category: 'pattern', description: 'Tres cards de contenido con glass y entrada Anime.js.', tags: [{ value: 'animejs' }, { value: 'cards' }, { value: 'glass' }] },
+  ]
+  for (const item of reusable) {
+    const existing = await payload.find({ collection: 'reusable-components', limit: 1, where: { slug: { equals: item.slug } } })
+    if (!existing.docs.length) {
+      await payload.create({ collection: 'reusable-components', data: { ...item, status: 'active', layout: [], source: 'manual', version: 1 } })
+      created.reusableComponents = (created.reusableComponents || 0) + 1
+    }
+  }
+
   return { ok: true, created }
 }

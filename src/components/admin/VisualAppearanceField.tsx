@@ -1,8 +1,8 @@
 'use client'
 
 import { useField } from '@payloadcms/ui'
-import { Image as ImageIcon, Paintbrush, RotateCcw, Type } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Image as ImageIcon, Paintbrush, RotateCcw, Type, Upload } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import styles from './VisualAppearanceField.module.css'
 
@@ -74,6 +74,8 @@ export default function VisualAppearanceField({ field, path, readOnly }: VisualA
   const [media, setMedia] = useState<Asset[]>([])
   const [backgrounds, setBackgrounds] = useState<Asset[]>([])
   const [assetsLoaded, setAssetsLoaded] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const backgroundInput = useRef<HTMLInputElement>(null)
   const isPage = field?.name === 'pageAppearance'
   const appearance = useMemo(() => fieldValue(value), [value])
 
@@ -112,6 +114,25 @@ export default function VisualAppearanceField({ field, path, readOnly }: VisualA
   const selectedMediaID = String((appearance.backgroundMedia as Asset | undefined)?.id || '')
   const selectedBackgroundID = String((appearance.savedBackground as Asset | undefined)?.id || '')
 
+  const uploadBackground = async (file?: File) => {
+    if (!file || readOnly || uploading) return
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('_payload', JSON.stringify({ alt: file.name.replace(/\.[^.]+$/, ''), category: 'background', device: 'universal', storageFolder: 'backgrounds' }))
+      const response = await fetch('/api/media', { method: 'POST', body: form, credentials: 'include' })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || !result?.doc?.id) throw new Error('No se pudo subir la imagen.')
+      const asset = result.doc as Asset
+      setMedia((items) => [asset, ...items])
+      setValue({ ...appearance, backgroundMode: 'image', backgroundMedia: compactMedia(asset), savedBackground: undefined })
+    } finally {
+      setUploading(false)
+      if (backgroundInput.current) backgroundInput.current.value = ''
+    }
+  }
+
   return (
     <section className={styles.inspector} aria-label={isPage ? 'Diseño global de página' : 'Apariencia visual del bloque'}>
       <header className={styles.header}>
@@ -142,6 +163,7 @@ export default function VisualAppearanceField({ field, path, readOnly }: VisualA
           {(backgroundMode === 'color' || backgroundMode === 'image') && <RangeField label="Opacidad del fondo" value={Number(appearance.surfaceOpacity ?? 100)} disabled={readOnly} min={0} max={100} onChange={(next) => update('surfaceOpacity', next)} />}
           {backgroundMode === 'image' && <>
             <label className={styles.field}><span><ImageIcon size={14} /> Imagen de biblioteca</span><select disabled={readOnly || !assetsLoaded} value={selectedMediaID} onChange={(event) => update('backgroundMedia', compactMedia(media.find((asset) => String(asset.id) === event.target.value) || ({ id: '' } as Asset)))}><option value="">Seleccionar archivo…</option>{media.map((asset) => <option value={String(asset.id)} key={asset.id}>{assetLabel(asset)}</option>)}</select></label>
+            <div className={styles.uploadAsset}><button type="button" disabled={readOnly || uploading} onClick={() => backgroundInput.current?.click()}><Upload size={14} /> {uploading ? 'Subiendo…' : 'Subir imagen ahora'}</button><small>Se guarda en Biblioteca multimedia.</small><input ref={backgroundInput} hidden type="file" accept="image/*" onChange={(event) => void uploadBackground(event.target.files?.[0])} /></div>
             <label className={styles.field}><span>Background guardado</span><select disabled={readOnly || !assetsLoaded} value={selectedBackgroundID} onChange={(event) => update('savedBackground', compactBackground(backgrounds.find((asset) => String(asset.id) === event.target.value) || ({ id: '' } as Asset)))}><option value="">Seleccionar background…</option>{backgrounds.map((asset) => <option value={String(asset.id)} key={asset.id}>{assetLabel(asset)}{asset.kind ? ` · ${asset.kind}` : ''}</option>)}</select></label>
             <label className={styles.field}><span>URL externa HTTPS</span><input disabled={readOnly} value={String(appearance.backgroundURL || '')} onChange={(event) => update('backgroundURL', event.target.value)} inputMode="url" placeholder="https://…" /></label>
             <label className={styles.field}><span>Encuadre</span><select disabled={readOnly} value={String(appearance.backgroundFit || 'cover')} onChange={(event) => update('backgroundFit', event.target.value)}><option value="cover">Cubrir</option><option value="contain">Contener</option></select></label>

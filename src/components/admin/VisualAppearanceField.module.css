@@ -28,5 +28,9 @@
 .rangeField span { justify-content: space-between; }
 .rangeField b { color: #c99000; font-size: 10px; }
 .rangeField input { width: 100%; accent-color: #e6ae00; }
+.uploadAsset { display:grid; align-content:end; gap:6px; }
+.uploadAsset button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:40px; border:1px solid var(--theme-elevation-250); border-radius:8px; background:var(--theme-elevation-100); color:var(--theme-text); font-weight:700; cursor:pointer; }
+.uploadAsset button:disabled { opacity:.56; cursor:wait; }
+.uploadAsset small { color:var(--theme-elevation-600); font-size:11px; }
 @media (max-width: 700px) { .inspector { padding: 11px; border-radius: 12px; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 0 9px 10px; } .quickPalettes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .palette { justify-content: center; min-width: 0; } }
 @media (max-width: 420px) { .grid { grid-template-columns: 1fr; } .rangeField { grid-column: auto; } .header small { max-width: 210px; } }

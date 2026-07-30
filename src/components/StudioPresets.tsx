@@ -2,12 +2,14 @@ import { ArrowRight, ChevronDown, Menu, TableProperties } from 'lucide-react'
 import Link from 'next/link'
 
 import styles from './StudioPresets.module.css'
+import { AnimatedReusablePreset } from './AnimatedReusablePreset'
 
 export function isStudioPreset(slug: string) {
-  return ['preset-action-buttons', 'preset-project-table', 'preset-navigation-menu', 'preset-text-drawer'].includes(slug)
+  return ['preset-action-buttons', 'preset-project-table', 'preset-navigation-menu', 'preset-text-drawer', 'preset-animated-solid-cta', 'preset-animated-glass-cards'].includes(slug)
 }
 
 export function StudioPreset({ slug }: { slug: string }) {
+  if (slug === 'preset-animated-solid-cta' || slug === 'preset-animated-glass-cards') return <AnimatedReusablePreset slug={slug} />
   if (slug === 'preset-action-buttons') {
     return <section className={styles.action}><span className={styles.eyebrow}>PATRÓN EDITABLE</span><h2>Un llamado claro para cada decisión.</h2><p>Modifica el color, fondo, opacidad, escala y espaciado desde el inspector del bloque.</p><div><Link href="#contacto">Hablar con un experto <ArrowRight size={16} /></Link><Link href="/proyectos">Ver proyectos</Link></div></section>
   }
