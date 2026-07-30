@@ -25,7 +25,9 @@ import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
 import {
+  revalidateBackgrounds,
   revalidateGlobals,
+  revalidateMedia,
   revalidateProjects,
   revalidateServices,
   revalidateTestimonials,
@@ -141,8 +143,8 @@ export default buildConfig({
   }),
   collections: [
     Users,
-    Media,
-    Backgrounds,
+    appendAfterChange(Media, revalidateMedia),
+    appendAfterChange(Backgrounds, revalidateBackgrounds),
     PagesWithIsolatedPreview,
     appendAfterChange(Services, revalidateServices),
     appendAfterChange(Projects, revalidateProjects),
