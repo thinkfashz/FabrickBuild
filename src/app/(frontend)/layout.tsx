@@ -25,8 +25,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FrontendLayout({ children }: { children: React.ReactNode }) {
   const { header, footer, settings } = await getGlobals()
   const contact = (settings?.contact || {}) as { whatsapp?: string }
-  const loader = (settings?.loader || {}) as Record<string, unknown>
-  const consent = (settings?.consent || {}) as Record<string, unknown>
+  const loader = (settings?.loader || {}) as React.ComponentProps<typeof SiteLoader>['settings']
+  const consent = (settings?.consent || {}) as React.ComponentProps<typeof ConsentBanner>['settings']
 
   return (
     <html lang="es" suppressHydrationWarning>
