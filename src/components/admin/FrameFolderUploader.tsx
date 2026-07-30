@@ -169,7 +169,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
     }
     setBusy(true)
     setProgress(0)
-    setMessage('Leyendo el vídeo y preparando hasta 61 fotogramas WebP…')
+    setMessage('Leyendo el vídeo y preparando exactamente hasta 60 fotogramas WebP para ScrollTrigger…')
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
     video.preload = 'auto'
@@ -180,11 +180,11 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
     try {
       await videoMetadata(video)
       if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('El vídeo no tiene una duración válida.')
-      const count = Math.min(61, Math.max(2, Math.ceil(video.duration)))
+      const count = 60
       const frames: File[] = []
       const maxEdge = target === 'desktopFrames' ? 1920 : 1080
       for (let index = 0; index < count; index += 1) {
-        const time = count === 1 ? 0 : Math.min(video.duration - 0.04, Math.max(0.01, (video.duration * index) / (count - 1)))
+        const time = Math.min(video.duration - 0.04, Math.max(0.01, (video.duration * index) / (count - 1)))
         await seekVideo(video, time)
         frames.push(await videoFrame(video, file, index, maxEdge))
         setProgress(Math.round(((index + 1) / count) * 100))
@@ -273,7 +273,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
       <div className="frame-folder-uploader__actions">
         <button type="button" disabled={busy} onClick={() => folderInput.current?.click()}>Subir carpeta</button>
         <button type="button" disabled={busy} onClick={() => imageInput.current?.click()}>Seleccionar imágenes</button>
-        <button type="button" disabled={busy} onClick={() => videoInput.current?.click()}>Extraer vídeo (hasta 61 frames)</button>
+        <button type="button" disabled={busy} onClick={() => videoInput.current?.click()}>Extraer vídeo (hasta 60 frames)</button>
         {preview.length > 0 && <button type="button" className="primary" disabled={busy} onClick={() => void upload()}>Subir y organizar</button>}
         {preview.length > 0 && <button type="button" className="ghost" disabled={busy} onClick={clearPreview}>Cancelar</button>}
       </div>

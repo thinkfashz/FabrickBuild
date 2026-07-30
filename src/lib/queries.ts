@@ -31,7 +31,14 @@ const compactBackground = (background: Doc) => ({
   desktopFrames: Array.isArray(background.desktopFrames) ? background.desktopFrames.map(compactMedia) : [],
   mobileFrames: Array.isArray(background.mobileFrames) ? background.mobileFrames.map(compactMedia) : [],
   playback: isDoc(background.playback)
-    ? { trigger: background.playback.trigger, fit: background.playback.fit, overlayOpacity: background.playback.overlayOpacity }
+    ? {
+        trigger: background.playback.trigger,
+        fit: background.playback.fit,
+        scrub: background.playback.scrub,
+        pin: background.playback.pin,
+        scrollLength: background.playback.scrollLength,
+        overlayOpacity: background.playback.overlayOpacity,
+      }
     : undefined,
 })
 

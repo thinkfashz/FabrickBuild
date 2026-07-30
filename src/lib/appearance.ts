@@ -10,6 +10,9 @@ export type FrameSequence = {
   poster: string | null
   trigger: 'scroll' | 'autoplay' | 'loop'
   fit: 'cover' | 'contain'
+  scrub: number
+  pin: boolean
+  overlayOpacity: number
 }
 
 const HEX = /^#[0-9a-f]{6}$/i
@@ -102,6 +105,9 @@ export function getBlockFrameSequence(block: Doc): FrameSequence | null {
     poster: savedBackgroundURL(background),
     trigger: trigger === 'autoplay' || trigger === 'loop' ? trigger : 'scroll',
     fit: background.playback?.fit === 'contain' ? 'contain' : 'cover',
+    scrub: Math.min(1.2, Math.max(0.08, Number(background.playback?.scrub ?? 0.32))),
+    pin: background.playback?.pin !== false,
+    overlayOpacity: Math.min(82, Math.max(0, Number(background.playback?.overlayOpacity ?? 24))),
   }
 }
 

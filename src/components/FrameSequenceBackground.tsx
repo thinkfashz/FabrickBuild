@@ -9,9 +9,11 @@ import type { FrameSequence } from '@/lib/appearance'
 
 type Props = {
   sequence: FrameSequence
-  /** Portfolio scenes are hand-driven even if an older Background says autoplay. */
+  /** Portfolio scenes are always hand-driven, even for an older autoplay record. */
   forceScroll?: boolean
 }
+
+const FRAME_LIMIT = 60
 
 function drawImage(canvas: HTMLCanvasElement, image: HTMLImageElement, fit: FrameSequence['fit']) {
   const bounds = canvas.getBoundingClientRect()
@@ -48,15 +50,15 @@ function fitPlane(mesh: THREE.Mesh, canvas: HTMLCanvasElement, image: HTMLImageE
 }
 
 /**
- * Ordered CMS frames rendered on a Three.js texture. ScrollTrigger maps the
- * full section scroll progress to the precise frame number. Frames are
- * preloaded around the current point, not all at once, so mobile remains
- * smooth. A 2D canvas remains available when WebGL is unavailable.
+ * A viewport-pinned sequence. ScrollTrigger maps progress to no more than 60
+ * ordered CMS frames; the static canvas is layered under each editorial scene.
+ * Three.js is used when WebGL is available and Canvas 2D is a safe fallback.
  */
 export function FrameSequenceBackground({ sequence, forceScroll = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fallbackCanvasRef = useRef<HTMLCanvasElement>(null)
+  const frameLabelRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -64,10 +66,13 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     const container = containerRef.current
     if (!canvas || !fallbackCanvas || !container) return
 
+    const section = container.closest<HTMLElement>('section')
     let stopped = false
     let interval: number | undefined
     let activeFrame = -1
+    let wantedFrame = 0
     let renderedFrame = -1
+    let progress = 0
     let images: Array<HTMLImageElement | undefined> = []
     let urls: string[] = []
     let loading = new Set<number>()
@@ -95,16 +100,32 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
 
     const chooseFrames = () => {
       const useMobile = window.matchMedia('(max-width: 767px)').matches
-      return useMobile && sequence.mobileFrames.length
+      const candidates = useMobile && sequence.mobileFrames.length
         ? sequence.mobileFrames
         : sequence.desktopFrames.length
           ? sequence.desktopFrames
           : sequence.mobileFrames
+      return candidates.slice(0, FRAME_LIMIT)
     }
 
     const resizeRenderer = () => {
       if (!renderer) return
       renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false)
+    }
+
+    const setMood = (nextProgress: number) => {
+      if (!section) return
+      const pulse = Math.sin(nextProgress * Math.PI * 2.2) * .12
+      const brightness = Math.min(1.08, Math.max(.52, .67 + nextProgress * .19 + pulse))
+      const veil = Math.min(.82, Math.max(.04, (sequence.overlayOpacity / 100) * (.92 - nextProgress * .22)))
+      section.style.setProperty('--cinematic-progress', nextProgress.toFixed(4))
+      section.style.setProperty('--cinematic-light', brightness.toFixed(3))
+      section.style.setProperty('--cinematic-veil', veil.toFixed(3))
+      section.style.setProperty('--cinematic-glow-x', `${Math.round(12 + nextProgress * 76)}%`)
+    }
+
+    const updateFrameLabel = (index: number) => {
+      if (frameLabelRef.current) frameLabelRef.current.textContent = `${String(index + 1).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
     }
 
     function requestFrame(index: number) {
@@ -114,7 +135,7 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       image.decoding = 'async'
       image.addEventListener('load', () => {
         loading.delete(index)
-        if (!stopped && (index === 0 || index === activeFrame)) draw(index, true)
+        if (!stopped && (index === 0 || index === wantedFrame)) draw(index, true)
         if (!stopped) warmFrames(index)
       })
       image.addEventListener('error', () => {
@@ -126,18 +147,22 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     }
 
     function warmFrames(center: number) {
-      for (let index = center - 1; index <= center + 4; index += 1) requestFrame(index)
-      while (loading.size < 3 && cursor < urls.length) requestFrame(cursor++)
+      for (let index = center - 2; index <= center + 7; index += 1) requestFrame(index)
+      while (loading.size < 4 && cursor < urls.length) requestFrame(cursor++)
     }
 
     const draw = (index: number, force = false) => {
-      if (!force && index === renderedFrame) return
-      requestFrame(index)
-      warmFrames(index)
-      const image = images[index]
+      if (!urls.length) return
+      const target = Math.min(urls.length - 1, Math.max(0, index))
+      wantedFrame = target
+      if (!force && target === renderedFrame) return
+      requestFrame(target)
+      warmFrames(target)
+      const image = images[target]
       if (!image || !image.complete) return
-      activeFrame = index
-      renderedFrame = index
+      activeFrame = target
+      renderedFrame = target
+      updateFrameLabel(target)
       if (useWebGL && renderer && scene && camera && mesh) {
         try {
           texture?.dispose()
@@ -161,6 +186,12 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       drawImage(fallbackCanvas, image, sequence.fit)
     }
 
+    const syncProgress = (nextProgress: number) => {
+      progress = Math.min(1, Math.max(0, nextProgress))
+      setMood(progress)
+      if (urls.length) draw(Math.round(progress * (urls.length - 1)))
+    }
+
     const loadFrames = () => {
       urls = chooseFrames()
       images = Array(urls.length)
@@ -168,6 +199,8 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       cursor = 0
       activeFrame = -1
       renderedFrame = -1
+      wantedFrame = 0
+      updateFrameLabel(0)
       warmFrames(0)
       draw(0, true)
     }
@@ -175,35 +208,31 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     const onResize = () => {
       loadFrames()
       resizeRenderer()
-      if (activeFrame >= 0) draw(activeFrame, true)
+      syncProgress(progress)
       trigger?.refresh()
     }
 
     loadFrames()
     const scrollDriven = forceScroll || sequence.trigger === 'scroll'
-    if (scrollDriven) {
-      const section = container.closest('section')
-      if (section) {
-        gsap.registerPlugin(ScrollTrigger)
-        trigger = ScrollTrigger.create({
-          trigger: section,
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 0.45,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            if (images.length > 1) draw(Math.round(self.progress * (images.length - 1)))
-          },
-        })
-        trigger.refresh()
-      }
+    if (scrollDriven && section) {
+      gsap.registerPlugin(ScrollTrigger)
+      trigger = ScrollTrigger.create({
+        trigger: section,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: forceScroll ? Math.max(.18, sequence.scrub) : sequence.scrub,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => syncProgress(self.progress),
+      })
+      syncProgress(trigger.progress)
+      trigger.refresh()
     } else {
       let current = 0
       interval = window.setInterval(() => {
-        if (!images.length) return
-        current = sequence.trigger === 'loop' ? (current + 1) % images.length : Math.min(current + 1, images.length - 1)
+        if (!urls.length) return
+        current = sequence.trigger === 'loop' ? (current + 1) % urls.length : Math.min(current + 1, urls.length - 1)
         draw(current)
-        if (sequence.trigger === 'autoplay' && current === images.length - 1 && interval) window.clearInterval(interval)
+        if (sequence.trigger === 'autoplay' && current === urls.length - 1 && interval) window.clearInterval(interval)
       }, 1000 / 24)
     }
     window.addEventListener('resize', onResize)
@@ -225,12 +254,14 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
   return (
     <div
       ref={containerRef}
-      className="hero-background hero-frame-sequence"
+      className={`hero-background hero-frame-sequence ${forceScroll || sequence.pin ? 'hero-frame-sequence--pinned' : ''}`}
       aria-hidden="true"
       style={sequence.poster ? { backgroundImage: `url(${JSON.stringify(sequence.poster)})` } : undefined}
     >
       <canvas ref={canvasRef} />
       <canvas ref={fallbackCanvasRef} className="hero-frame-sequence__fallback" />
+      <div className="hero-frame-sequence__light" />
+      <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>01 / 60</span><i>SCROLL / MOTION</i></div>
     </div>
   )
 }

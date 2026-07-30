@@ -33,23 +33,20 @@ export function PortfolioExperience({ block }: { block: Doc }) {
     gsap.registerPlugin(ScrollTrigger)
     const animeAnimations: Array<{ revert?: () => void }> = []
     const context = gsap.context(() => {
-      gsap.fromTo(`.${styles.heroCopy} > *`, { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: .8, stagger: .1, ease: 'power3.out' })
-      gsap.fromTo(`.${styles.orbital}`, { rotate: -12, scale: .84, opacity: 0 }, { rotate: 0, scale: 1, opacity: 1, duration: 1.1, ease: 'expo.out' })
-      gsap.to(`.${styles.orbital}`, { rotate: 360, ease: 'none', scrollTrigger: { trigger: element, start: 'top bottom', end: 'bottom top', scrub: 1 } })
-      gsap.utils.toArray<HTMLElement>('[data-cinematic-section]').forEach((section) => {
-        const direction = section.dataset.side === 'right' ? 58 : -58
-        gsap.fromTo(section, { x: direction, autoAlpha: 0 }, {
+      gsap.utils.toArray<HTMLElement>('[data-cinematic-scene]').forEach((scene) => {
+        const direction = scene.dataset.side === 'right' ? 54 : -54
+        gsap.fromTo(scene, { x: direction, autoAlpha: 0 }, {
           x: 0,
           autoAlpha: 1,
-          duration: .85,
+          duration: .82,
           ease: 'power3.out',
           scrollTrigger: {
-            trigger: section,
-            start: 'top 84%',
+            trigger: scene,
+            start: 'top 82%',
             once: true,
             onEnter: () => {
-              const copy = Array.from(section.querySelectorAll<HTMLElement>('[data-cinematic-copy]'))
-              if (copy.length) animeAnimations.push(animate(copy, { opacity: [0, 1], translateY: [16, 0], delay: stagger(58), duration: 620, ease: 'outExpo' }))
+              const copy = Array.from(scene.querySelectorAll<HTMLElement>('[data-cinematic-copy]'))
+              if (copy.length) animeAnimations.push(animate(copy, { opacity: [0, 1], translateY: [18, 0], delay: stagger(60), duration: 680, ease: 'outExpo' }))
             },
           },
         })
@@ -63,31 +60,55 @@ export function PortfolioExperience({ block }: { block: Doc }) {
 
   return (
     <section ref={root} className={styles.portfolio}>
-      <div className={styles.hero} data-cinematic-section data-side="left">
-        <div className={`${styles.heroCopy} ${styles.reveal}`}>
-          <span data-cinematic-copy className="eyebrow">{block.eyebrow || 'ESTUDIO DIGITAL INDEPENDIENTE'}</span>
+      <section className={`${styles.hero} ${styles.sceneLeft}`} data-cinematic-scene data-side="left">
+        <div className={styles.heroCopy}>
+          <span data-cinematic-copy className="eyebrow">{block.eyebrow || 'FABRICKBUILD / EXPERIENCIA DIGITAL'}</span>
           <h1 data-cinematic-copy>{block.heading || 'Diseñamos experiencias que se sienten vivas.'}<em>{block.highlight || 'Diseño · código · movimiento'}</em></h1>
-          <p data-cinematic-copy>{block.description || 'Estrategia, identidad y producto digital para marcas que buscan una presencia imposible de ignorar.'}</p>
+          <p data-cinematic-copy>{block.description || 'Una narrativa digital inmersiva, pensada para guiar cada mirada desde el primer frame hasta la última decisión.'}</p>
           <div data-cinematic-copy className={styles.actions}><a className="button button-yellow" href={block.primaryCTA?.url || '#proyectos'}>{block.primaryCTA?.label || 'Ver proyectos'} <ArrowRight size={17} /></a><a className="button button-ghost" href={block.secondaryCTA?.url || '#contacto'}>{block.secondaryCTA?.label || 'Hablemos'}</a></div>
         </div>
-        <div className={styles.orbital} aria-hidden="true"><span>01</span><span>UX</span><span>AI</span><span>WEBGL</span><i /><b /></div>
-      </div>
+        <aside data-cinematic-copy className={styles.heroTelemetry}><span>01 / 60</span><strong>SCROLL PARA CONTINUAR</strong><i /></aside>
+      </section>
 
-      <div className={`${styles.stackSection} ${styles.reveal}`} data-cinematic-section data-side="left"><div className={styles.sectionHead}><span data-cinematic-copy className="eyebrow">TECNOLOGÍAS</span><h2 data-cinematic-copy>Construido con herramientas que escalan.</h2></div><div data-cinematic-copy className={styles.stack}>{stack.map((item: Doc, index: number) => { const Icon = techIcon(index); return <span key={item.id || item.label || index}><Icon size={16} />{item.label || item.name}</span> })}</div></div>
-
-      <section className={styles.story} data-cinematic-section data-side="right">
-        <div className={styles.storyVisual} aria-hidden="true"><span>02 / MOTION</span><i /><i /><b /></div>
-        <div className={styles.storyCopy}>
-          <span data-cinematic-copy className="eyebrow">RECORRIDO CINEMATOGRÁFICO</span>
-          <h2 data-cinematic-copy>El proyecto avanza a tu ritmo.</h2>
-          <p data-cinematic-copy>Cada frame responde al desplazamiento: sin reproducción automática, sin perder el control y con una transición continua entre historia, imagen y acción.</p>
-          <a data-cinematic-copy className="button button-ghost" href="#proyectos">Explorar el proceso <ArrowRight size={17} /></a>
+      <section className={`${styles.scene} ${styles.sceneRight}`} data-cinematic-scene data-side="right">
+        <div className={styles.sceneCopy}>
+          <span data-cinematic-copy className="eyebrow">NUESTRA FORMA DE TRABAJAR</span>
+          <h2 data-cinematic-copy>La imagen abre el camino.<em>La experiencia lo confirma.</em></h2>
+          <p data-cinematic-copy>Cada sección ocupa su propio momento. El texto no compite con el contenido: aparece en el costado preciso mientras la iluminación y la escena cambian con el scroll.</p>
+          <a data-cinematic-copy className="button button-ghost" href="#tecnologia">Ver metodología <ArrowRight size={17} /></a>
         </div>
       </section>
 
-      <div id="proyectos" className={`${styles.projects} ${styles.reveal}`}><div className={styles.sectionHead} data-cinematic-section data-side="left"><span data-cinematic-copy className="eyebrow">SELECCIÓN</span><h2 data-cinematic-copy>Interfaces con una personalidad propia.</h2></div><div className={styles.projectList}>{projects.map((project: Doc, index: number) => { const src = getMediaURL(project.image) || project.imageURL || fallbackProjects[index % fallbackProjects.length].imageURL; return <article data-cinematic-section data-side={index % 2 ? 'right' : 'left'} key={project.id || project.title || index}><div className={`${styles.projectImage} ${styles[`tone${index % 3}`]}`}><Image src={src} alt={project.title || 'Proyecto'} fill sizes="(max-width: 760px) 100vw, 55vw" /><span>{String(index + 1).padStart(2, '0')}</span></div><div className={styles.projectCopy}><small data-cinematic-copy>{project.type || project.category || 'Portfolio'}</small><h3 data-cinematic-copy>{project.title || `Proyecto ${index + 1}`}</h3><p data-cinematic-copy>{project.description || 'Una experiencia diseñada para navegar, descubrir y recordar.'}</p><a data-cinematic-copy href={project.url || '#contacto'}>Explorar caso <ArrowRight size={16} /></a></div></article> })}</div></div>
+      <section id="tecnologia" className={`${styles.techScene} ${styles.sceneLeft}`} data-cinematic-scene data-side="left">
+        <div className={styles.sceneCopy}>
+          <span data-cinematic-copy className="eyebrow">SISTEMA CREATIVO</span>
+          <h2 data-cinematic-copy>Herramientas que hacen que una marca avance.</h2>
+          <p data-cinematic-copy>Diseño, desarrollo y contenido trabajan como un mismo sistema, adaptable desde Payload y preparado para cualquier pantalla.</p>
+        </div>
+        <div data-cinematic-copy className={styles.stack}>{stack.map((item: Doc, index: number) => { const Icon = techIcon(index); return <span key={item.id || item.label || index}><Icon size={16} />{item.label || item.name}</span> })}</div>
+      </section>
 
-      <div className={`${styles.closing} ${styles.reveal}`} data-cinematic-section data-side="right"><Star size={18} /><p data-cinematic-copy>Un portfolio que también es una experiencia: editable desde Payload, visible en móvil y diseñado para crecer.</p></div>
+      <section className={`${styles.scene} ${styles.sceneRight}`} data-cinematic-scene data-side="right">
+        <div className={styles.sceneCopy}>
+          <span data-cinematic-copy className="eyebrow">MOTION / NARRATIVA</span>
+          <h2 data-cinematic-copy>El recorrido avanza con tu mano.</h2>
+          <p data-cinematic-copy>La portada no reproduce un video por detrás: el scroll controla una secuencia de hasta 60 frames y transforma la luz con cada avance, de manera natural y precisa.</p>
+          <div data-cinematic-copy className={styles.motionRule}><b>60</b><span>FRAMES SINCRONIZADOS<br />CON SCROLLTRIGGER</span></div>
+        </div>
+      </section>
+
+      <section id="proyectos" className={styles.projects}>
+        <div className={`${styles.projectIntro} ${styles.sceneRight}`} data-cinematic-scene data-side="right"><span data-cinematic-copy className="eyebrow">SELECCIÓN</span><h2 data-cinematic-copy>Interfaces con una personalidad propia.</h2></div>
+        <div className={styles.projectList}>{projects.map((project: Doc, index: number) => {
+          const src = getMediaURL(project.image) || project.imageURL || fallbackProjects[index % fallbackProjects.length].imageURL
+          return <article data-cinematic-scene data-side={index % 2 ? 'left' : 'right'} key={project.id || project.title || index}>
+            <div className={`${styles.projectImage} ${styles[`tone${index % 3}`]}`}><Image src={src} alt={project.title || 'Proyecto'} fill sizes="(max-width: 760px) 100vw, 54vw" /><span>{String(index + 1).padStart(2, '0')}</span></div>
+            <div className={styles.projectCopy}><small data-cinematic-copy>{project.type || project.category || 'Portfolio'}</small><h3 data-cinematic-copy>{project.title || `Proyecto ${index + 1}`}</h3><p data-cinematic-copy>{project.description || 'Una experiencia diseñada para navegar, descubrir y recordar.'}</p><a data-cinematic-copy href={project.url || '#contacto'}>Explorar caso <ArrowRight size={16} /></a></div>
+          </article>
+        })}</div>
+      </section>
+
+      <section className={styles.closing} data-cinematic-scene data-side="left"><div><Star size={18} /><span data-cinematic-copy className="eyebrow">LISTO PARA EL SIGUIENTE FRAME</span></div><h2 data-cinematic-copy>Una historia que no se mira.<em>Se recorre.</em></h2><a data-cinematic-copy className="button button-yellow" href="#contacto">Crear algo memorable <ArrowRight size={17} /></a></section>
     </section>
   )
 }
