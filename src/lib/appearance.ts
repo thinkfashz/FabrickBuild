@@ -76,7 +76,7 @@ export function getPortfolioFrameSequence(block: Doc): FrameSequence | null {
   const background = candidates.find((item) => {
     const desktop = Array.isArray(item.desktopFrames) ? item.desktopFrames.length : 0
     const mobile = Array.isArray(item.mobileFrames) ? item.mobileFrames.length : 0
-    return item.kind === 'frames' || desktop > 0 || mobile > 0
+    return desktop > 0 || mobile > 0
   }) || null
 
   if (!background) return null
