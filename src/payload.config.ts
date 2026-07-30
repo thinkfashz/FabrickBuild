@@ -70,12 +70,16 @@ function normalizePostgresSSLMode(connectionString: string): string {
   }
 }
 
-const databaseSource = process.env.POSTGRES_URL
-  ? 'POSTGRES_URL'
-  : process.env.DATABASE_URL
-    ? 'DATABASE_URL'
-    : 'local-fallback'
+const explicitDatabaseURL = process.env.PAYLOAD_DATABASE_URL
+const databaseSource = explicitDatabaseURL
+  ? 'PAYLOAD_DATABASE_URL'
+  : process.env.POSTGRES_URL
+    ? 'POSTGRES_URL'
+    : process.env.DATABASE_URL
+      ? 'DATABASE_URL'
+      : 'local-fallback'
 const rawDatabaseURL =
+  explicitDatabaseURL ||
   process.env.POSTGRES_URL ||
   process.env.DATABASE_URL ||
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
@@ -83,8 +87,25 @@ const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 const poolMax = Math.min(20, Math.max(2, Number(process.env.POSTGRES_POOL_MAX || 8)))
 const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
 
-console.info(`[database] Conexión seleccionada mediante ${databaseSource}.`)
+const safeDatabaseTarget = (() => {
+  try {
+    const url = new URL(databaseURL)
+    return `${url.hostname}${url.port ? `:${url.port}` : ''}${url.pathname}`
+  } catch {
+    return 'conexión no identificable'
+  }
+})()
+
+console.info(`[database] Conexión seleccionada mediante ${databaseSource}: ${safeDatabaseTarget}.`)
 console.info(`[storage] Vercel Blob ${blobToken ? 'habilitado' : 'no configurado'}.`)
+if (
+  process.env.POSTGRES_URL &&
+  process.env.DATABASE_URL &&
+  process.env.POSTGRES_URL !== process.env.DATABASE_URL &&
+  !explicitDatabaseURL
+) {
+  console.warn('[database] POSTGRES_URL y DATABASE_URL apuntan a conexiones diferentes; Payload prioriza POSTGRES_URL para conservar Multimedia.')
+}
 
 const appendAfterChange = (
   collection: CollectionConfig,
