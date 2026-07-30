@@ -69,6 +69,7 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     extraClassName,
   ].filter(Boolean).join(' ')
 
+  const mobileScale = appearance.mobileHeadingScale / 100
   const style: CSSVars = {
     '--cms-surface-color': appearance.surfaceColor,
     '--cms-surface-opacity': appearance.surfaceOpacity / 100,
@@ -83,11 +84,13 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     '--cms-radius': `${appearance.cornerRadius}px`,
     '--cms-pad-top': `${appearance.paddingTop}px`,
     '--cms-pad-bottom': `${appearance.paddingBottom}px`,
-    '--cms-font-scale': appearance.fontScale / 100,
+    '--cms-font-size': `${(appearance.fontScale / 100).toFixed(2)}rem`,
     '--cms-overlay': appearance.overlayColor,
     '--cms-overlay-opacity': appearance.overlayOpacity / 100,
     '--cms-mobile-pad': `${appearance.mobilePadding}px`,
-    '--cms-mobile-heading-scale': appearance.mobileHeadingScale / 100,
+    '--cms-mobile-h1-max': `${(4.6 * mobileScale).toFixed(2)}rem`,
+    '--cms-mobile-h2-max': `${(3.2 * mobileScale).toFixed(2)}rem`,
+    '--cms-mobile-h3-max': `${(2.1 * mobileScale).toFixed(2)}rem`,
     '--cms-mobile-align': appearance.mobileTextAlign,
     '--cms-background-fit': appearance.backgroundFit,
   }
