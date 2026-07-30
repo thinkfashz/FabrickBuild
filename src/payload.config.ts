@@ -2,7 +2,7 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
-import { buildConfig } from 'payload'
+import { buildConfig, type CollectionConfig, type GlobalConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { AIChanges } from '@/collections/AIChanges'
@@ -19,6 +19,12 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
+import {
+  revalidateGlobals,
+  revalidateProjects,
+  revalidateServices,
+  revalidateTestimonials,
+} from '@/hooks/revalidateContent'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -50,9 +56,7 @@ function normalizePostgresSSLMode(connectionString: string): string {
   try {
     const url = new URL(connectionString)
     const mode = url.searchParams.get('sslmode')
-    if (mode && ['prefer', 'require', 'verify-ca'].includes(mode)) {
-      url.searchParams.set('sslmode', 'verify-full')
-    }
+    if (mode && ['prefer', 'require', 'verify-ca'].includes(mode)) url.searchParams.set('sslmode', 'verify-full')
     return url.toString()
   } catch {
     return connectionString
@@ -65,20 +69,44 @@ const rawDatabaseURL =
   'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
 const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 const poolMax = Math.min(20, Math.max(2, Number(process.env.POSTGRES_POOL_MAX || 8)))
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
 
-const blobToken =
-  process.env.BLOB_READ_WRITE_TOKEN ||
-  process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
+const appendAfterChange = (collection: CollectionConfig, hook: NonNullable<CollectionConfig['hooks']>['afterChange'][number]): CollectionConfig => ({
+  ...collection,
+  hooks: {
+    ...collection.hooks,
+    afterChange: [...(collection.hooks?.afterChange || []), hook],
+  },
+})
+
+const appendGlobalAfterChange = (global: GlobalConfig): GlobalConfig => ({
+  ...global,
+  hooks: {
+    ...global.hooks,
+    afterChange: [...(global.hooks?.afterChange || []), revalidateGlobals],
+  },
+})
+
+const previewPageURL = (data: Record<string, unknown>) => {
+  const slug = typeof data.slug === 'string' ? data.slug : 'home'
+  const secret = encodeURIComponent(process.env.PREVIEW_SECRET || '')
+  return `${serverURL}/preview-page/${encodeURIComponent(slug)}?secret=${secret}`
+}
+
+const PagesWithIsolatedPreview: CollectionConfig = {
+  ...Pages,
+  admin: {
+    ...Pages.admin,
+    livePreview: { url: ({ data }) => previewPageURL(data as Record<string, unknown>) },
+    preview: (data) => previewPageURL(data as Record<string, unknown>),
+  },
+}
 
 export default buildConfig({
   admin: {
     user: Users.slug,
-    importMap: {
-      baseDir: path.resolve(dirname),
-    },
-    meta: {
-      titleSuffix: '— FabrickBuild CMS',
-    },
+    importMap: { baseDir: path.resolve(dirname) },
+    meta: { titleSuffix: '— FabrickBuild CMS' },
     components: {
       beforeNavLinks: ['@/components/admin/AdminStudioNav'],
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
@@ -106,24 +134,20 @@ export default buildConfig({
     Users,
     Media,
     Backgrounds,
-    Pages,
-    Services,
-    Projects,
-    Testimonials,
+    PagesWithIsolatedPreview,
+    appendAfterChange(Services, revalidateServices),
+    appendAfterChange(Projects, revalidateProjects),
+    appendAfterChange(Testimonials, revalidateTestimonials),
     Leads,
     Integrations,
     AIChanges,
     ReusableComponents,
   ],
-  globals: [Header, Footer, SiteSettings],
+  globals: [Header, Footer, SiteSettings].map(appendGlobalAfterChange),
   plugins: [
     vercelBlobStorage({
       enabled: Boolean(blobToken),
-      collections: {
-        media: {
-          prefix: 'fabrickbuild',
-        },
-      },
+      collections: { media: { prefix: 'fabrickbuild' } },
       clientUploads: true,
       token: blobToken,
     }),
@@ -134,7 +158,5 @@ export default buildConfig({
   secret: process.env.PAYLOAD_SECRET || 'fabrickbuild-development-secret-change-in-production',
   serverURL,
   ...(sharpInstance ? { sharp: sharpInstance } : {}),
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
+  typescript: { outputFile: path.resolve(dirname, 'payload-types.ts') },
 })
