@@ -99,7 +99,14 @@ export const Pages: CollectionConfig = {
               type: 'collapsible',
               label: 'Lienzo de la página',
               admin: { initCollapsed: false },
-              fields: [pageAppearanceField],
+              fields: [
+                pageAppearanceField,
+                {
+                  type: 'ui',
+                  name: 'pageBackgroundQuickUpload',
+                  admin: { components: { Field: '@/components/admin/PageBackgroundQuickUpload' } },
+                },
+              ],
             },
             {
               type: 'ui',

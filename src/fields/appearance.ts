@@ -31,3 +31,14 @@ export const pageAppearanceField: Field = {
       'Define la tipografía y el background de esta página completa. Los bloques pueden heredar o sobrescribir estos valores.',
   },
 }
+
+/** Shared presentation controls for the navigation and footer globals. */
+export const chromeAppearanceField = (label: string): Field => ({
+  name: 'appearance',
+  type: 'json',
+  label,
+  admin: {
+    components: { Field: '@/components/admin/VisualAppearanceField' },
+    description: 'Color, transparencia, imagen de fondo, tipografía y botones. Se aplica a todo el sitio al guardar.',
+  },
+})

@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Menu } from 'lucide-react'
 import { getMediaAlt, getMediaURL } from '@/lib/media'
+import { blockAppearanceProps } from '@/lib/appearance'
 
 type NavItem = { id?: string | number; label?: string | null; url?: string | null }
 
@@ -20,6 +21,7 @@ export function SiteHeader({
   const cta = (header?.cta || {}) as { label?: string; url?: string }
   const brandName = String(settings?.brandName || 'FabrickBuild')
   const logo = getMediaURL(settings?.logo as never, 'thumbnail')
+  const presentation = blockAppearanceProps({ appearance: header?.appearance || {} })
 
   const Brand = () => (
     <Link href="/" className="brand" aria-label={`${brandName}, inicio`}>
@@ -33,7 +35,7 @@ export function SiteHeader({
   )
 
   return (
-    <header className="site-header">
+    <header className={`site-header ${presentation.className}`} style={presentation.style}>
       <div className="shell header-inner">
         <Brand />
         <nav className="desktop-nav" aria-label="Navegación principal">

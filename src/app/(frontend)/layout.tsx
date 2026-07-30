@@ -3,6 +3,7 @@ import React from 'react'
 import { getGlobals } from '@/lib/queries'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
+import { SiteExperience } from '@/components/SiteExperience'
 import './globals.css'
 import './generated.css'
 
@@ -27,6 +28,7 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         <SiteHeader header={header} settings={settings} />
         <main>{children}</main>
         <SiteFooter footer={footer} settings={settings} />
+        <SiteExperience experience={(settings?.experience || {}) as { loaderEnabled?: boolean; loaderDuration?: number; loaderTitle?: string; loaderMessage?: string; consentEnabled?: boolean; consentVersion?: string }} />
         {typeof (settings?.contact as { whatsapp?: string } | undefined)?.whatsapp === 'string' && (settings?.contact as { whatsapp?: string }).whatsapp && (
           <a
             className="whatsapp-float"
