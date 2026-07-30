@@ -46,6 +46,38 @@ export async function getDraftPageBySlug(slug: string) {
   }
 }
 
+const publicHeroBackground = unstable_cache(
+  async () => {
+    const payload = await getCMS()
+    const result = await payload.find({
+      collection: 'backgrounds',
+      depth: 2,
+      limit: 1,
+      sort: '-updatedAt',
+      overrideAccess: false,
+      where: {
+        and: [
+          { status: { equals: 'ready' } },
+          { kind: { equals: 'frames' } },
+          { category: { equals: 'hero' } },
+        ],
+      },
+    })
+    return result.docs[0] || null
+  },
+  ['fabrick-hero-background'],
+  { revalidate: 300, tags: ['fabrick-backgrounds'] },
+)
+
+export async function getHeroBackground() {
+  try {
+    return await publicHeroBackground()
+  } catch (error) {
+    console.error('[queries] No fue posible cargar el background cinematográfico.', error)
+    return null
+  }
+}
+
 const publicServices = unstable_cache(
   async (featuredOnly: boolean, limit: number) => {
     const payload = await getCMS()
