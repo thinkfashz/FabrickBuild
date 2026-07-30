@@ -28,5 +28,8 @@
     "next-env.d.ts",
     "next.config.mjs"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/components/FabrickSignatureExperience.tsx"
+  ]
 }
