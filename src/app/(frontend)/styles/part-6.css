@@ -1,0 +1,19 @@
+.cms-surface h1 em,
+.cms-surface h2 em,
+.site-header .brand strong,
+.site-footer .brand strong {
+  color: var(--cms-accent);
+}
+
+.site-header .header-cta:hover,
+.cms-surface .button-yellow:hover,
+.cms-surface .button-dark:hover {
+  background: color-mix(in srgb, var(--cms-button) 86%, #ffffff 14%);
+  color: var(--cms-button-text);
+}
+
+.cms-surface .button-outline:hover,
+.cms-surface .button-ghost:hover {
+  border-color: var(--cms-accent);
+  color: var(--cms-heading);
+}
