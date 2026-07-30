@@ -48,20 +48,27 @@ La preparación elimina únicamente los marcadores históricos de desarrollo con
 
 ## Validación de entrega
 
-El commit final debe comprobar, en este orden:
+El preview final del 30 de julio de 2026 comprobó:
 
-1. Generación del import map.
-2. Eliminación del marcador de desarrollo sin modificar datos comerciales.
+1. Generación correcta del import map.
+2. Preparación de migraciones con `0` marcadores eliminados.
 3. Aplicación idempotente de migraciones.
-4. Creación idempotente de los componentes Anime.js.
-5. TypeScript y compilación de Next.js.
-6. Apertura de portada, páginas legales, admin y preview móvil.
-7. Ausencia de errores de esquema en runtime.
-8. Cabeceras de caché públicas para visitantes y privadas para admin, preview y formularios.
-9. Presencia del texto y composición del portfolio cinematográfico aprobado en Inicio.
-10. Ausencia del visor Fabrick Signature en Inicio.
-11. Reproducción de la cantidad completa declarada por el Background.
+4. Ejecución de la semilla de componentes Anime.js.
+5. TypeScript y compilación de Next.js correctos.
+6. Generación completa de 17 de 17 páginas estáticas.
+7. Portada pública respondiendo HTTP 200.
+8. Presencia del portfolio cinematográfico aprobado en Inicio.
+9. Ausencia del visor Fabrick Signature en Inicio.
+10. Ausencia de errores de runtime después del despliegue.
+
+## Preview validado
+
+- Commit desplegado: `01e519bf1f4021128be0dbaad01cc607412d8917`.
+- Deployment: `dpl_3CxtgcnGmJVrR9L5WqEu8d1MDyPJ`.
+- Estado: `READY`.
+- URL: `fabrickbuild-s2gsb0bno-think-fastzs-projects.vercel.app`.
+- Estado multimedia: el Background `Casa / home` sigue relacionado con `0` frames de escritorio y `0` móviles; debe volver a cargarse desde Backgrounds/Multimedia.
 
 ## Despliegue
 
-Los cambios permanecen en una rama y PR draft. No deben fusionarse con `main` hasta validar el preview, las rutas legales, el administrador y los logs de runtime.
+Los cambios permanecen en una rama y PR draft. No deben fusionarse con `main` hasta completar la prueba visual final y volver a cargar la secuencia multimedia.
