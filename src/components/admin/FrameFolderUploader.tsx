@@ -4,6 +4,8 @@ import { useField } from '@payloadcms/ui'
 import { useMemo, useRef, useState } from 'react'
 
 type UploadTarget = 'desktopFrames' | 'mobileFrames'
+type OutputFormat = 'webp' | 'png'
+type QualityPreset = 'compact' | 'balanced' | 'high'
 
 type Props = {
   path?: string
@@ -17,7 +19,12 @@ type PreviewFile = {
 
 const MAX_FRAME_BYTES = 190 * 1024
 
-const webpName = (name: string) => `${name.replace(/\.[^.]+$/, '') || 'frame'}.webp`
+const outputName = (name: string, format: OutputFormat) => `${name.replace(/\.[^.]+$/, '') || 'frame'}.${format}`
+const qualityValues: Record<QualityPreset, { webp: number; desktop: number; mobile: number; label: string }> = {
+  compact: { webp: .68, desktop: 1280, mobile: 720, label: 'Compacta · carga más rápida' },
+  balanced: { webp: .80, desktop: 1600, mobile: 900, label: 'Equilibrada · recomendada' },
+  high: { webp: .90, desktop: 1920, mobile: 1080, label: 'Alta · más detalle' },
+}
 
 async function openImage(file: File) {
   const url = URL.createObjectURL(file)
@@ -33,17 +40,16 @@ async function openImage(file: File) {
   }
 }
 
-async function asWebP(file: File, maxEdge: number): Promise<File> {
-  if (file.type === 'image/webp' && file.size <= MAX_FRAME_BYTES) return file
+async function asOptimizedImage(file: File, maxEdge: number, format: OutputFormat, qualityPreset: QualityPreset): Promise<File> {
+  if (file.type === `image/${format}` && file.size <= MAX_FRAME_BYTES) return file
   const image = await openImage(file)
   const longestSide = Math.max(image.naturalWidth, image.naturalHeight)
   let scale = Math.min(1, maxEdge / Math.max(1, longestSide))
-  let quality = 0.82
+  let quality = qualityValues[qualityPreset].webp
   let output: Blob | null = null
 
-  // The loop gives a practical hard ceiling for cellular use while retaining
-  // enough detail for a canvas sequence. It falls back gracefully on browsers
-  // that do not support WebP encoding.
+  // Canvas is free and runs on the editor device. PNG is lossless, so its
+  // only available size control is resolution; WebP also reduces quality.
   for (let attempt = 0; attempt < 18; attempt += 1) {
     const width = Math.max(2, Math.round(image.naturalWidth * scale))
     const height = Math.max(2, Math.round(image.naturalHeight * scale))
@@ -53,13 +59,14 @@ async function asWebP(file: File, maxEdge: number): Promise<File> {
     const context = canvas.getContext('2d')
     if (!context) throw new Error('El navegador no pudo preparar el canvas de optimización.')
     context.drawImage(image, 0, 0, width, height)
-    output = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', quality))
+    output = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, `image/${format}`, format === 'webp' ? quality : undefined))
     if (!output) return file
     if (output.size <= MAX_FRAME_BYTES) break
-    if (quality > 0.48) quality = Math.max(0.48, quality - 0.09)
-    else { scale *= 0.82; quality = 0.76 }
+    if (format === 'webp' && quality > 0.46) quality = Math.max(0.46, quality - 0.08)
+    else { scale *= 0.82; quality = qualityValues[qualityPreset].webp }
   }
-  return output ? new File([output], webpName(file.name), { type: 'image/webp', lastModified: file.lastModified }) : file
+  if (!output || output.size > MAX_FRAME_BYTES) throw new Error(`No fue posible dejar ${file.name} bajo 190 KB. Usa calidad compacta o WebP.`)
+  return new File([output], outputName(file.name, format), { type: `image/${format}`, lastModified: file.lastModified })
 }
 
 const videoMetadata = (video: HTMLVideoElement) => new Promise<void>((resolve, reject) => {
@@ -76,7 +83,7 @@ const seekVideo = (video: HTMLVideoElement, time: number) => new Promise<void>((
   video.currentTime = time
 })
 
-async function videoFrame(video: HTMLVideoElement, file: File, index: number, maxEdge: number) {
+async function videoFrame(video: HTMLVideoElement, file: File, index: number, maxEdge: number, format: OutputFormat, qualityPreset: QualityPreset) {
   const scale = Math.min(1, maxEdge / Math.max(video.videoWidth, video.videoHeight, 1))
   const canvas = document.createElement('canvas')
   canvas.width = Math.max(2, Math.round(video.videoWidth * scale))
@@ -84,10 +91,10 @@ async function videoFrame(video: HTMLVideoElement, file: File, index: number, ma
   const context = canvas.getContext('2d')
   if (!context) throw new Error('El navegador no pudo crear el canvas de vídeo.')
   context.drawImage(video, 0, 0, canvas.width, canvas.height)
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', 0.82))
-  if (!blob) throw new Error('No se pudo convertir este vídeo a WebP.')
-  const name = `${cleanName(file.name).replace(/\s+/g, '-')}-${String(index + 1).padStart(3, '0')}.webp`
-  return asWebP(new File([blob], name, { type: 'image/webp', lastModified: file.lastModified }), maxEdge)
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, `image/${format}`, format === 'webp' ? qualityValues[qualityPreset].webp : undefined))
+  if (!blob) throw new Error(`No se pudo convertir este vídeo a ${format.toUpperCase()}.`)
+  const name = `${cleanName(file.name).replace(/\s+/g, '-')}-${String(index + 1).padStart(3, '0')}.${format}`
+  return asOptimizedImage(new File([blob], name, { type: `image/${format}`, lastModified: file.lastModified }), maxEdge, format, qualityPreset)
 }
 
 const naturalSort = (files: File[]) =>
@@ -116,6 +123,9 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
   const [message, setMessage] = useState('')
   const [preview, setPreview] = useState<PreviewFile[]>([])
   const [album, setAlbum] = useState('secuencia')
+  const [frameCount, setFrameCount] = useState(60)
+  const [format, setFormat] = useState<OutputFormat>('webp')
+  const [quality, setQuality] = useState<QualityPreset>('balanced')
   const desktop = useField<unknown[]>({ path: 'desktopFrames' })
   const mobile = useField<unknown[]>({ path: 'mobileFrames' })
 
@@ -140,14 +150,15 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
     }
 
     setBusy(true)
-    setMessage(`Optimizando ${files.length} imágenes a WebP para que cada frame use hasta 190 KB…`)
+    const limitedFiles = files.slice(0, frameCount)
+    setMessage(`Optimizando ${limitedFiles.length} imágenes a ${format.toUpperCase()} para que cada frame use hasta 190 KB…`)
     const sourceAlbum = groupName(files)
     try {
       const optimized: File[] = []
-      const maxEdge = target === 'desktopFrames' ? 1920 : 1080
-      for (let index = 0; index < files.length; index += 1) {
-        optimized.push(await asWebP(files[index], maxEdge))
-        setProgress(Math.round(((index + 1) / files.length) * 100))
+      const maxEdge = target === 'desktopFrames' ? qualityValues[quality].desktop : qualityValues[quality].mobile
+      for (let index = 0; index < limitedFiles.length; index += 1) {
+        optimized.push(await asOptimizedImage(limitedFiles[index], maxEdge, format, quality))
+        setProgress(Math.round(((index + 1) / limitedFiles.length) * 100))
       }
       clearPreview()
       setAlbum(sourceAlbum)
@@ -169,7 +180,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
     }
     setBusy(true)
     setProgress(0)
-    setMessage('Leyendo el vídeo y preparando exactamente hasta 60 fotogramas WebP para ScrollTrigger…')
+    setMessage(`Leyendo el vídeo y preparando ${frameCount} fotogramas ${format.toUpperCase()} para ScrollTrigger…`)
     const url = URL.createObjectURL(file)
     const video = document.createElement('video')
     video.preload = 'auto'
@@ -180,13 +191,13 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
     try {
       await videoMetadata(video)
       if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('El vídeo no tiene una duración válida.')
-      const count = 60
+      const count = frameCount
       const frames: File[] = []
-      const maxEdge = target === 'desktopFrames' ? 1920 : 1080
+      const maxEdge = target === 'desktopFrames' ? qualityValues[quality].desktop : qualityValues[quality].mobile
       for (let index = 0; index < count; index += 1) {
-        const time = Math.min(video.duration - 0.04, Math.max(0.01, (video.duration * index) / (count - 1)))
+        const time = Math.min(video.duration - 0.04, Math.max(0.01, count === 1 ? video.duration / 2 : (video.duration * index) / (count - 1)))
         await seekVideo(video, time)
-        frames.push(await videoFrame(video, file, index, maxEdge))
+        frames.push(await videoFrame(video, file, index, maxEdge, format, quality))
         setProgress(Math.round(((index + 1) / count) * 100))
       }
       clearPreview()
@@ -262,7 +273,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
       <div className="frame-folder-uploader__head">
         <div>
           <strong>Carga automatizada de frames</strong>
-          <p>Selecciona primero Web o Móvil. Puedes subir una carpeta completa o imágenes sueltas; el sistema aplica orden natural y luego numera la secuencia sin saltos.</p>
+          <p>Primero define el destino y la salida. Luego sube un video, una carpeta o imágenes: el sistema crea, comprime, ordena y numera la secuencia sin saltos.</p>
         </div>
         <select value={target} onChange={(event) => setTarget(event.target.value as UploadTarget)} disabled={busy}>
           <option value="desktopFrames">Web / escritorio</option>
@@ -270,10 +281,17 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
         </select>
       </div>
 
+      <div className="frame-folder-uploader__settings" aria-label="Configuración antes de generar frames">
+        <label><span>Frames</span><select value={frameCount} disabled={busy} onChange={(event) => setFrameCount(Number(event.target.value))}>{[12, 24, 36, 48, 60].map((count) => <option key={count} value={count}>{count} frames</option>)}</select></label>
+        <label><span>Formato</span><select value={format} disabled={busy} onChange={(event) => setFormat(event.target.value as OutputFormat)}><option value="webp">WebP (recomendado)</option><option value="png">PNG (sin pérdida)</option></select></label>
+        <label><span>Calidad</span><select value={quality} disabled={busy} onChange={(event) => setQuality(event.target.value as QualityPreset)}>{(Object.keys(qualityValues) as QualityPreset[]).map((preset) => <option key={preset} value={preset}>{qualityValues[preset].label}</option>)}</select></label>
+        <small>Límite estricto: 190 KB por frame. PNG reduce resolución si es necesario; WebP conserva mejor peso/calidad para móvil.</small>
+      </div>
+
       <div className="frame-folder-uploader__actions">
         <button type="button" disabled={busy} onClick={() => folderInput.current?.click()}>Subir carpeta</button>
         <button type="button" disabled={busy} onClick={() => imageInput.current?.click()}>Seleccionar imágenes</button>
-        <button type="button" disabled={busy} onClick={() => videoInput.current?.click()}>Extraer vídeo (hasta 60 frames)</button>
+        <button type="button" disabled={busy} onClick={() => videoInput.current?.click()}>Subir vídeo y generar {frameCount} frames</button>
         {preview.length > 0 && <button type="button" className="primary" disabled={busy} onClick={() => void upload()}>Subir y organizar</button>}
         {preview.length > 0 && <button type="button" className="ghost" disabled={busy} onClick={clearPreview}>Cancelar</button>}
       </div>
@@ -284,13 +302,12 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
 
       {preview.length > 0 && (
         <div className="frame-folder-uploader__preview" aria-label="Vista previa del orden de frames">
-          {preview.slice(0, 60).map((item) => (
+          {preview.map((item) => (
             <figure key={`${item.file.name}-${item.order}`}>
               <img src={item.url} alt="" />
               <figcaption><b>{String(item.order).padStart(3, '0')}</b><span>{item.file.name}</span></figcaption>
             </figure>
           ))}
-          {preview.length > 60 && <div className="more">+{preview.length - 60} frames</div>}
         </div>
       )}
 
@@ -300,10 +317,10 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
         .frame-folder-uploader{border:1px solid color-mix(in srgb,var(--theme-elevation-150) 74%,#f4c84b 26%);border-radius:16px;padding:clamp(12px,3vw,20px);margin:8px 0 22px;background:linear-gradient(135deg,color-mix(in srgb,var(--theme-elevation-50) 93%,#f4c84b 7%),var(--theme-elevation-50));box-shadow:0 12px 28px rgba(0,0,0,.05)}
         .frame-folder-uploader__head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px} strong{display:block;font-size:16px;margin-bottom:5px} p{margin:0;max-width:760px;color:var(--theme-elevation-600);line-height:1.5}
         select{min-width:190px;padding:10px 12px;border:1px solid var(--theme-elevation-250);border-radius:8px;background:var(--theme-input-bg);color:var(--theme-text)}
-        .frame-folder-uploader__actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px} button{border:0;border-radius:8px;padding:11px 15px;cursor:pointer;background:var(--theme-elevation-800);color:#fff;font-weight:700} button.primary{background:#c99b19;color:#111} button.ghost{background:transparent;color:var(--theme-text);border:1px solid var(--theme-elevation-250)} button:disabled{opacity:.55;cursor:wait}
+        .frame-folder-uploader__settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px;padding:12px;border:1px solid var(--theme-elevation-150);border-radius:10px}.frame-folder-uploader__settings label{display:grid;gap:6px;font-size:12px;font-weight:700}.frame-folder-uploader__settings small{grid-column:1/-1;color:var(--theme-elevation-600);line-height:1.45}.frame-folder-uploader__actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px} button{border:0;border-radius:8px;padding:11px 15px;cursor:pointer;background:var(--theme-elevation-800);color:#fff;font-weight:700} button.primary{background:#c99b19;color:#111} button.ghost{background:transparent;color:var(--theme-text);border:1px solid var(--theme-elevation-250)} button:disabled{opacity:.55;cursor:wait}
         .frame-folder-uploader__preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:18px;max-height:430px;overflow:auto;padding:10px;border-radius:10px;background:var(--theme-elevation-100)} figure{margin:0;min-width:0;border-radius:8px;overflow:hidden;background:var(--theme-elevation-50)} img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover} figcaption{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;padding:7px;font-size:10px} figcaption span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.more{display:grid;place-items:center;min-height:100px;font-weight:800}
         .frame-folder-uploader__status{display:grid;gap:8px;margin-top:14px;color:var(--theme-elevation-700)} progress{width:100%;height:8px}
-        @media(max-width:720px){.frame-folder-uploader__head{flex-direction:column}select,button{width:100%;min-height:44px}.frame-folder-uploader__actions{display:grid}.frame-folder-uploader__preview{grid-template-columns:repeat(3,minmax(0,1fr));padding:6px;gap:6px}figcaption span{display:none}}
+        @media(max-width:720px){.frame-folder-uploader__head{flex-direction:column}.frame-folder-uploader__settings{grid-template-columns:1fr}select,button{width:100%;min-height:44px}.frame-folder-uploader__actions{display:grid}.frame-folder-uploader__preview{grid-template-columns:repeat(3,minmax(0,1fr));padding:6px;gap:6px}figcaption span{display:none}}
       `}</style>
     </section>
   )

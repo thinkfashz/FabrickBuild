@@ -1,5 +1,5 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { lexicalEditor, TextStateFeature } from '@payloadcms/richtext-lexical'
 import { es } from '@payloadcms/translations/languages/es'
 import path from 'path'
 import { buildConfig } from 'payload'
@@ -20,6 +20,7 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
+import { textStateConfig } from '@/fields/textStateConfig'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -97,7 +98,15 @@ export default buildConfig({
       ],
     },
   },
-  editor: lexicalEditor({}),
+  // The floating Payload toolbar now lets the editor select only part of a
+  // sentence and apply an approved color. This is intentionally a palette,
+  // not arbitrary CSS, so public rendering is predictable and safe.
+  editor: lexicalEditor({
+    features: ({ defaultFeatures }) => [
+      ...defaultFeatures,
+      TextStateFeature({ state: textStateConfig }),
+    ],
+  }),
   db: postgresAdapter({
     pool: {
       connectionString: databaseURL,

@@ -115,6 +115,8 @@
 .fabrick-width-full > .shell { max-width:none; width:100%; padding-inline:clamp(18px,5vw,90px); }
 .fabrick-block .button-yellow,
 .fabrick-block .round-link { background:var(--fabrick-button-bg, var(--yellow)); color:var(--fabrick-button-text, var(--ink)); }
+.fabrick-block .button { border-width:var(--fabrick-button-border-width, 0px); border-color:var(--fabrick-button-border, transparent); border-radius:var(--fabrick-button-radius, 999px); min-height:var(--fabrick-button-height, 50px); padding-inline:var(--fabrick-button-padding, 23px); }
+.fabrick-block .button-ghost { border-color:var(--fabrick-button-border, rgba(255,255,255,.22)); }
 .fabrick-block-image .service-card,
 .fabrick-block-image .testimonial-grid article,
 .fabrick-block-image .lead-form { backdrop-filter:blur(14px); }

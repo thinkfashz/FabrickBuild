@@ -8,7 +8,10 @@ export const Content: Block = {
   fields: [
     { name: 'eyebrow', type: 'text' },
     { name: 'heading', type: 'text' },
-    { name: 'content', type: 'richText', required: true },
+    {
+      name: 'content', type: 'richText', required: true, label: 'Texto con formato',
+      admin: { description: 'Selecciona una parte del texto para cambiar solo ese fragmento de color desde la barra flotante. Títulos y párrafos completos se controlan en Apariencia visual.' },
+    },
     { name: 'media', type: 'upload', relationTo: 'media' },
     {
       name: 'mediaPosition',
