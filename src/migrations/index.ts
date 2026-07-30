@@ -1,5 +1,6 @@
 import * as migration_20260730_090000_complete_cms from './20260730_090000_complete_cms'
 import * as migration_20260730_091000_leads_and_footer_rows from './20260730_091000_leads_and_footer_rows'
+import * as migration_20260730_120000_portfolio_factory_tables from './20260730_120000_portfolio_factory_tables'
 
 export const migrations = [
   {
@@ -11,5 +12,10 @@ export const migrations = [
     up: migration_20260730_091000_leads_and_footer_rows.up,
     down: migration_20260730_091000_leads_and_footer_rows.down,
     name: '20260730_091000_leads_and_footer_rows',
+  },
+  {
+    up: migration_20260730_120000_portfolio_factory_tables.up,
+    down: migration_20260730_120000_portfolio_factory_tables.down,
+    name: '20260730_120000_portfolio_factory_tables',
   },
 ]
