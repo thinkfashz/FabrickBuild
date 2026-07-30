@@ -30,6 +30,7 @@ const nextConfig = {
     imageSizes: [32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       { protocol: 'https', hostname: '**.public.blob.vercel-storage.com' },
+      { protocol: 'https', hostname: '**.vercel.app' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
