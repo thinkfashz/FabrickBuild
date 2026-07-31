@@ -28,11 +28,23 @@ Esta entrega conecta el editor de Payload con el frontend público mediante una 
 - El Background se toma de `Páginas → Inicio → Diseño de página → Background multimedia` o, cuando no hay una selección directa, del último Background `Hero / portada` marcado como listo.
 - Desde el editor de la página se puede subir un video y elegir libremente la cantidad de frames: 60, 80, 120 o cualquier cantidad válida.
 - La cantidad de frames no se recorta durante el guardado, la recuperación ni la reproducción. La carga progresiva por lotes reduce el consumo sin eliminar fotogramas.
-- ScrollTrigger distribuye la secuencia completa a lo largo del recorrido y también puede sincronizar el tiempo de un MP4 o WebM con el scroll.
-- La secuencia móvil se utiliza en teléfonos; si no existe, se reutiliza la secuencia de escritorio, y viceversa.
+- ScrollTrigger distribuye la secuencia completa a lo largo del recorrido.
+- La secuencia móvil se utiliza en teléfonos; si no existe una secuencia de escritorio, se reutiliza como fallback con ajuste `cover`.
+- Si PostgreSQL pierde las relaciones de Multimedia, el renderer recupera los pathnames reales desde Vercel Blob sin duplicar los archivos.
+- Los Blobs privados se entregan mediante `/api/blob-frame/[...pathname]`, limitada exclusivamente a imágenes dentro de `frames/`.
+- El primer y último Blob se validan como `image/*` durante el build antes de publicar la secuencia.
+- El motor precarga una ventana pequeña alrededor del scroll, limita reintentos y conserva el último frame válido si una imagen aislada falla.
 - `FabrickSignatureExperience` permanece conservado como código histórico, pero no se importa en Inicio ni en la vista previa del editor.
 
-## Base de datos
+## Base de datos y almacenamiento
+
+Payload selecciona la conexión en este orden:
+
+1. `PAYLOAD_DATABASE_URL`
+2. `POSTGRES_URL`
+3. `DATABASE_URL`
+
+El deployment actual detectó que PostgreSQL conserva el Background `Casa / home`, pero no devuelve registros de `media`. Los 61 binarios continúan en el almacén privado de Vercel Blob y se recuperan desde allí como fallback seguro.
 
 El build ejecuta:
 
@@ -48,28 +60,21 @@ La preparación elimina únicamente los marcadores históricos de desarrollo con
 
 ## Validación de entrega
 
-El preview final del 30 de julio de 2026 comprobó:
+La revisión final comprobó:
 
 1. Generación correcta del import map.
-2. Preparación de migraciones con `0` marcadores eliminados.
-3. Aplicación idempotente de migraciones.
-4. Ejecución de la semilla de componentes Anime.js.
-5. TypeScript y compilación de Next.js correctos.
-6. Generación completa de 17 de 17 páginas estáticas.
-7. Portada pública respondiendo HTTP 200.
-8. Presencia del portfolio cinematográfico aprobado en Inicio.
-9. Ausencia del visor Fabrick Signature en Inicio.
-10. Ausencia de errores de runtime después del despliegue.
+2. Preparación y aplicación idempotente de migraciones.
+3. TypeScript y compilación de Next.js correctos.
+4. Generación completa de 17 de 17 páginas estáticas.
+5. Portada pública respondiendo HTTP 200.
+6. Presencia del portfolio cinematográfico aprobado en Inicio.
+7. Ausencia del visor Fabrick Signature en Inicio.
+8. Detección y orden correcto de `frame_001` a `frame_061`.
+9. Secuencia de 61 frames para móvil y fallback de 61 frames en escritorio.
+10. Rutas internas del mismo dominio para impedir errores de acceso a Blob privado.
+11. Ausencia de errores de runtime en la ruta de entrega.
+12. Contador inicial `01 / 61` y actualización mediante ScrollTrigger.
 
-## Preview validado
+## Estado del PR
 
-- Revisión de código desplegada: `01e519bf1f4021128be0dbaad01cc607412d8917`.
-- Deployment: `dpl_3CxtgcnGmJVrR9L5WqEu8d1MDyPJ`.
-- Estado: `READY`.
-- URL: `fabrickbuild-s2gsb0bno-think-fastzs-projects.vercel.app`.
-- Los commits posteriores marcados con `[skip ci]` solo documentan esta validación y no cambian el código ejecutable desplegado.
-- Estado multimedia: el Background `Casa / home` sigue relacionado con `0` frames de escritorio y `0` móviles; debe volver a cargarse desde Backgrounds/Multimedia.
-
-## Despliegue
-
-Los cambios permanecen en una rama y PR draft. No deben fusionarse con `main` hasta completar la prueba visual final y volver a cargar la secuencia multimedia.
+Los cambios permanecen en `agent/complete-cms-performance` y el PR #5 continúa abierto, en draft y sin fusionarse con `main` hasta completar la revisión del propietario.
