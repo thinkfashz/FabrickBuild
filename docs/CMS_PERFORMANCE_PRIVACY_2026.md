@@ -75,6 +75,10 @@ La revisión final comprobó:
 11. Ausencia de errores de runtime en la ruta de entrega.
 12. Contador inicial `01 / 61` y actualización mediante ScrollTrigger.
 
+## Corrección de credenciales Blob
+
+La ruta de entrega y la validación del build utilizan explícitamente la misma credencial disponible, incluyendo compatibilidad con el nombre heredado de la integración. Esto evita respuestas HTTP 502 y garantiza que los PNG privados puedan dibujarse en Canvas y WebGL.
+
 ## Estado del PR
 
 Los cambios permanecen en `agent/complete-cms-performance` y el PR #5 continúa abierto, en draft y sin fusionarse con `main` hasta completar la revisión del propietario.
