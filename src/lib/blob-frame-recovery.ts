@@ -16,6 +16,10 @@ const MOBILE_NAME = /(movil|mobile|vertical|portrait|phone)/i
 const DESKTOP_NAME = /(desktop|escritorio|horizontal|landscape|web|pc)/i
 const DERIVATIVE_NAME = /(?:^|[/_-])(thumbnail|thumb|card|small|medium|hero)(?:[/_.-]|$)/i
 
+const getBlobToken = () => process.env.BLOB_READ_WRITE_TOKEN
+  || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
+  || null
+
 const hasUsableFrames = (background: Doc | null | undefined) => {
   if (!background) return false
   const desktop = Array.isArray(background.desktopFrames) ? background.desktopFrames.length : 0
@@ -44,16 +48,18 @@ const publicFrameURL = (pathname: string) =>
   `/api/blob-frame/${pathname.split('/').map((segment) => encodeURIComponent(segment)).join('/')}`
 
 async function listEveryBlob(prefix?: string) {
-  const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
+  const token = getBlobToken()
+  if (!token) throw new Error('Vercel Blob no entregó una credencial de lectura al build.')
+
   const blobs: BlobEntry[] = []
   let cursor: string | undefined
 
   do {
     const result = await list({
       limit: 1000,
+      token,
       ...(prefix ? { prefix } : {}),
       ...(cursor ? { cursor } : {}),
-      ...(token ? { token } : {}),
     })
     blobs.push(...(result.blobs as BlobEntry[]))
     cursor = result.hasMore ? result.cursor : undefined
@@ -87,8 +93,14 @@ function selectBestFrames(entries: BlobEntry[]) {
 }
 
 async function validatePrivateFrame(entry: BlobEntry) {
-  const result = await get(entry.pathname, { access: 'private' })
-  const contentType = result?.blob.contentType || ''
+  const token = getBlobToken()
+  if (!token) throw new Error('Vercel Blob no entregó una credencial para validar los frames.')
+
+  const result = await get(entry.pathname, {
+    access: 'private',
+    token,
+  })
+  const contentType = result?.blob.contentType || result?.headers.get('content-type') || ''
   if (!result || result.statusCode !== 200 || !result.stream || !contentType.startsWith('image/')) {
     throw new Error(`El Blob ${entry.pathname} no devolvió una imagen válida.`)
   }
