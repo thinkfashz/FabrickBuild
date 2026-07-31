@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import * as THREE from 'three'
@@ -47,15 +47,19 @@ function fitPlane(mesh: THREE.Mesh, canvas: HTMLCanvasElement, image: HTMLImageE
 }
 
 /**
- * Reproduce todos los frames relacionados al Background de Payload.
- * No existe un máximo fijo: una secuencia puede contener 60, 80, 120 o más
- * fotogramas y ScrollTrigger distribuye todo el conjunto a lo largo del scroll.
+ * Reproduce todos los frames relacionados al Background de Payload o recuperados
+ * desde Blob. Precarga únicamente una ventana cercana al scroll y mantiene un
+ * fallback Canvas 2D cuando WebGL no está disponible.
  */
 export function FrameSequenceBackground({ sequence, forceScroll = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fallbackCanvasRef = useRef<HTMLCanvasElement>(null)
   const frameLabelRef = useRef<HTMLSpanElement>(null)
+  const initialFrameCount = useMemo(
+    () => Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length),
+    [sequence.desktopFrames.length, sequence.mobileFrames.length],
+  )
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -72,6 +76,8 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     let images: Array<HTMLImageElement | undefined> = []
     let urls: string[] = []
     let loading = new Set<number>()
+    let failed = new Set<number>()
+    let retries = new Map<number, number>()
     let cursor = 0
     let texture: THREE.Texture | null = null
     let renderer: THREE.WebGLRenderer | null = null
@@ -92,6 +98,7 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       useWebGL = true
     } catch {
       canvas.style.display = 'none'
+      fallbackCanvas.style.display = 'block'
     }
 
     const chooseFrames = () => {
@@ -122,31 +129,64 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
 
     const updateFrameLabel = (index: number) => {
       if (!frameLabelRef.current) return
-      const current = urls.length ? index + 1 : 0
+      const current = urls.length ? Math.min(urls.length, Math.max(1, index + 1)) : 0
       frameLabelRef.current.textContent = `${String(current).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
     }
 
+    const nearestLoadedFrame = (target: number) => {
+      for (let radius = 0; radius < urls.length; radius += 1) {
+        const previous = target - radius
+        const next = target + radius
+        const previousImage = images[previous]
+        if (previous >= 0 && previousImage?.complete && previousImage.naturalWidth) return previous
+        const nextImage = images[next]
+        if (next < urls.length && nextImage?.complete && nextImage.naturalWidth) return next
+      }
+      return -1
+    }
+
     function requestFrame(index: number) {
-      if (index < 0 || index >= urls.length || images[index] || loading.has(index)) return
+      if (
+        index < 0 ||
+        index >= urls.length ||
+        images[index]?.complete ||
+        loading.has(index) ||
+        failed.has(index)
+      ) return
+
       loading.add(index)
       const image = new window.Image()
       image.decoding = 'async'
       image.addEventListener('load', () => {
         loading.delete(index)
+        retries.delete(index)
         if (!stopped && (index === 0 || index === wantedFrame)) draw(index, true)
         if (!stopped) warmFrames(index)
-      })
+      }, { once: true })
       image.addEventListener('error', () => {
         loading.delete(index)
         images[index] = undefined
-        if (!stopped) warmFrames(index)
-      })
+        const attempt = (retries.get(index) || 0) + 1
+        retries.set(index, attempt)
+        if (attempt < 2 && !stopped) {
+          window.setTimeout(() => requestFrame(index), 350 * attempt)
+          return
+        }
+        failed.add(index)
+        if (!stopped && index === wantedFrame) {
+          const fallbackIndex = nearestLoadedFrame(index)
+          if (fallbackIndex >= 0) draw(fallbackIndex, true)
+        }
+        if (!stopped) warmFrames(index + 1)
+      }, { once: true })
       images[index] = image
       image.src = urls[index]
     }
 
     function warmFrames(center: number) {
-      for (let index = center - 2; index <= center + 7; index += 1) requestFrame(index)
+      // Ventana pequeña alrededor del frame solicitado: evita descargar toda la
+      // secuencia de golpe en conexiones móviles.
+      for (let index = center - 2; index <= center + 5; index += 1) requestFrame(index)
       while (loading.size < 4 && cursor < urls.length) requestFrame(cursor++)
     }
 
@@ -157,9 +197,12 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       if (!force && target === renderedFrame) return
       requestFrame(target)
       warmFrames(target)
-      const image = images[target]
+      const exactImage = images[target]
+      const fallbackIndex = exactImage?.complete && exactImage.naturalWidth ? target : nearestLoadedFrame(target)
+      const image = fallbackIndex >= 0 ? images[fallbackIndex] : undefined
       if (!image || !image.complete || !image.naturalWidth) return
-      renderedFrame = target
+
+      renderedFrame = fallbackIndex
       updateFrameLabel(target)
       if (useWebGL && renderer && scene && camera && mesh) {
         try {
@@ -192,15 +235,21 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     }
 
     const loadFrames = () => {
-      urls = chooseFrames()
-      images = Array(urls.length)
-      loading = new Set<number>()
-      cursor = 0
-      renderedFrame = -1
-      wantedFrame = 0
-      updateFrameLabel(0)
-      warmFrames(0)
-      draw(0, true)
+      const nextURLs = chooseFrames()
+      const changed = nextURLs.length !== urls.length || nextURLs.some((url, index) => url !== urls[index])
+      urls = nextURLs
+      if (changed) {
+        images = Array(urls.length)
+        loading = new Set<number>()
+        failed = new Set<number>()
+        retries = new Map<number, number>()
+        cursor = 0
+        renderedFrame = -1
+        wantedFrame = 0
+      }
+      updateFrameLabel(Math.round(progress * Math.max(0, urls.length - 1)))
+      warmFrames(wantedFrame)
+      draw(wantedFrame, true)
     }
 
     const onResize = () => {
@@ -249,6 +298,10 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     }
   }, [forceScroll, sequence])
 
+  const initialLabel = initialFrameCount
+    ? `01 / ${String(initialFrameCount).padStart(2, '0')}`
+    : '00 / 00'
+
   return (
     <div
       ref={containerRef}
@@ -259,7 +312,7 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       <canvas ref={canvasRef} />
       <canvas ref={fallbackCanvasRef} className="hero-frame-sequence__fallback" />
       <div className="hero-frame-sequence__light" />
-      <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>00 / 00</span><i>SCROLL / MOTION</i></div>
+      <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>{initialLabel}</span><i>SCROLL / MOTION</i></div>
     </div>
   )
 }
