@@ -9,6 +9,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import { getMediaURL } from '@/lib/media'
+import { RuntimeBlobFrameBackground } from './RuntimeBlobFrameBackground'
 import styles from './PortfolioExperience.module.css'
 
 type Doc = Record<string, any>
@@ -26,7 +27,7 @@ export function PortfolioExperience({ block, frameCount = 0 }: { block: Doc; fra
   const root = useRef<HTMLElement>(null)
   const stack = Array.isArray(block.techStack) && block.techStack.length ? block.techStack : fallbackStack.map((label) => ({ label }))
   const projects = Array.isArray(block.projects) && block.projects.length ? block.projects : fallbackProjects
-  const sequenceLabel = frameCount > 0 ? String(frameCount) : 'CMS'
+  const sequenceLabel = frameCount > 0 ? String(frameCount) : '61'
 
   useEffect(() => {
     const element = root.current
@@ -61,6 +62,8 @@ export function PortfolioExperience({ block, frameCount = 0 }: { block: Doc; fra
 
   return (
     <section ref={root} className={styles.portfolio}>
+      {frameCount === 0 && <RuntimeBlobFrameBackground />}
+
       <section className={`${styles.hero} ${styles.sceneLeft}`} data-cinematic-scene data-side="left">
         <div className={styles.heroCopy}>
           <span data-cinematic-copy className="eyebrow">{block.eyebrow || 'FABRICKBUILD / EXPERIENCIA DIGITAL'}</span>
