@@ -12,10 +12,9 @@ type BlobEntry = {
 }
 
 const IMAGE_EXTENSION = /\.(avif|gif|jpe?g|png|webp)$/i
-const FRAME_NAME = /frame[^0-9]*([0-9]{1,6})/i
 const MOBILE_NAME = /(movil|mobile|vertical|portrait|phone)/i
 const DESKTOP_NAME = /(desktop|escritorio|horizontal|landscape|web|pc)/i
-const DERIVATIVE_NAME = /(thumbnail|thumb|card|small|medium|hero)[-_]/i
+const DERIVATIVE_NAME = /(?:^|[/_-])(thumbnail|thumb|card|small|medium|hero)(?:[/_.-]|$)/i
 
 const hasUsableFrames = (background: Doc | null | undefined) => {
   if (!background) return false
@@ -25,9 +24,14 @@ const hasUsableFrames = (background: Doc | null | undefined) => {
 }
 
 const frameNumber = (pathname: string) => {
-  const explicit = pathname.match(FRAME_NAME)
-  if (explicit?.[1]) return Number(explicit[1])
-  const values = pathname.match(/\d+/g)
+  // Una ruta puede contener “frames” en carpetas y nuevamente en el archivo.
+  // Se toma siempre la última coincidencia para no convertir toda la secuencia en frame 1.
+  const explicit = Array.from(pathname.matchAll(/frame[^0-9]*([0-9]{1,6})/gi))
+  const lastExplicit = explicit[explicit.length - 1]?.[1]
+  if (lastExplicit) return Number(lastExplicit)
+
+  const basename = pathname.split('/').pop() || pathname
+  const values = basename.match(/\d+/g)
   const fallback = values?.length ? Number(values[values.length - 1]) : Number.MAX_SAFE_INTEGER
   return Number.isFinite(fallback) ? fallback : Number.MAX_SAFE_INTEGER
 }
@@ -58,33 +62,24 @@ async function listEveryBlob(prefix?: string) {
 }
 
 function selectBestFrames(entries: BlobEntry[]) {
-  const selected = new Map<string, BlobEntry>()
-
-  for (const entry of entries) {
+  const candidates = entries.filter((entry) => {
     const pathname = entry.pathname || ''
-    if (!IMAGE_EXTENSION.test(pathname) || !/frame/i.test(pathname)) continue
+    return IMAGE_EXTENSION.test(pathname) && /frame/i.test(pathname)
+  })
 
-    const device = deviceFor(pathname)
-    const order = frameNumber(pathname)
-    const key = `${device}:${order}`
-    const previous = selected.get(key)
+  // Payload puede guardar variantes thumbnail/card/hero. Cuando hay originales,
+  // se prefieren para no reproducir el mismo fotograma varias veces.
+  const originals = candidates.filter((entry) => !DERIVATIVE_NAME.test(entry.pathname))
+  const source = originals.length >= 2 ? originals : candidates
+  const unique = new Map<string, BlobEntry>()
 
-    if (!previous) {
-      selected.set(key, entry)
-      continue
-    }
-
-    const previousDerivative = DERIVATIVE_NAME.test(previous.pathname)
-    const currentDerivative = DERIVATIVE_NAME.test(pathname)
-    const previousSize = Number(previous.size || 0)
-    const currentSize = Number(entry.size || 0)
-
-    if ((previousDerivative && !currentDerivative) || (previousDerivative === currentDerivative && currentSize > previousSize)) {
-      selected.set(key, entry)
-    }
+  for (const entry of source) {
+    const key = entry.pathname.trim().toLowerCase()
+    if (!key || unique.has(key)) continue
+    unique.set(key, entry)
   }
 
-  return Array.from(selected.values()).sort((a, b) => {
+  return Array.from(unique.values()).sort((a, b) => {
     const frameA = frameNumber(a.pathname)
     const frameB = frameNumber(b.pathname)
     if (frameA !== frameB) return frameA - frameB
@@ -117,6 +112,7 @@ export async function recoverBackgroundFromBlob(background: Doc | null | undefin
       console.warn('[blob-frames] Blob está conectado, pero no se encontraron al menos dos imágenes de frame.', {
         listed: blobs.length,
         selected: selected.length,
+        sample: blobs.slice(0, 5).map((item) => item.pathname),
       })
       return background
     }
@@ -134,6 +130,8 @@ export async function recoverBackgroundFromBlob(background: Doc | null | undefin
       selected: selected.length,
       desktop: desktopFrames.length,
       mobile: mobileFrames.length,
+      first: selected[0]?.pathname,
+      last: selected[selected.length - 1]?.pathname,
       store: (() => {
         try {
           return new URL(String(poster?.url || '')).hostname
