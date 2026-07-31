@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { list } from '@vercel/blob'
+import { get, list } from '@vercel/blob'
 
 type Doc = Record<string, any>
 
@@ -86,6 +86,16 @@ function selectBestFrames(entries: BlobEntry[]) {
   })
 }
 
+async function validatePrivateFrame(entry: BlobEntry) {
+  const result = await get(entry.pathname, { access: 'private' })
+  const contentType = result?.blob.contentType || ''
+  if (!result || result.statusCode !== 200 || !result.stream || !contentType.startsWith('image/')) {
+    throw new Error(`El Blob ${entry.pathname} no devolvió una imagen válida.`)
+  }
+  await result.stream.cancel().catch(() => undefined)
+  return contentType
+}
+
 const asMediaDocument = (entry: BlobEntry) => {
   const url = publicFrameURL(entry.pathname)
   return {
@@ -120,6 +130,13 @@ export async function recoverBackgroundFromBlob(background: Doc | null | undefin
       return background
     }
 
+    const first = selected[0]
+    const last = selected[selected.length - 1]
+    const [firstType, lastType] = await Promise.all([
+      validatePrivateFrame(first),
+      validatePrivateFrame(last),
+    ])
+
     const desktop = selected.filter((entry) => deviceFor(entry.pathname) === 'desktop')
     const mobile = selected.filter((entry) => deviceFor(entry.pathname) === 'mobile')
     const universal = selected.filter((entry) => deviceFor(entry.pathname) === 'universal')
@@ -128,13 +145,15 @@ export async function recoverBackgroundFromBlob(background: Doc | null | undefin
     const mobileFrames = (mobile.length >= 2 ? mobile : universal.length >= 2 ? universal : desktop).map(asMediaDocument)
     const poster = mobileFrames[0] || desktopFrames[0] || null
 
-    console.info('[blob-frames] Secuencia recuperada y conectada a la ruta segura del sitio.', {
+    console.info('[blob-frames] Secuencia privada validada y conectada a la ruta segura del sitio.', {
       listed: blobs.length,
       selected: selected.length,
       desktop: desktopFrames.length,
       mobile: mobileFrames.length,
-      first: selected[0]?.pathname,
-      last: selected[selected.length - 1]?.pathname,
+      first: first.pathname,
+      firstType,
+      last: last.pathname,
+      lastType,
       delivery: '/api/blob-frame/[...pathname]',
     })
 
@@ -146,6 +165,7 @@ export async function recoverBackgroundFromBlob(background: Doc | null | undefin
       frameCountDesktop: desktopFrames.length,
       frameCountMobile: mobileFrames.length,
       recoveredFromBlob: true,
+      blobDeliveryValidated: true,
     }
   } catch (error) {
     console.error('[blob-frames] No fue posible recuperar la secuencia desde Vercel Blob.', error)
