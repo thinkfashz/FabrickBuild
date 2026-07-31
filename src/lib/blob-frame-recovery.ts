@@ -24,8 +24,6 @@ const hasUsableFrames = (background: Doc | null | undefined) => {
 }
 
 const frameNumber = (pathname: string) => {
-  // Una ruta puede contener “frames” en carpetas y nuevamente en el archivo.
-  // Se toma siempre la última coincidencia para no convertir toda la secuencia en frame 1.
   const explicit = Array.from(pathname.matchAll(/frame[^0-9]*([0-9]{1,6})/gi))
   const lastExplicit = explicit[explicit.length - 1]?.[1]
   if (lastExplicit) return Number(lastExplicit)
@@ -41,6 +39,9 @@ const deviceFor = (pathname: string): 'desktop' | 'mobile' | 'universal' => {
   if (DESKTOP_NAME.test(pathname)) return 'desktop'
   return 'universal'
 }
+
+const publicFrameURL = (pathname: string) =>
+  `/api/blob-frame/${pathname.split('/').map((segment) => encodeURIComponent(segment)).join('/')}`
 
 async function listEveryBlob(prefix?: string) {
   const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
@@ -67,8 +68,6 @@ function selectBestFrames(entries: BlobEntry[]) {
     return IMAGE_EXTENSION.test(pathname) && /frame/i.test(pathname)
   })
 
-  // Payload puede guardar variantes thumbnail/card/hero. Cuando hay originales,
-  // se prefieren para no reproducir el mismo fotograma varias veces.
   const originals = candidates.filter((entry) => !DERIVATIVE_NAME.test(entry.pathname))
   const source = originals.length >= 2 ? originals : candidates
   const unique = new Map<string, BlobEntry>()
@@ -87,13 +86,17 @@ function selectBestFrames(entries: BlobEntry[]) {
   })
 }
 
-const asMediaDocument = (entry: BlobEntry) => ({
-  id: `blob:${entry.pathname}`,
-  filename: entry.pathname.split('/').pop() || entry.pathname,
-  alt: `Frame ${frameNumber(entry.pathname)}`,
-  url: entry.url || entry.downloadUrl,
-  externalURL: entry.url || entry.downloadUrl,
-})
+const asMediaDocument = (entry: BlobEntry) => {
+  const url = publicFrameURL(entry.pathname)
+  return {
+    id: `blob:${entry.pathname}`,
+    filename: entry.pathname.split('/').pop() || entry.pathname,
+    alt: `Frame ${frameNumber(entry.pathname)}`,
+    url,
+    externalURL: url,
+    blobPathname: entry.pathname,
+  }
+}
 
 /**
  * Recupera la secuencia directamente desde Vercel Blob cuando PostgreSQL perdió
@@ -125,20 +128,14 @@ export async function recoverBackgroundFromBlob(background: Doc | null | undefin
     const mobileFrames = (mobile.length >= 2 ? mobile : universal.length >= 2 ? universal : desktop).map(asMediaDocument)
     const poster = mobileFrames[0] || desktopFrames[0] || null
 
-    console.info('[blob-frames] Secuencia recuperada directamente desde Vercel Blob.', {
+    console.info('[blob-frames] Secuencia recuperada y conectada a la ruta segura del sitio.', {
       listed: blobs.length,
       selected: selected.length,
       desktop: desktopFrames.length,
       mobile: mobileFrames.length,
       first: selected[0]?.pathname,
       last: selected[selected.length - 1]?.pathname,
-      store: (() => {
-        try {
-          return new URL(String(poster?.url || '')).hostname
-        } catch {
-          return 'desconocido'
-        }
-      })(),
+      delivery: '/api/blob-frame/[...pathname]',
     })
 
     return {
