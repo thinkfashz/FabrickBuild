@@ -47,6 +47,8 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     if (!container || !canvas) return
 
     const section = container.closest<HTMLElement>('section')
+    const horizontal = section?.dataset.backgroundAxis === 'horizontal'
+    const reverse = section?.dataset.playbackDirection === 'reverse'
     const mobileQuery = window.matchMedia('(max-width: 767px)')
     const connection = (navigator as Navigator & { connection?: { effectiveType?: string; saveData?: boolean } }).connection
     let mobile = mobileQuery.matches
@@ -74,9 +76,9 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
 
     const loadedCount = () => records.reduce((total, record) => total + (record.state === 'loaded' ? 1 : 0), 0)
     const updateLabels = () => {
-      frameLabelRef.current && (frameLabelRef.current.textContent = `${String(wanted + 1).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`)
+      if (frameLabelRef.current) frameLabelRef.current.textContent = `${String(wanted + 1).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
       const loaded = loadedCount()
-      loadLabelRef.current && (loadLabelRef.current.textContent = loaded >= Math.min(8, urls.length) ? 'Secuencia lista' : `Preparando ${loaded}/${Math.min(8, urls.length)}`)
+      if (loadLabelRef.current) loadLabelRef.current.textContent = loaded >= Math.min(8, urls.length) ? 'Secuencia lista' : `Preparando ${loaded}/${Math.min(8, urls.length)}`
       container.dataset.sequenceReady = loaded > 0 ? 'true' : 'false'
     }
 
@@ -197,8 +199,13 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     const syncScroll = () => {
       scrollRAF = 0
       if (!section || !urls.length) return
-      const rect = section.getBoundingClientRect()
-      const progress = clamp(-rect.top / Math.max(1, rect.height - innerHeight), 0, 1)
+      const rawProgress = horizontal
+        ? clamp(section.scrollLeft / Math.max(1, section.scrollWidth - section.clientWidth), 0, 1)
+        : (() => {
+            const rect = section.getBoundingClientRect()
+            return clamp(-rect.top / Math.max(1, rect.height - innerHeight), 0, 1)
+          })()
+      const progress = reverse ? 1 - rawProgress : rawProgress
       section.style.setProperty('--cinematic-progress', progress.toFixed(4))
       section.style.setProperty('--cinematic-light', String(0.8 + progress * 0.14))
       section.style.setProperty('--cinematic-veil', String(clamp((sequence.overlayOpacity / 100) * (0.84 - progress * 0.16), 0.03, 0.55)))
@@ -217,7 +224,8 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       queued.clear()
       activeLoads = 0
       rendered = -1
-      enqueue(0, true)
+      wanted = reverse ? Math.max(0, urls.length - 1) : 0
+      enqueue(wanted, true)
       preloadKeyframes()
       warmWindow(wanted)
       backgroundFill()
@@ -235,11 +243,18 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     }
 
     reset()
+    const scrollTarget: Window | HTMLElement = horizontal && section ? section : window
     if (forceScroll || sequence.trigger === 'scroll') {
-      addEventListener('scroll', onScroll, { passive: true })
-      addEventListener('resize', resize, { passive: true })
+      scrollTarget.addEventListener('scroll', onScroll, { passive: true })
+      window.addEventListener('resize', resize, { passive: true })
     } else {
-      autoplayTimer = window.setInterval(() => setWanted(sequence.trigger === 'loop' ? (wanted + 1) % Math.max(1, urls.length) : Math.min(wanted + 1, urls.length - 1)), 50)
+      autoplayTimer = window.setInterval(() => {
+        const step = reverse ? -1 : 1
+        const next = sequence.trigger === 'loop'
+          ? (wanted + step + Math.max(1, urls.length)) % Math.max(1, urls.length)
+          : clamp(wanted + step, 0, Math.max(0, urls.length - 1))
+        setWanted(next)
+      }, 50)
     }
     resizeObserver = new ResizeObserver(() => { rendered = -1; scheduleRender(true) })
     resizeObserver.observe(container)
@@ -247,8 +262,8 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
 
     return () => {
       stopped = true
-      removeEventListener('scroll', onScroll)
-      removeEventListener('resize', resize)
+      scrollTarget.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', resize)
       mobileQuery.removeEventListener('change', resize)
       resizeObserver?.disconnect()
       clearInterval(autoplayTimer)
