@@ -1,0 +1,68 @@
+import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+
+import { AIPageStyle } from '@/components/AIPageStyle'
+import { PageSurface } from '@/components/PageSurface'
+import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
+import { RenderBlocks } from '@/components/RenderBlocks'
+import { recoverBackgroundFromBlob } from '@/lib/blob-frame-recovery'
+import { portfolioLayoutFromPage } from '@/lib/home-template'
+import { getDraftGlobals, getDraftPageBySlug, getHeroBackground } from '@/lib/queries'
+
+type Args = {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ secret?: string }>
+}
+
+export const dynamic = 'force-dynamic'
+export const metadata: Metadata = { robots: { index: false, follow: false } }
+
+export default async function PreviewPage({ params, searchParams }: Args) {
+  const [{ slug }, query] = await Promise.all([params, searchParams])
+  const expected = process.env.PREVIEW_SECRET
+  if (!expected || query.secret !== expected) notFound()
+
+  const [page, globals, defaultBackground] = await Promise.all([
+    getDraftPageBySlug(slug),
+    getDraftGlobals(),
+    slug === 'home' ? getHeroBackground() : Promise.resolve(null),
+  ])
+  if (!page) notFound()
+
+  const settings = globals.settings as Record<string, any> | null
+  const experience = String(settings?.homepageExperience || 'luxury')
+  const usePortfolioFactory = slug === 'home' && (experience === 'luxury' || experience === 'portfolio')
+  const selectedBackgroundCandidate =
+    page.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
+      ? page.savedBackground
+      : defaultBackground
+  const selectedBackground = slug === 'home'
+    ? await recoverBackgroundFromBlob(selectedBackgroundCandidate as Record<string, any> | null)
+    : selectedBackgroundCandidate
+
+  if (usePortfolioFactory) {
+    const portfolioBlocks = portfolioLayoutFromPage(
+      (page.layout || []) as Record<string, any>[],
+      selectedBackground as Record<string, any> | null,
+    )
+    return (
+      <>
+        <AIPageStyle css={page.aiStyle as string | undefined} />
+        <RefreshRouteOnSave />
+        <main className="ai-page ai-page--preview portfolio-factory-page">
+          <RenderBlocks blocks={portfolioBlocks} />
+        </main>
+      </>
+    )
+  }
+
+  return (
+    <PageSurface page={page as Record<string, unknown>}>
+      <AIPageStyle css={page.aiStyle as string | undefined} />
+      <RefreshRouteOnSave />
+      <div className="ai-page ai-page--preview">
+        <RenderBlocks blocks={(page.layout || []) as Record<string, any>[]} />
+      </div>
+    </PageSurface>
+  )
+}

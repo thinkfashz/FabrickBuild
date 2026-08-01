@@ -5,15 +5,16 @@ export const Leads: CollectionConfig = {
   slug: 'leads',
   labels: { singular: 'Contacto', plural: 'Cotizaciones y contactos' },
   access: {
-    create: () => true,
+    create: authenticated,
     read: authenticated,
     update: authenticated,
-    delete: authenticated
+    delete: authenticated,
   },
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'phone', 'service', 'status', 'priority', 'createdAt'],
-    group: 'CRM'
+    group: 'CRM',
+    description: 'Los registros públicos solo se crean mediante la API validada, con control anti-spam y consentimiento.',
   },
   fields: [
     { name: 'name', type: 'text', required: true, label: 'Nombre' },
@@ -28,8 +29,8 @@ export const Leads: CollectionConfig = {
         { label: 'Casa nueva', value: 'new-home' },
         { label: 'Remodelación', value: 'remodeling' },
         { label: 'Reparación', value: 'repair' },
-        { label: 'Otro', value: 'other' }
-      ]
+        { label: 'Otro', value: 'other' },
+      ],
     },
     { name: 'area', type: 'number', min: 0, label: 'Superficie aproximada (m²)' },
     {
@@ -41,10 +42,12 @@ export const Leads: CollectionConfig = {
         { label: '$1.000.000 a $5.000.000 CLP', value: '1m-5m' },
         { label: '$5.000.000 a $20.000.000 CLP', value: '5m-20m' },
         { label: 'Más de $20.000.000 CLP', value: 'over-20m' },
-        { label: 'Por definir', value: 'unknown' }
-      ]
+        { label: 'Por definir', value: 'unknown' },
+      ],
     },
     { name: 'message', type: 'textarea', required: true, label: 'Mensaje' },
+    { name: 'privacyConsent', type: 'checkbox', required: true, label: 'Aceptó tratamiento de datos para responder la solicitud' },
+    { name: 'consentVersion', type: 'text', label: 'Versión del consentimiento', admin: { readOnly: true } },
     {
       name: 'status',
       type: 'select',
@@ -56,8 +59,8 @@ export const Leads: CollectionConfig = {
         { label: 'Visita agendada', value: 'scheduled' },
         { label: 'Cotización enviada', value: 'quoted' },
         { label: 'Ganado', value: 'won' },
-        { label: 'Perdido', value: 'lost' }
-      ]
+        { label: 'Perdido', value: 'lost' },
+      ],
     },
     {
       name: 'priority',
@@ -68,30 +71,20 @@ export const Leads: CollectionConfig = {
         { label: 'Baja', value: 'low' },
         { label: 'Normal', value: 'normal' },
         { label: 'Alta', value: 'high' },
-        { label: 'Urgente', value: 'urgent' }
-      ]
+        { label: 'Urgente', value: 'urgent' },
+      ],
     },
-    {
-      name: 'assignedTo',
-      type: 'relationship',
-      relationTo: 'users',
-      admin: { position: 'sidebar' }
-    },
+    { name: 'assignedTo', type: 'relationship', relationTo: 'users', admin: { position: 'sidebar' } },
     {
       name: 'internalNotes',
       type: 'textarea',
       access: {
         create: ({ req }) => Boolean(req.user),
         read: ({ req }) => Boolean(req.user),
-        update: ({ req }) => Boolean(req.user)
-      }
+        update: ({ req }) => Boolean(req.user),
+      },
     },
-    {
-      name: 'source',
-      type: 'text',
-      defaultValue: 'website',
-      admin: { position: 'sidebar', readOnly: true }
-    }
+    { name: 'source', type: 'text', defaultValue: 'website', admin: { position: 'sidebar', readOnly: true } },
   ],
-  timestamps: true
+  timestamps: true,
 }

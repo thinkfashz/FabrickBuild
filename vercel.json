@@ -3,5 +3,6 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
+  "ignoreCommand": "node -e \"process.exit(/\\[skip ci\\]/i.test(process.env.VERCEL_GIT_COMMIT_MESSAGE || '') ? 0 : 1)\"",
   "regions": ["iad1"]
 }

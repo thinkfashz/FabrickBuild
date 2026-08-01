@@ -1,8 +1,10 @@
 import { AIPageStyle } from '@/components/AIPageStyle'
-import { LuxuryScrollExperience } from '@/components/LuxuryScrollExperience'
-import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
+import { PageSurface } from '@/components/PageSurface'
 import { RenderBlocks } from '@/components/RenderBlocks'
-import { getPageBySlug } from '@/lib/queries'
+import { recoverBackgroundFromBlob } from '@/lib/blob-frame-recovery'
+import { portfolioLayoutFromPage } from '@/lib/home-template'
+import { repairLegacyBackgroundFrames } from '@/lib/legacy-background-recovery'
+import { getGlobals, getHeroBackground, getPageBySlug } from '@/lib/queries'
 
 const fallback = [
   {
@@ -25,7 +27,7 @@ const fallback = [
     blockType: 'servicesGrid',
     eyebrow: 'Servicios',
     heading: 'Una solución para cada etapa de tu obra.',
-    intro: 'Conecta la base de datos y ejecuta el seed para administrar esta sección.',
+    intro: 'Desde una reparación puntual hasta una casa completamente nueva.',
     limit: 6,
   },
   {
@@ -46,16 +48,48 @@ const fallback = [
   },
 ]
 
+export const revalidate = 300
+
 export default async function HomePage() {
-  const page = await getPageBySlug('home')
+  const [page, globals, defaultBackground] = await Promise.all([
+    getPageBySlug('home'),
+    getGlobals(),
+    getHeroBackground(),
+  ])
+  const settings = globals.settings as Record<string, any> | null
+  const experience = String(settings?.homepageExperience || 'luxury')
+  const usePortfolioFactory = experience === 'luxury' || experience === 'portfolio'
+  const configuredBackground =
+    page?.backgroundSource === 'saved' && page.savedBackground && typeof page.savedBackground === 'object'
+      ? page.savedBackground
+      : defaultBackground
+  const legacyBackground = await repairLegacyBackgroundFrames(
+    configuredBackground as Record<string, any> | null,
+  )
+  const selectedBackground = await recoverBackgroundFromBlob(legacyBackground)
+
+  if (usePortfolioFactory) {
+    const portfolioBlocks = portfolioLayoutFromPage(
+      (page?.layout as Record<string, any>[] | null | undefined),
+      selectedBackground as Record<string, any> | null,
+    )
+    return (
+      <>
+        <AIPageStyle css={page?.aiStyle as string | undefined} />
+        <main className="ai-page portfolio-factory-page">
+          <RenderBlocks blocks={portfolioBlocks} />
+        </main>
+      </>
+    )
+  }
+
+  const blocks = ((page?.layout as Record<string, unknown>[]) || fallback)
   return (
-    <>
+    <PageSurface page={page as Record<string, unknown> | null}>
       <AIPageStyle css={page?.aiStyle as string | undefined} />
-      <RefreshRouteOnSave />
-      <main className="ai-page">
-        <LuxuryScrollExperience />
-        <RenderBlocks blocks={(page?.layout as Record<string, unknown>[]) || fallback} />
-      </main>
-    </>
+      <div className="ai-page">
+        <RenderBlocks blocks={blocks} />
+      </div>
+    </PageSurface>
   )
 }

@@ -1,0 +1,20 @@
+section[data-background-source] {
+  height: var(--luxury-scroll-height, 780vh) !important;
+}
+
+section[data-background-source="video"] video,
+section[data-background-source="poster"] img {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--luxury-media-fit, cover);
+  object-position: center;
+  background: #0b0b0b;
+}
+
+section[data-background-source="video"] video {
+  pointer-events: none;
+}

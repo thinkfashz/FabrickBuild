@@ -70,15 +70,20 @@ async function sortMediaIds(values: unknown, req: any): Promise<(string | number
   )
   if (ids.length < 2) return ids
 
-  const result = await req.payload.find({
-    collection: 'media',
-    depth: 0,
-    limit: Math.min(ids.length, 500),
-    overrideAccess: true,
-    where: { id: { in: ids } },
-  })
+  const docs: MediaLike[] = []
+  for (let start = 0; start < ids.length; start += 100) {
+    const batch = ids.slice(start, start + 100)
+    const result = await req.payload.find({
+      collection: 'media',
+      depth: 0,
+      limit: batch.length,
+      overrideAccess: true,
+      where: { id: { in: batch } },
+    })
+    docs.push(...((result.docs || []) as MediaLike[]))
+  }
 
-  return ((result.docs || []) as MediaLike[])
+  return docs
     .sort((a, b) => {
       const explicitA = typeof a.frameOrder === 'number' ? a.frameOrder : Number.MAX_SAFE_INTEGER
       const explicitB = typeof b.frameOrder === 'number' ? b.frameOrder : Number.MAX_SAFE_INTEGER
@@ -116,7 +121,7 @@ export const Backgrounds: CollectionConfig = {
     group: 'Multimedia',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'kind', 'device', 'status', 'frameCountDesktop', 'frameCountMobile'],
-    description: 'Sube una carpeta completa, varias imágenes o reutiliza archivos. El slug y el orden se generan automáticamente.',
+    description: 'Sube video, carpeta o imágenes. La secuencia conserva todos los frames y se ordena automáticamente.',
   },
   fields: [
     {
@@ -167,7 +172,7 @@ export const Backgrounds: CollectionConfig = {
               label: 'Frames web / escritorio', filterOptions: imageFilter,
               admin: {
                 condition: (_, siblingData) => siblingData?.kind === 'frames' && ['desktop', 'responsive'].includes(siblingData?.device),
-                description: 'Puedes subir una carpeta o seleccionar imágenes. Se ordenan automáticamente al guardar.',
+                description: 'Puedes subir cualquier cantidad. Todos los frames se ordenan y reproducen; no existe un máximo fijo de 60.',
               },
             },
             {
@@ -175,7 +180,7 @@ export const Backgrounds: CollectionConfig = {
               label: 'Frames móvil vertical', filterOptions: imageFilter,
               admin: {
                 condition: (_, siblingData) => siblingData?.kind === 'frames' && ['mobile', 'responsive'].includes(siblingData?.device),
-                description: 'La secuencia móvil se ordena independientemente.',
+                description: 'La secuencia móvil se ordena independientemente y conserva todos sus frames.',
               },
             },
             { name: 'poster', type: 'upload', relationTo: 'media', label: 'Portada mientras cargan los frames', admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' } },
@@ -187,6 +192,10 @@ export const Backgrounds: CollectionConfig = {
         {
           label: 'Animación cinematográfica',
           fields: [
+            {
+              name: 'backgroundPreview', type: 'ui',
+              admin: { components: { Field: '@/components/admin/BackgroundPreviewPanel' } },
+            },
             {
               name: 'engine', type: 'select', defaultValue: 'gsap-three', required: true,
               options: [
@@ -202,7 +211,7 @@ export const Backgrounds: CollectionConfig = {
                 { name: 'scrub', type: 'number', defaultValue: 0.35, min: 0, max: 3 },
                 { name: 'pin', type: 'checkbox', defaultValue: true },
                 { name: 'snap', type: 'checkbox', defaultValue: false },
-                { name: 'scrollLength', type: 'number', defaultValue: 500, min: 100, max: 1500 },
+                { name: 'scrollLength', type: 'number', defaultValue: 780, min: 100, max: 1800 },
                 { name: 'parallax', type: 'number', defaultValue: 12, min: 0, max: 100 },
                 { name: 'fit', type: 'select', defaultValue: 'cover', options: [{ label: 'Cubrir', value: 'cover' }, { label: 'Contener', value: 'contain' }] },
                 { name: 'overlayOpacity', type: 'number', defaultValue: 20, min: 0, max: 90 },

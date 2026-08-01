@@ -1,7 +1,22 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionBeforeValidateHook, CollectionConfig } from 'payload'
 import { authenticated } from '@/access/authenticated'
 
 const imageProcessingEnabled = process.platform !== 'android'
+
+const slugify = (value: unknown) =>
+  String(value || 'secuencia')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70) || 'secuencia'
+
+const organizeFrameMetadata: CollectionBeforeValidateHook = ({ data }) => {
+  if (!data || data.category !== 'frame') return data
+  return { ...data, collectionKey: slugify(data.collectionKey || 'secuencia') }
+}
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -12,24 +27,31 @@ export const Media: CollectionConfig = {
     update: authenticated,
     delete: authenticated,
   },
+  hooks: { beforeValidate: [organizeFrameMetadata] },
   admin: {
     group: 'Multimedia',
     useAsTitle: 'alt',
-    defaultColumns: ['filename', 'alt', 'category', 'device', 'frameOrder', 'updatedAt'],
+    defaultColumns: ['filename', 'alt', 'category', 'collectionKey', 'device', 'frameOrder', 'updatedAt'],
     description:
-      'Carga imágenes individuales o en grupo. Para secuencias usa nombres correlativos como frame_001, frame_002 y luego crea un Background multimedia.',
+      'Las imágenes se optimizan y los frames se agrupan como carpetas virtuales mediante Grupo o secuencia. Filtra por collectionKey para revisar una animación completa.',
   },
   upload: {
     staticDir: 'media',
-    mimeTypes: ['image/*', 'application/pdf', 'video/mp4'],
+    bulkUpload: true,
+    displayPreview: true,
+    mimeTypes: ['image/*', 'application/pdf', 'video/mp4', 'video/webm'],
     ...(imageProcessingEnabled
       ? {
           adminThumbnail: 'thumbnail',
           focalPoint: true,
+          formatOptions: {
+            format: 'webp' as const,
+            options: { quality: 80, effort: 4 },
+          },
           imageSizes: [
-            { name: 'thumbnail', width: 480, height: 320, position: 'centre' as const },
-            { name: 'card', width: 900, height: 650, position: 'centre' as const },
-            { name: 'hero', width: 1920, height: 1080, position: 'centre' as const },
+            { name: 'thumbnail', width: 420, height: 280, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'card', width: 900, height: 675, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'hero', width: 1600, position: 'centre' as const, withoutEnlargement: true },
           ],
         }
       : {
@@ -65,7 +87,7 @@ export const Media: CollectionConfig = {
         { label: 'Móvil vertical', value: 'mobile' },
       ],
       admin: {
-        description: 'Marca los frames como Web o Móvil para filtrarlos fácilmente al crear un background.',
+        description: 'Marca los frames como Web o Móvil para cargar solo la secuencia adecuada en cada dispositivo.',
       },
     },
     {
@@ -81,11 +103,11 @@ export const Media: CollectionConfig = {
     {
       name: 'collectionKey',
       type: 'text',
-      label: 'Grupo o secuencia',
+      label: 'Carpeta virtual / secuencia',
       index: true,
       admin: {
         condition: (_, siblingData) => siblingData?.category === 'frame',
-        description: 'Usa el mismo nombre para todos los frames del grupo, por ejemplo casa-lujo-01.',
+        description: 'Agrupa todos los frames del mismo background sin crear columnas nuevas ni duplicar archivos en Blob.',
       },
     },
     { name: 'caption', type: 'textarea', label: 'Descripción o crédito' },

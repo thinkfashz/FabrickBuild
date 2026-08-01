@@ -1,7 +1,7 @@
 import { withPayload } from '@payloadcms/next/withPayload'
 
 const privateHeaders = [
-  { key: 'Cache-Control', value: 'no-store, max-age=0' },
+  { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
   { key: 'Pragma', value: 'no-cache' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -13,17 +13,51 @@ const privateHeaders = [
   { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
 ]
 
+const previewHeaders = privateHeaders.map((header) =>
+  header.key === 'X-Frame-Options' ? { ...header, value: 'SAMEORIGIN' } : header,
+)
+
+const publicMediaHeaders = [
+  { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+]
+
 const nextConfig = {
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 604800,
+    deviceSizes: [360, 480, 640, 750, 828, 1080, 1280, 1440, 1920],
+    imageSizes: [32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       { protocol: 'https', hostname: '**.public.blob.vercel-storage.com' },
+      { protocol: 'https', hostname: '**.vercel.app' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
+  poweredByHeader: false,
   async headers() {
     return [
       {
+        source: '/frames/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      {
+        source: '/api/media/file/:path*',
+        headers: publicMediaHeaders,
+      },
+      {
+        source: '/preview-page/:path*',
+        headers: previewHeaders,
+      },
+      {
         source: '/studio/:path*',
+        headers: privateHeaders,
+      },
+      {
+        source: '/api/public/leads',
         headers: privateHeaders,
       },
       {

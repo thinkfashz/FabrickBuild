@@ -1,0 +1,616 @@
+.portfolio {
+  --racing-red: #ff2945;
+  --warm-yellow: #ffd637;
+  --chrome: #fffdf9;
+  position: relative;
+  z-index: 2;
+  overflow: clip;
+  padding: 0;
+  color: var(--chrome);
+  background: transparent;
+}
+
+:global(.portfolio-showcase--cinematic) {
+  position: relative;
+  min-height: 100svh;
+  overflow: clip;
+  isolation: isolate;
+  background: #050304;
+  --cinematic-light: .94;
+  --cinematic-veil: .08;
+  --cinematic-glow-x: 35%;
+}
+
+:global(.portfolio-showcase--cinematic .hero-frame-sequence) { z-index: 0; }
+
+.hero,
+.scene,
+.techScene,
+.closing {
+  position: relative;
+  display: grid;
+  width: min(1240px, calc(100% - 44px));
+  min-height: 100svh;
+  margin-inline: auto;
+  align-items: center;
+}
+
+.hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 40px;
+  padding: clamp(92px, 13vh, 152px) 0 clamp(56px, 9vh, 104px);
+}
+
+.heroCopy,
+.sceneCopy,
+.projectIntro,
+.projectCopy,
+.closing h2 {
+  position: relative;
+  z-index: 1;
+}
+
+.heroCopy::before,
+.sceneCopy::before,
+.projectIntro::before,
+.projectCopy::before,
+.closing h2::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -16% -12%;
+  pointer-events: none;
+  background: radial-gradient(circle at 18% 50%, rgba(2, 3, 5, .86), rgba(2, 3, 5, .42) 48%, transparent 75%);
+  filter: blur(16px);
+}
+
+.sceneRight .sceneCopy::before,
+.projectIntro::before {
+  background: radial-gradient(circle at 78% 50%, rgba(2, 3, 5, .86), rgba(2, 3, 5, .4) 48%, transparent 75%);
+}
+
+.heroCopy {
+  max-width: 800px;
+  padding-left: clamp(18px, 2vw, 30px);
+}
+
+.heroCopy::after,
+.sceneCopy::after,
+.projectIntro::after,
+.projectCopy::after {
+  content: '';
+  position: absolute;
+  top: .2em;
+  left: 0;
+  width: 2px;
+  height: clamp(48px, 8vw, 88px);
+  background: linear-gradient(180deg, var(--racing-red), rgba(255, 41, 69, 0));
+  box-shadow: 0 0 20px rgba(255, 41, 69, .45);
+}
+
+.heroCopy h1,
+.sceneCopy h2,
+.projectIntro h2,
+.closing h2 {
+  max-width: 980px;
+  margin: 15px 0 0;
+  color: var(--chrome);
+  font-size: clamp(54px, 7.8vw, 112px);
+  line-height: .86;
+  letter-spacing: -.075em;
+  text-wrap: balance;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, .9), 0 16px 48px rgba(0, 0, 0, .65);
+}
+
+.heroCopy h1 em,
+.sceneCopy h2 em,
+.closing h2 em {
+  display: block;
+  margin-top: .24em;
+  color: var(--racing-red);
+  font-family: Iowan Old Style, Baskerville, Georgia, serif;
+  font-size: .47em;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -.04em;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .9), 0 0 28px rgba(255, 41, 69, .28);
+}
+
+.heroCopy p,
+.sceneCopy p,
+.projectCopy p {
+  max-width: 610px;
+  margin: 28px 0 0;
+  color: rgba(255, 253, 249, .82);
+  font-size: clamp(16px, 1.42vw, 20px);
+  line-height: 1.72;
+  text-wrap: pretty;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .95), 0 8px 30px rgba(0, 0, 0, .7);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.portfolio :global(.button) {
+  min-height: 56px;
+  padding-inline: 27px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 880;
+  letter-spacing: -.015em;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .28);
+  transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+}
+
+.portfolio :global(.button:hover) {
+  transform: translateY(-3px) scale(1.015);
+}
+
+.portfolio :global(.button-yellow) {
+  border: 1px solid rgba(255, 255, 255, .46);
+  background: linear-gradient(135deg, #ffe35c, #ffc914 70%, #ffae00);
+  color: #171006;
+  box-shadow: 0 18px 45px rgba(255, 187, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+.portfolio :global(.button-yellow:hover) {
+  box-shadow: 0 22px 55px rgba(255, 187, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.portfolio :global(.button-ghost) {
+  border: 1px solid rgba(255, 255, 255, .42);
+  background: rgba(5, 6, 8, .34);
+  color: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.portfolio :global(.button-ghost:hover) {
+  background: rgba(255, 255, 255, .14);
+  border-color: rgba(255, 255, 255, .72);
+}
+
+.heroTelemetry {
+  align-self: end;
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+  min-width: 170px;
+  padding: 0 0 6px;
+  color: rgba(255, 255, 255, .8);
+  font-size: 10px;
+  letter-spacing: .13em;
+  text-shadow: 0 2px 12px #000;
+}
+
+.heroTelemetry span {
+  color: var(--racing-red);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.heroTelemetry strong { font-size: 9px; font-weight: 850; }
+.heroTelemetry i {
+  display: block;
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--racing-red) 0 42%, rgba(255, 255, 255, .42) 42%);
+}
+
+.scene {
+  grid-template-columns: minmax(0, 1fr);
+  padding-block: clamp(58px, 10vh, 124px);
+}
+
+.sceneRight .sceneCopy {
+  justify-self: end;
+  padding-right: clamp(18px, 2vw, 30px);
+  text-align: right;
+}
+
+.sceneRight .sceneCopy::after { left: auto; right: 0; }
+
+.sceneCopy {
+  max-width: min(650px, 100%);
+  padding-left: clamp(18px, 2vw, 30px);
+}
+
+.sceneCopy h2 { font-size: clamp(44px, 6.2vw, 88px); }
+.sceneCopy :global(.button) { display: inline-flex; margin-top: 30px; }
+
+.techScene {
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  gap: clamp(32px, 8vw, 120px);
+  padding-block: clamp(58px, 10vh, 124px);
+}
+
+.techScene .sceneCopy h2 { font-size: clamp(42px, 5.7vw, 78px); }
+
+.stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: flex-end;
+  gap: 12px 22px;
+  max-width: 600px;
+  justify-self: end;
+}
+
+.stack span {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, .26);
+  color: rgba(255, 255, 255, .86);
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: .02em;
+  text-shadow: 0 2px 12px #000;
+}
+
+.stack span svg { color: var(--racing-red); }
+
+.motionRule {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, .32);
+}
+
+.motionRule b {
+  color: var(--racing-red);
+  font-size: clamp(50px, 6vw, 78px);
+  line-height: .8;
+  letter-spacing: -.08em;
+  text-shadow: 0 2px 15px #000, 0 0 22px rgba(255, 41, 69, .35);
+}
+
+.motionRule span {
+  color: rgba(255, 255, 255, .76);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  line-height: 1.55;
+  text-shadow: 0 2px 12px #000;
+}
+
+.projects {
+  width: min(1240px, calc(100% - 44px));
+  margin-inline: auto;
+  padding: clamp(76px, 14vh, 160px) 0;
+}
+
+.projectIntro {
+  display: grid;
+  min-height: 72svh;
+  align-items: center;
+  justify-items: end;
+  margin-left: auto;
+  padding-right: clamp(18px, 2vw, 30px);
+  text-align: right;
+}
+
+.projectIntro::after { left: auto; right: 0; }
+.projectIntro h2 { max-width: 760px; font-size: clamp(46px, 6.2vw, 90px); }
+
+.projectList { display: grid; gap: clamp(92px, 17vh, 188px); }
+
+.projectList article {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+  gap: clamp(34px, 7vw, 112px);
+  min-height: 82svh;
+  align-items: center;
+}
+
+.projectList article:nth-child(even) .projectImage { order: 2; }
+.projectList article:nth-child(even) .projectCopy { text-align: right; padding-right: clamp(18px, 2vw, 30px); padding-left: 0; }
+.projectList article:nth-child(even) .projectCopy::after { left: auto; right: 0; }
+.projectList article:nth-child(even) .projectCopy::before { background: radial-gradient(circle at 78% 50%, rgba(2, 3, 5, .86), rgba(2, 3, 5, .4) 48%, transparent 75%); }
+.projectList article:nth-child(even) .projectCopy a { justify-content: flex-end; }
+
+.projectImage {
+  position: relative;
+  min-height: clamp(320px, 40vw, 560px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 24px;
+  background: #17070b;
+  box-shadow: 0 38px 100px rgba(0, 0, 0, .42), 0 0 45px rgba(150, 4, 30, .12);
+}
+
+.projectImage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(74, 2, 16, .02), rgba(8, 2, 4, .34));
+}
+
+.projectImage img {
+  object-fit: cover;
+  transition: transform 1s cubic-bezier(.2, .8, .2, 1), filter 1s ease;
+}
+
+.projectList article:hover .projectImage img { transform: scale(1.045); filter: saturate(1.08); }
+
+.projectImage span {
+  position: absolute;
+  z-index: 1;
+  right: 18px;
+  bottom: 16px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 50%;
+  background: rgba(4, 5, 7, .36);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.projectCopy {
+  max-width: 500px;
+  padding-left: clamp(18px, 2vw, 30px);
+}
+
+.projectCopy small {
+  color: var(--racing-red);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px #000;
+}
+
+.projectCopy h3 {
+  margin: 14px 0 0;
+  color: #fffdf9;
+  font-size: clamp(40px, 5vw, 68px);
+  line-height: .9;
+  letter-spacing: -.065em;
+  text-wrap: balance;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, .9), 0 14px 42px rgba(0, 0, 0, .62);
+}
+
+.projectCopy p { margin-top: 20px; font-size: 16px; }
+
+.projectCopy a {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 9px;
+  margin-top: 28px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 999px;
+  background: rgba(5, 6, 8, .3);
+  color: #fff;
+  backdrop-filter: blur(9px);
+  font-size: 12px;
+  font-weight: 850;
+  transition: transform .22s ease, background .22s ease, border-color .22s ease;
+}
+
+.projectCopy a:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, .75);
+  background: rgba(255, 255, 255, .13);
+}
+
+.closing {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 34px;
+  padding-block: clamp(86px, 15vh, 170px);
+}
+
+.closing > div {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-shadow: 0 2px 12px #000;
+}
+
+.closing > div svg { color: var(--racing-red); }
+.closing h2 { grid-column: 1; max-width: 880px; font-size: clamp(50px, 7vw, 102px); }
+.closing .button { grid-column: 2; grid-row: 2; align-self: end; }
+
+@media (max-width: 900px) {
+  .hero,
+  .scene,
+  .techScene,
+  .closing {
+    width: min(100% - 34px, 680px);
+  }
+
+  .hero { grid-template-columns: 1fr; gap: 42px; }
+  .heroTelemetry { justify-items: start; align-self: auto; }
+  .techScene { grid-template-columns: 1fr; gap: 44px; }
+  .stack { justify-self: start; justify-content: flex-start; }
+}
+
+@media (max-width: 760px) {
+  .hero,
+  .scene,
+  .techScene,
+  .closing {
+    width: min(100% - 30px, 600px);
+    min-height: 84svh;
+  }
+
+  .hero {
+    align-content: space-between;
+    padding-top: 96px;
+    padding-bottom: 58px;
+  }
+
+  .heroCopy,
+  .sceneCopy,
+  .projectCopy { padding-left: 16px; }
+
+  .heroCopy::before,
+  .sceneCopy::before,
+  .projectIntro::before,
+  .projectCopy::before,
+  .closing h2::before {
+    inset: -10% -6%;
+    filter: blur(12px);
+  }
+
+  .heroCopy h1 {
+    max-width: 540px;
+    font-size: clamp(43px, 13.4vw, 66px);
+    line-height: .88;
+  }
+
+  .heroCopy h1 em,
+  .sceneCopy h2 em,
+  .closing h2 em { font-size: .5em; line-height: 1; }
+
+  .heroCopy p,
+  .sceneCopy p,
+  .projectCopy p {
+    margin-top: 22px;
+    font-size: 15px;
+    line-height: 1.62;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .portfolio :global(.button) {
+    width: 100%;
+    min-height: 54px;
+    padding-inline: 20px;
+    font-size: 13px;
+  }
+
+  .scene {
+    min-height: 88svh;
+    align-items: end;
+    padding-bottom: 76px;
+  }
+
+  .sceneRight .sceneCopy {
+    justify-self: start;
+    padding-right: 0;
+    padding-left: 16px;
+    text-align: left;
+  }
+
+  .sceneRight .sceneCopy::after { right: auto; left: 0; }
+  .sceneRight .sceneCopy::before { background: radial-gradient(circle at 18% 50%, rgba(2, 3, 5, .86), rgba(2, 3, 5, .42) 48%, transparent 75%); }
+
+  .sceneCopy h2,
+  .techScene .sceneCopy h2 {
+    font-size: clamp(40px, 11.6vw, 60px);
+    line-height: .9;
+  }
+
+  .sceneCopy :global(.button) { width: auto; max-width: 100%; }
+
+  .techScene {
+    min-height: 92svh;
+    align-content: center;
+    gap: 34px;
+  }
+
+  .stack { gap: 9px 17px; }
+  .stack span { min-height: 34px; font-size: 11px; }
+
+  .motionRule { align-items: flex-end; }
+  .motionRule b { font-size: 58px; }
+  .motionRule span { max-width: 190px; font-size: 9px; }
+
+  .projects {
+    width: min(100% - 30px, 600px);
+    padding-block: 42px 92px;
+  }
+
+  .projectIntro {
+    min-height: 74svh;
+    justify-items: start;
+    padding-right: 0;
+    padding-left: 16px;
+    text-align: left;
+  }
+
+  .projectIntro::after { right: auto; left: 0; }
+  .projectIntro::before { background: radial-gradient(circle at 18% 50%, rgba(2, 3, 5, .86), rgba(2, 3, 5, .42) 48%, transparent 75%); }
+  .projectIntro h2 { font-size: clamp(42px, 12vw, 64px); line-height: .9; }
+
+  .projectList { gap: 86px; }
+
+  .projectList article,
+  .projectList article:nth-child(even) {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .projectList article:nth-child(even) .projectImage { order: 0; }
+  .projectList article:nth-child(even) .projectCopy {
+    padding-right: 0;
+    padding-left: 16px;
+    text-align: left;
+  }
+
+  .projectList article:nth-child(even) .projectCopy::after { right: auto; left: 0; }
+  .projectList article:nth-child(even) .projectCopy::before { background: radial-gradient(circle at 18% 50%, rgba(2, 3, 5, .86), rgba(2, 3, 5, .42) 48%, transparent 75%); }
+  .projectList article:nth-child(even) .projectCopy a { justify-content: flex-start; }
+
+  .projectImage { min-height: 280px; border-radius: 20px; }
+  .projectCopy h3 { font-size: clamp(38px, 11.5vw, 50px); }
+  .projectCopy a { min-height: 50px; margin-top: 24px; }
+
+  .closing {
+    grid-template-columns: 1fr;
+    min-height: 88svh;
+    align-content: center;
+  }
+
+  .closing h2 {
+    grid-column: 1;
+    font-size: clamp(45px, 13vw, 70px);
+    line-height: .88;
+  }
+
+  .closing .button {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 420px) {
+  .heroCopy h1 { font-size: clamp(41px, 13vw, 57px); }
+  .heroCopy p,
+  .sceneCopy p,
+  .projectCopy p { font-size: 14px; }
+  .heroTelemetry { min-width: 0; }
+  .projectImage { min-height: 250px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .projectImage img,
+  .portfolio :global(.button),
+  .projectCopy a { transition: none; }
+}
