@@ -121,7 +121,7 @@ export const Backgrounds: CollectionConfig = {
     group: 'Multimedia',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'kind', 'device', 'status', 'frameCountDesktop', 'frameCountMobile'],
-    description: 'Sube video, carpeta o imágenes. La secuencia conserva todos los frames y se ordena automáticamente.',
+    description: 'Crea secuencias, videos, imágenes o URLs reutilizables y publícalas en una o varias páginas.',
   },
   fields: [
     {
@@ -139,6 +139,7 @@ export const Backgrounds: CollectionConfig = {
               name: 'kind', type: 'radio', required: true, defaultValue: 'frames', label: 'Tipo de background',
               options: [
                 { label: 'Secuencia cinematográfica de frames', value: 'frames' },
+                { label: 'Video', value: 'video' },
                 { label: 'Imagen única', value: 'image' },
                 { label: 'URL externa', value: 'url' },
               ],
@@ -205,7 +206,7 @@ export const Backgrounds: CollectionConfig = {
               ],
             },
             {
-              name: 'playback', type: 'group', label: 'Comportamiento', admin: { condition: (_, siblingData) => siblingData?.kind === 'frames' },
+              name: 'playback', type: 'group', label: 'Comportamiento',
               fields: [
                 { name: 'trigger', type: 'select', defaultValue: 'scroll', options: [{ label: 'ScrollTrigger cinematográfico', value: 'scroll' }, { label: 'Automático', value: 'autoplay' }, { label: 'Bucle', value: 'loop' }] },
                 { name: 'scrub', type: 'number', defaultValue: 0.35, min: 0, max: 3 },
@@ -220,8 +221,16 @@ export const Backgrounds: CollectionConfig = {
           ],
         },
         {
-          label: 'Imagen o URL',
+          label: 'Video, imagen o URL',
           fields: [
+            {
+              name: 'video', type: 'upload', relationTo: 'media', label: 'Video reutilizable',
+              filterOptions: { mimeType: { contains: 'video/' } },
+              admin: {
+                condition: (_, siblingData) => siblingData?.kind === 'video',
+                description: 'Se reproduce silenciado, en bucle y con el mismo sistema de publicación múltiple de los frames.',
+              },
+            },
             { name: 'image', type: 'upload', relationTo: 'media', label: 'Imagen principal', admin: { condition: (_, siblingData) => siblingData?.kind === 'image' } },
             {
               name: 'externalURL', type: 'text', label: 'URL del background',

@@ -1,9 +1,8 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { Menu } from 'lucide-react'
 
 import { appearanceProps } from '@/lib/appearance'
-import { getMediaAlt, getMediaURL } from '@/lib/media'
+import { getMediaURL } from '@/lib/media'
 
 type NavItem = { id?: string | number; label?: string | null; url?: string | null }
 
@@ -39,54 +38,20 @@ export function SiteHeader({
   const cta = (header?.cta || {}) as { label?: string; url?: string }
   const brandName = String(settings?.brandName || 'FabrickBuild')
   const portfolioName = String(header?.portfolioName || settings?.portfolioName || 'Portafolio Fabrick')
-  const desktopLogoDoc = header?.logo || settings?.logo
-  const mobileLogoDoc = header?.mobileLogo || settings?.mobileLogo || desktopLogoDoc
-  const desktopLogo = getMediaURL(desktopLogoDoc, 'thumbnail')
-  const mobileLogo = getMediaURL(mobileLogoDoc, 'thumbnail')
   const backgroundMedia = getMediaURL(header?.backgroundMedia, 'hero')
   const { className, style } = appearanceProps(header?.appearance || defaultHeaderAppearance, 'site-header site-header--portfolio')
-  const logoSizeDesktop = Math.min(160, Math.max(28, Number(header?.logoSizeDesktop || 46)))
-  const logoSizeMobile = Math.min(120, Math.max(28, Number(header?.logoSizeMobile || 40)))
-  const logoAnimation = String(header?.logoAnimation || 'glow')
 
   if (backgroundMedia) style.backgroundImage = `url("${backgroundMedia}")`
-  style['--brand-logo-desktop'] = `${logoSizeDesktop}px`
-  style['--brand-logo-mobile'] = `${logoSizeMobile}px`
 
   const Brand = () => (
     <Link
       href="/"
-      className={`brand brand--${logoAnimation}`}
+      className="brand brand--wordmark"
       aria-label={`${portfolioName}, inicio`}
       data-mobile-centered={header?.centerLogoMobile !== false ? 'true' : 'false'}
     >
-      {desktopLogo ? (
-        <>
-          <span className="brand-logo brand-logo--desktop">
-            <Image
-              src={desktopLogo}
-              alt={getMediaAlt(desktopLogoDoc, brandName)}
-              fill
-              sizes={`${logoSizeDesktop}px`}
-              priority
-            />
-          </span>
-          <span className="brand-logo brand-logo--mobile">
-            <Image
-              src={mobileLogo || desktopLogo}
-              alt={getMediaAlt(mobileLogoDoc, brandName)}
-              fill
-              sizes={`${logoSizeMobile}px`}
-              priority
-            />
-          </span>
-        </>
-      ) : (
-        <span className="brand-mark" aria-hidden="true"><b>F</b><i /></span>
-      )}
-      <span className="brand-name">
-        <small>PORTAFOLIO</small>
-        <strong>Fabrick</strong>
+      <span className="brand-wordmark" aria-label={brandName}>
+        <strong>FABRICK</strong><em>BUILD</em>
       </span>
     </Link>
   )

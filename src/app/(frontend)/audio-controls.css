@@ -1,0 +1,30 @@
+.ambient-audio__volume {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 130px) 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  background: rgba(8,8,10,.82);
+  color: rgba(255,255,255,.82);
+  font-size: 11px;
+  backdrop-filter: blur(16px);
+}
+
+.ambient-audio__volume input {
+  width: 100%;
+  accent-color: #f4c84b;
+  cursor: pointer;
+}
+
+.ambient-audio__volume span {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .ambient-audio__volume {
+    grid-template-columns: auto minmax(68px, 105px) 34px;
+    padding: 7px 10px;
+  }
+}

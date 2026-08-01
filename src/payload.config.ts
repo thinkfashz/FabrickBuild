@@ -2,12 +2,7 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
-import {
-  buildConfig,
-  type CollectionAfterChangeHook,
-  type CollectionConfig,
-  type GlobalConfig,
-} from 'payload'
+import { buildConfig, type CollectionAfterChangeHook, type CollectionConfig, type GlobalConfig } from 'payload'
 import { fileURLToPath } from 'url'
 
 import { AIChanges } from '@/collections/AIChanges'
@@ -24,14 +19,7 @@ import { Users } from '@/collections/Users'
 import { Footer } from '@/globals/Footer'
 import { Header } from '@/globals/Header'
 import { SiteSettings } from '@/globals/SiteSettings'
-import {
-  revalidateBackgrounds,
-  revalidateGlobals,
-  revalidateMedia,
-  revalidateProjects,
-  revalidateServices,
-  revalidateTestimonials,
-} from '@/hooks/revalidateContent'
+import { revalidateBackgrounds, revalidateGlobals, revalidateMedia, revalidateProjects, revalidateServices, revalidateTestimonials } from '@/hooks/revalidateContent'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -48,16 +36,8 @@ if (!isAndroid) {
 }
 
 const deploymentURL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
-const serverURL =
-  process.env.NEXT_PUBLIC_SERVER_URL ||
-  deploymentURL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'http://localhost:3000')
-
-const allowedOrigins = Array.from(
-  new Set([serverURL, deploymentURL, 'http://localhost:3000'].filter(Boolean) as string[]),
-)
+const serverURL = process.env.NEXT_PUBLIC_SERVER_URL || deploymentURL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'http://localhost:3000')
+const allowedOrigins = Array.from(new Set([serverURL, deploymentURL, 'http://localhost:3000'].filter(Boolean) as string[]))
 
 function normalizePostgresSSLMode(connectionString: string): string {
   try {
@@ -71,18 +51,8 @@ function normalizePostgresSSLMode(connectionString: string): string {
 }
 
 const explicitDatabaseURL = process.env.PAYLOAD_DATABASE_URL
-const databaseSource = explicitDatabaseURL
-  ? 'PAYLOAD_DATABASE_URL'
-  : process.env.POSTGRES_URL
-    ? 'POSTGRES_URL'
-    : process.env.DATABASE_URL
-      ? 'DATABASE_URL'
-      : 'local-fallback'
-const rawDatabaseURL =
-  explicitDatabaseURL ||
-  process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL ||
-  'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
+const databaseSource = explicitDatabaseURL ? 'PAYLOAD_DATABASE_URL' : process.env.POSTGRES_URL ? 'POSTGRES_URL' : process.env.DATABASE_URL ? 'DATABASE_URL' : 'local-fallback'
+const rawDatabaseURL = explicitDatabaseURL || process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/fabrickbuild'
 const databaseURL = normalizePostgresSSLMode(rawDatabaseURL)
 const poolMax = Math.min(20, Math.max(2, Number(process.env.POSTGRES_POOL_MAX || 8)))
 const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN_READ_WRITE_TOKEN
@@ -98,32 +68,15 @@ const safeDatabaseTarget = (() => {
 
 console.info(`[database] Conexión seleccionada mediante ${databaseSource}: ${safeDatabaseTarget}.`)
 console.info(`[storage] Vercel Blob ${blobToken ? 'habilitado' : 'no configurado'}.`)
-if (
-  process.env.POSTGRES_URL &&
-  process.env.DATABASE_URL &&
-  process.env.POSTGRES_URL !== process.env.DATABASE_URL &&
-  !explicitDatabaseURL
-) {
-  console.warn('[database] POSTGRES_URL y DATABASE_URL apuntan a conexiones diferentes; Payload prioriza POSTGRES_URL para conservar Multimedia.')
-}
 
-const appendAfterChange = (
-  collection: CollectionConfig,
-  hook: CollectionAfterChangeHook,
-): CollectionConfig => ({
+const appendAfterChange = (collection: CollectionConfig, hook: CollectionAfterChangeHook): CollectionConfig => ({
   ...collection,
-  hooks: {
-    ...collection.hooks,
-    afterChange: [...(collection.hooks?.afterChange || []), hook],
-  },
+  hooks: { ...collection.hooks, afterChange: [...(collection.hooks?.afterChange || []), hook] },
 })
 
 const appendGlobalAfterChange = (global: GlobalConfig): GlobalConfig => ({
   ...global,
-  hooks: {
-    ...global.hooks,
-    afterChange: [...(global.hooks?.afterChange || []), revalidateGlobals],
-  },
+  hooks: { ...global.hooks, afterChange: [...(global.hooks?.afterChange || []), revalidateGlobals] },
 })
 
 const previewPageURL = (data: Record<string, unknown>) => {
@@ -145,8 +98,13 @@ export default buildConfig({
   admin: {
     user: Users.slug,
     importMap: { baseDir: path.resolve(dirname) },
-    meta: { titleSuffix: '— FabrickBuild CMS' },
+    meta: { titleSuffix: '— FabrickBuild Control Center' },
     components: {
+      graphics: {
+        Logo: '@/components/admin/AdminBrand#AdminLogo',
+        Icon: '@/components/admin/AdminBrand#AdminIcon',
+      },
+      beforeLogin: ['@/components/admin/AdminLoginWelcome'],
       beforeNavLinks: ['@/components/admin/AdminStudioNav'],
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
@@ -162,13 +120,7 @@ export default buildConfig({
   db: postgresAdapter({
     migrationDir: path.resolve(dirname, 'migrations'),
     push: false,
-    pool: {
-      connectionString: databaseURL,
-      max: poolMax,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 8_000,
-      allowExitOnIdle: true,
-    },
+    pool: { connectionString: databaseURL, max: poolMax, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 8_000, allowExitOnIdle: true },
   }),
   collections: [
     Users,
@@ -187,7 +139,12 @@ export default buildConfig({
   plugins: [
     vercelBlobStorage({
       enabled: Boolean(blobToken),
-      collections: { media: { prefix: 'fabrickbuild' } },
+      collections: {
+        media: {
+          prefix: 'fabrickbuild',
+          disablePayloadAccessControl: true,
+        },
+      },
       clientUploads: true,
       token: blobToken,
     }),
