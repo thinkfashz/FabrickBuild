@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
 
+import { AssignedBackgrounds } from '@/components/AssignedBackgrounds'
 import { appearanceProps } from '@/lib/appearance'
 import { getMediaAlt, getMediaURL } from '@/lib/media'
 
@@ -33,6 +34,7 @@ export function PageSurface({
       ? saved?.externalURL
       : null
   const { className, style } = appearanceProps(page?.pageAppearance, 'page-surface')
+  const experiences = Array.isArray(page?.backgroundExperiences) ? page.backgroundExperiences : []
 
   if (!suppressMedia && external && /\.(mp4|webm)(\?|$)/i.test(external)) {
     // Rendered below as video.
@@ -84,6 +86,7 @@ export function PageSurface({
       )}
       <div className="cms-surface__overlay" aria-hidden="true" />
       <div className="page-surface__content">{children}</div>
+      {!suppressMedia && experiences.length > 0 && <AssignedBackgrounds assignments={experiences} />}
     </div>
   )
 }
