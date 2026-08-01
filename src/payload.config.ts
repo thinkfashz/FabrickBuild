@@ -67,7 +67,7 @@ const safeDatabaseTarget = (() => {
 })()
 
 console.info(`[database] Conexión seleccionada mediante ${databaseSource}: ${safeDatabaseTarget}.`)
-console.info(`[storage] Vercel Blob privado ${blobToken ? 'habilitado' : 'no configurado'}.`)
+console.info(`[storage] Vercel Blob ${blobToken ? 'habilitado' : 'no configurado'}.`)
 
 const appendAfterChange = (collection: CollectionConfig, hook: CollectionAfterChangeHook): CollectionConfig => ({
   ...collection,
@@ -133,7 +133,6 @@ export default buildConfig({
   globals: [Header, Footer, SiteSettings].map(appendGlobalAfterChange),
   plugins: [
     vercelBlobStorage({
-      access: 'private',
       enabled: Boolean(blobToken),
       collections: {
         media: {
