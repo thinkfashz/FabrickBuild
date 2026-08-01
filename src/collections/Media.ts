@@ -15,13 +15,7 @@ const slugify = (value: unknown) =>
 
 const organizeFrameMetadata: CollectionBeforeValidateHook = ({ data }) => {
   if (!data || data.category !== 'frame') return data
-  const collectionKey = slugify(data.collectionKey || 'secuencia')
-  const device = ['desktop', 'mobile'].includes(String(data.device)) ? String(data.device) : 'universal'
-  return {
-    ...data,
-    collectionKey,
-    storageFolder: `frames/${collectionKey}/${device}`,
-  }
+  return { ...data, collectionKey: slugify(data.collectionKey || 'secuencia') }
 }
 
 export const Media: CollectionConfig = {
@@ -109,22 +103,11 @@ export const Media: CollectionConfig = {
     {
       name: 'collectionKey',
       type: 'text',
-      label: 'Grupo o secuencia',
+      label: 'Carpeta virtual / secuencia',
       index: true,
       admin: {
         condition: (_, siblingData) => siblingData?.category === 'frame',
-        description: 'Funciona como carpeta virtual para todos los frames del mismo background.',
-      },
-    },
-    {
-      name: 'storageFolder',
-      type: 'text',
-      label: 'Carpeta virtual de frames',
-      index: true,
-      admin: {
-        readOnly: true,
-        condition: (_, siblingData) => siblingData?.category === 'frame',
-        description: 'Ruta lógica usada para organizar la secuencia en Multimedia, por ejemplo frames/casa/mobile.',
+        description: 'Agrupa todos los frames del mismo background sin crear columnas nuevas ni duplicar archivos en Blob.',
       },
     },
     { name: 'caption', type: 'textarea', label: 'Descripción o crédito' },

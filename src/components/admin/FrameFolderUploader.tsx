@@ -171,6 +171,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
 
     try {
       await waitForEvent(video, 'loadedmetadata')
+      if (video.readyState < 2) await waitForEvent(video, 'loadeddata')
       if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('El video no tiene una duración válida.')
 
       const maxWidth = target === 'mobileFrames' ? 1080 : 1600
@@ -228,7 +229,7 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
       device,
       frameOrder: index + 1,
       collectionKey: slugify(folderName),
-      storageFolder,
+      caption: `Carpeta virtual: ${storageFolder}`,
     }
     const form = new FormData()
     form.append('file', file)
