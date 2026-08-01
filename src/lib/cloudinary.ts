@@ -29,7 +29,7 @@ export function encryptCloudinaryCredentials(value: CloudinaryCredentials) {
 }
 
 export function decryptCloudinaryCredentials(doc: any): CloudinaryCredentials {
-  if (!doc?.encryptedCredentials || !doc?.credentialIV || !doc?.credentialTag) throw new Error('Cloudinary no tiene credenciales guardadas.')
+  if (!doc?.encryptedCredentials || !doc?.credentialIV || !doc?.credentialTag) throw new Error('Cloudinary no tiene credenciales guardadas en esta base de datos.')
   const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey(), Buffer.from(doc.credentialIV, 'base64'))
   decipher.setAuthTag(Buffer.from(doc.credentialTag, 'base64'))
   const clear = Buffer.concat([decipher.update(Buffer.from(doc.encryptedCredentials, 'base64')), decipher.final()]).toString('utf8')
@@ -38,14 +38,19 @@ export function decryptCloudinaryCredentials(doc: any): CloudinaryCredentials {
 
 export async function getCloudinaryIntegration() {
   const payload = await getPayload({ config })
-  const result = await payload.find({ collection: 'integrations', depth: 0, limit: 1, overrideAccess: true, where: { provider: { equals: PROVIDER } } })
-  return { payload, doc: result.docs?.[0] as any }
-}
-
-export async function getCloudinaryCredentials() {
-  const { doc } = await getCloudinaryIntegration()
-  if (!doc?.enabled) throw new Error('Cloudinary está desactivado en Integraciones.')
-  return decryptCloudinaryCredentials(doc)
+  const result = await payload.find({
+    collection: 'integrations',
+    depth: 0,
+    limit: 20,
+    sort: '-updatedAt',
+    overrideAccess: true,
+    where: { provider: { equals: PROVIDER } },
+  })
+  const docs = (result.docs || []) as any[]
+  const doc = docs.find((item) => item?.enabled && item?.encryptedCredentials)
+    || docs.find((item) => item?.encryptedCredentials)
+    || docs[0]
+  return { payload, doc, duplicates: Math.max(0, docs.length - 1) }
 }
 
 const basicAuth = (credentials: CloudinaryCredentials) => `Basic ${Buffer.from(`${credentials.apiKey}:${credentials.apiSecret}`).toString('base64')}`
@@ -55,6 +60,50 @@ export async function testCloudinary(credentials: CloudinaryCredentials) {
   const json = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(json?.error?.message || `Cloudinary respondió HTTP ${response.status}`)
   return { ok: true, total: Number(json?.total_count || 0), cloudName: credentials.cloudName }
+}
+
+export async function getCloudinaryCredentials() {
+  const { payload, doc } = await getCloudinaryIntegration()
+  const credentials = decryptCloudinaryCredentials(doc)
+
+  if (!doc?.enabled || doc?.status !== 'connected') {
+    try {
+      await testCloudinary(credentials)
+      if (doc?.id) {
+        await payload.update({
+          collection: 'integrations',
+          id: doc.id,
+          overrideAccess: true,
+          data: {
+            enabled: true,
+            status: 'connected',
+            lastConnectedAt: new Date().toISOString(),
+            lastTestedAt: new Date().toISOString(),
+            lastError: null,
+          } as any,
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Las credenciales guardadas no son válidas.'
+      throw new Error(`Cloudinary está guardado pero no pudo reactivarse: ${message}`)
+    }
+  }
+
+  return credentials
+}
+
+export function cloudinaryEnvironmentInfo() {
+  const database = process.env.PAYLOAD_DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL || 'local'
+  let databaseTarget = 'local'
+  try {
+    const parsed = new URL(database)
+    databaseTarget = `${parsed.hostname}/${parsed.pathname.replace(/^\//, '') || 'database'}`
+  } catch {}
+  return {
+    environment: process.env.VERCEL_ENV || process.env.NODE_ENV || 'local',
+    deployment: process.env.VERCEL_URL || 'local',
+    databaseFingerprint: crypto.createHash('sha256').update(databaseTarget).digest('hex').slice(0, 10),
+  }
 }
 
 export async function uploadCloudinaryImage(file: File, folder: string, publicID: string) {

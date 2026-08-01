@@ -1,18 +1,18 @@
-import { decryptCloudinaryCredentials, encryptCloudinaryCredentials, getCloudinaryIntegration, testCloudinary } from '@/lib/cloudinary'
+import { cloudinaryEnvironmentInfo, decryptCloudinaryCredentials, encryptCloudinaryCredentials, getCloudinaryIntegration, testCloudinary } from '@/lib/cloudinary'
 
 export const runtime = 'nodejs'
 
 async function requireAdmin(request: Request) {
-  const { payload, doc } = await getCloudinaryIntegration()
+  const { payload, doc, duplicates } = await getCloudinaryIntegration()
   const auth = await payload.auth({ headers: request.headers })
   if (!auth.user || auth.user.role !== 'admin') return { error: Response.json({ ok: false, message: 'Solo un administrador puede configurar Cloudinary.' }, { status: 403 }) }
-  return { payload, doc }
+  return { payload, doc, duplicates }
 }
 
 export async function GET(request: Request) {
   const context = await requireAdmin(request)
   if ('error' in context) return context.error
-  const { doc } = context
+  const { doc, duplicates } = context
   let cloudName = ''
   let rootFolder = 'fabrickbuild'
   try {
@@ -30,7 +30,9 @@ export async function GET(request: Request) {
     hint: doc?.credentialHint || '',
     lastTestedAt: doc?.lastTestedAt || null,
     lastError: doc?.lastError || null,
-  })
+    duplicates,
+    environment: cloudinaryEnvironmentInfo(),
+  }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -53,25 +55,26 @@ export async function POST(request: Request) {
     rootFolder,
   }
   if (!credentials.cloudName || !credentials.apiKey || !credentials.apiSecret) {
-    return Response.json({ ok: false, message: 'Completa Cloud name, API key y API secret.' }, { status: 400 })
+    return Response.json({ ok: false, message: 'Completa Cloud name, API key y API secret. Si fueron guardadas en otro Preview, ese deployment probablemente usa otra base PostgreSQL.' }, { status: 400 })
   }
 
   try {
     const test = await testCloudinary(credentials)
     const encrypted = encryptCloudinaryCredentials(credentials)
+    const now = new Date().toISOString()
     const data = {
       label: 'Cloudinary Multimedia', provider: 'cloudinary', enabled: true, priority: 50,
-      status: 'connected', lastConnectedAt: new Date().toISOString(), lastTestedAt: new Date().toISOString(), lastError: null,
-      capabilities: { images: true, folders: true, frames: true, source: 'secondary', rootFolder },
-      ...encrypted, secretUpdatedAt: action === 'save' ? new Date().toISOString() : (doc?.secretUpdatedAt || new Date().toISOString()),
+      status: 'connected', lastConnectedAt: now, lastTestedAt: now, lastError: null,
+      capabilities: { images: true, folders: true, frames: true, source: 'secondary', rootFolder, sharedDatabase: true },
+      ...encrypted, secretUpdatedAt: action === 'save' ? now : (doc?.secretUpdatedAt || now),
     }
     const saved = doc?.id
       ? await payload.update({ collection: 'integrations', id: doc.id, data: data as any, overrideAccess: true })
       : await payload.create({ collection: 'integrations', data: data as any, overrideAccess: true })
-    return Response.json({ ok: true, message: 'Cloudinary conectado y guardado en la bóveda cifrada.', test, hint: saved.credentialHint })
+    return Response.json({ ok: true, message: 'Cloudinary fue probado, activado y guardado en PostgreSQL para este entorno.', test, hint: saved.credentialHint, environment: cloudinaryEnvironmentInfo() })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'No fue posible conectar con Cloudinary.'
     if (doc?.id) await payload.update({ collection: 'integrations', id: doc.id, data: { status: 'error', lastTestedAt: new Date().toISOString(), lastError: message } as any, overrideAccess: true }).catch(() => null)
-    return Response.json({ ok: false, message }, { status: 502 })
+    return Response.json({ ok: false, message, environment: cloudinaryEnvironmentInfo() }, { status: 502 })
   }
 }
