@@ -1,48 +1,28 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import type { FrameSequence } from '@/lib/appearance'
 
-type Props = {
-  sequence: FrameSequence
-  forceScroll?: boolean
-}
-
-type FrameRecord = {
-  image: HTMLImageElement | null
-  state: 'idle' | 'queued' | 'loading' | 'loaded' | 'error'
-  attempts: number
-}
+type Props = { sequence: FrameSequence; forceScroll?: boolean }
+type FrameRecord = { image: HTMLImageElement | null; state: 'idle' | 'loading' | 'loaded' | 'error' }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+const imageCache = new Map<string, HTMLImageElement>()
 
-function drawCover(
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
-  fit: FrameSequence['fit'],
-  mobile: boolean,
-) {
+function drawFrame(canvas: HTMLCanvasElement, image: HTMLImageElement, fit: FrameSequence['fit'], mobile: boolean) {
   const bounds = canvas.getBoundingClientRect()
-  const maxDpr = mobile ? 1.25 : 1.65
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, maxDpr)
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, mobile ? 1.12 : 1.45)
   const width = Math.max(1, Math.round(bounds.width * pixelRatio))
   const height = Math.max(1, Math.round(bounds.height * pixelRatio))
-
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width
     canvas.height = height
   }
-
   const context = canvas.getContext('2d', { alpha: false, desynchronized: true })
   if (!context || !image.naturalWidth || !image.naturalHeight) return
-
   context.imageSmoothingEnabled = true
-  context.imageSmoothingQuality = 'high'
-  context.clearRect(0, 0, width, height)
-
+  context.imageSmoothingQuality = mobile ? 'medium' : 'high'
   const sourceRatio = image.naturalWidth / image.naturalHeight
   const targetRatio = width / height
   const scale = fit === 'contain'
@@ -50,323 +30,240 @@ function drawCover(
     : (sourceRatio > targetRatio ? height / image.naturalHeight : width / image.naturalWidth)
   const drawWidth = image.naturalWidth * scale
   const drawHeight = image.naturalHeight * scale
-
-  context.drawImage(
-    image,
-    Math.round((width - drawWidth) / 2),
-    Math.round((height - drawHeight) / 2),
-    Math.ceil(drawWidth),
-    Math.ceil(drawHeight),
-  )
+  context.clearRect(0, 0, width, height)
+  context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight)
 }
 
-/**
- * Reproductor cinematográfico ligero.
- *
- * Prioriza el primer frame y una ventana cercana al scroll, carga el resto en
- * segundo plano con concurrencia limitada y dibuja únicamente cuando cambia el
- * índice real. El canvas 2D evita recrear texturas WebGL en cada movimiento.
- */
 export function FrameSequenceBackground({ sequence, forceScroll = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameLabelRef = useRef<HTMLSpanElement>(null)
   const loadLabelRef = useRef<HTMLSpanElement>(null)
-  const initialFrameCount = useMemo(
-    () => Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length),
-    [sequence.desktopFrames.length, sequence.mobileFrames.length],
-  )
+  const initialFrameCount = useMemo(() => Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length), [sequence])
 
   useEffect(() => {
-    const canvas = canvasRef.current
     const container = containerRef.current
-    if (!canvas || !container) return
+    const canvas = canvasRef.current
+    if (!container || !canvas) return
 
     const section = container.closest<HTMLElement>('section')
     const mobileQuery = window.matchMedia('(max-width: 767px)')
+    const connection = (navigator as Navigator & { connection?: { effectiveType?: string; saveData?: boolean } }).connection
     let mobile = mobileQuery.matches
-    let stopped = false
-    let hidden = document.hidden
-    let progress = 0
-    let wantedFrame = 0
-    let renderedFrame = -1
-    let loadedCount = 0
-    let activeLoads = 0
-    let backgroundCursor = 0
-    let drawRAF = 0
-    let backgroundTimer = 0
-    let autoplayTimer = 0
-    let trigger: ScrollTrigger | null = null
-    let resizeObserver: ResizeObserver | null = null
     let urls: string[] = []
     let records: FrameRecord[] = []
+    let wanted = 0
+    let rendered = -1
+    let activeLoads = 0
+    let stopped = false
+    let scrollRAF = 0
+    let drawRAF = 0
+    let autoplayTimer = 0
+    let idleHandle = 0
+    let resizeObserver: ResizeObserver | null = null
     const queue: number[] = []
     const queued = new Set<number>()
-    const concurrency = () => (mobile ? 3 : 5)
-    const readyThreshold = () => Math.min(urls.length, mobile ? 6 : 9)
+    const slowConnection = connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType || '')
 
     const chooseFrames = () => {
-      const candidates = mobile && sequence.mobileFrames.length
+      const source = mobile && sequence.mobileFrames.length
         ? sequence.mobileFrames
-        : sequence.desktopFrames.length
-          ? sequence.desktopFrames
-          : sequence.mobileFrames
-      return Array.from(new Set(candidates.filter(Boolean)))
+        : sequence.desktopFrames.length ? sequence.desktopFrames : sequence.mobileFrames
+      return Array.from(new Set(source.filter(Boolean)))
     }
 
-    const setMood = (nextProgress: number) => {
-      if (!section) return
-      const pulse = Math.sin(nextProgress * Math.PI * 1.8) * 0.06
-      const brightness = clamp(0.76 + nextProgress * 0.16 + pulse, 0.66, 1.02)
-      const veil = clamp((sequence.overlayOpacity / 100) * (0.86 - nextProgress * 0.18), 0.03, 0.58)
-      section.style.setProperty('--cinematic-progress', nextProgress.toFixed(4))
-      section.style.setProperty('--cinematic-light', brightness.toFixed(3))
-      section.style.setProperty('--cinematic-veil', veil.toFixed(3))
-      section.style.setProperty('--cinematic-glow-x', `${Math.round(16 + nextProgress * 68)}%`)
+    const loadedCount = () => records.reduce((total, record) => total + (record.state === 'loaded' ? 1 : 0), 0)
+    const updateLabels = () => {
+      frameLabelRef.current && (frameLabelRef.current.textContent = `${String(wanted + 1).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`)
+      const loaded = loadedCount()
+      loadLabelRef.current && (loadLabelRef.current.textContent = loaded >= Math.min(8, urls.length) ? 'Secuencia lista' : `Preparando ${loaded}/${Math.min(8, urls.length)}`)
+      container.dataset.sequenceReady = loaded > 0 ? 'true' : 'false'
     }
 
-    const updateLabels = (index = wantedFrame) => {
-      const current = urls.length ? clamp(index + 1, 1, urls.length) : 0
-      if (frameLabelRef.current) {
-        frameLabelRef.current.textContent = `${String(current).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
-      }
-      if (loadLabelRef.current) {
-        loadLabelRef.current.textContent = loadedCount >= readyThreshold()
-          ? `${loadedCount}/${urls.length} preparados`
-          : `Preparando ${loadedCount}/${urls.length}`
-      }
-      container.dataset.sequenceReady = loadedCount >= readyThreshold() ? 'true' : 'false'
-    }
-
-    const nearestLoadedFrame = (target: number) => {
-      for (let radius = 0; radius < urls.length; radius += 1) {
-        const previous = target - radius
-        const next = target + radius
-        if (previous >= 0 && records[previous]?.state === 'loaded') return previous
-        if (next < urls.length && records[next]?.state === 'loaded') return next
+    const nearestLoaded = (target: number) => {
+      for (let distance = 0; distance < urls.length; distance += 1) {
+        const before = target - distance
+        const after = target + distance
+        if (before >= 0 && records[before]?.state === 'loaded') return before
+        if (after < records.length && records[after]?.state === 'loaded') return after
       }
       return -1
     }
 
-    const renderNow = (force = false) => {
+    const render = (force = false) => {
       drawRAF = 0
-      if (stopped || hidden || !urls.length) return
-      const exact = records[wantedFrame]
-      const index = exact?.state === 'loaded' ? wantedFrame : nearestLoadedFrame(wantedFrame)
-      if (index < 0 || (!force && index === renderedFrame)) return
+      if (stopped || document.hidden) return
+      const index = records[wanted]?.state === 'loaded' ? wanted : nearestLoaded(wanted)
+      if (index < 0 || (!force && index === rendered)) return
       const image = records[index]?.image
       if (!image) return
-      renderedFrame = index
-      drawCover(canvas, image, sequence.fit, mobile)
-      updateLabels(wantedFrame)
+      rendered = index
+      drawFrame(canvas, image, sequence.fit, mobile)
+      updateLabels()
+    }
+    const scheduleRender = (force = false) => {
+      if (!drawRAF) drawRAF = requestAnimationFrame(() => render(force))
     }
 
-    const scheduleDraw = (force = false) => {
-      if (drawRAF) return
-      drawRAF = window.requestAnimationFrame(() => renderNow(force))
-    }
-
-    const pumpQueue = () => {
-      if (stopped || hidden) return
-      while (activeLoads < concurrency() && queue.length) {
+    const pump = () => {
+      const limit = slowConnection ? 2 : mobile ? 4 : 6
+      while (!stopped && !document.hidden && activeLoads < limit && queue.length) {
         const index = queue.shift()
         if (typeof index !== 'number') break
         queued.delete(index)
         const record = records[index]
-        if (!record || record.state === 'loaded' || record.state === 'loading' || record.state === 'error') continue
-
+        if (!record || record.state !== 'idle') continue
+        const cached = imageCache.get(urls[index])
+        if (cached?.complete && cached.naturalWidth) {
+          record.image = cached
+          record.state = 'loaded'
+          if (index === wanted || rendered < 0) scheduleRender(true)
+          continue
+        }
         record.state = 'loading'
-        record.attempts += 1
         activeLoads += 1
-        const image = new window.Image()
+        const image = new Image()
         image.decoding = 'async'
         image.loading = 'eager'
-        image.fetchPriority = index <= readyThreshold() || index === wantedFrame ? 'high' : 'low'
-
-        const finish = () => {
-          activeLoads = Math.max(0, activeLoads - 1)
-          pumpQueue()
+        image.fetchPriority = Math.abs(index - wanted) <= 3 || index === 0 ? 'high' : 'low'
+        image.onload = () => {
+          const finish = () => {
+            if (!stopped) {
+              record.image = image
+              record.state = 'loaded'
+              imageCache.set(urls[index], image)
+              if (index === wanted || rendered < 0) scheduleRender(true)
+              updateLabels()
+            }
+            activeLoads = Math.max(0, activeLoads - 1)
+            pump()
+          }
+          image.decode().then(finish).catch(finish)
         }
-
-        image.addEventListener('load', () => {
-          const complete = () => {
-            if (stopped) return
-            record.image = image
-            record.state = 'loaded'
-            loadedCount += 1
-            updateLabels()
-            if (index === wantedFrame || renderedFrame < 0) scheduleDraw(true)
-            finish()
-          }
-          image.decode().then(complete).catch(complete)
-        }, { once: true })
-
-        image.addEventListener('error', () => {
+        image.onerror = () => {
+          record.state = 'error'
           activeLoads = Math.max(0, activeLoads - 1)
-          record.image = null
-          if (record.attempts < 2 && !stopped) {
-            record.state = 'idle'
-            window.setTimeout(() => enqueue(index, true), 240 * record.attempts)
-          } else {
-            record.state = 'error'
-          }
-          updateLabels()
-          pumpQueue()
-        }, { once: true })
-
-        record.image = image
+          pump()
+        }
         image.src = urls[index]
       }
     }
 
-    function enqueue(index: number, priority = false) {
-      if (index < 0 || index >= records.length) return
-      const record = records[index]
-      if (!record || record.state === 'loaded' || record.state === 'loading' || record.state === 'error' || queued.has(index)) return
-      record.state = 'queued'
+    const enqueue = (index: number, priority = false) => {
+      if (index < 0 || index >= records.length || queued.has(index) || records[index]?.state !== 'idle') return
       queued.add(index)
-      if (priority) queue.unshift(index)
-      else queue.push(index)
-      pumpQueue()
+      priority ? queue.unshift(index) : queue.push(index)
+      pump()
     }
 
-    const warmFrames = (center: number) => {
-      const ahead = mobile ? 7 : 11
-      const behind = mobile ? 3 : 5
+    const warmWindow = (center: number) => {
       enqueue(center, true)
-      for (let radius = 1; radius <= Math.max(ahead, behind); radius += 1) {
-        if (radius <= ahead) enqueue(center + radius, radius <= 3)
-        if (radius <= behind) enqueue(center - radius, radius <= 2)
+      const ahead = slowConnection ? 3 : mobile ? 8 : 12
+      const behind = slowConnection ? 2 : mobile ? 5 : 7
+      for (let distance = 1; distance <= Math.max(ahead, behind); distance += 1) {
+        if (distance <= ahead) enqueue(center + distance, distance <= 4)
+        if (distance <= behind) enqueue(center - distance, distance <= 3)
       }
     }
 
-    const preloadBackground = () => {
-      window.clearTimeout(backgroundTimer)
-      const tick = () => {
-        if (stopped) return
-        if (!hidden && backgroundCursor < records.length) {
-          let added = 0
-          while (backgroundCursor < records.length && added < (mobile ? 1 : 2)) {
-            enqueue(backgroundCursor)
-            backgroundCursor += 1
-            added += 1
-          }
-        }
-        if (backgroundCursor < records.length) backgroundTimer = window.setTimeout(tick, mobile ? 170 : 110)
+    const preloadKeyframes = () => {
+      if (!urls.length) return
+      const step = slowConnection ? 10 : mobile ? 6 : 5
+      const keyframes = new Set([0, urls.length - 1, Math.floor(urls.length / 2)])
+      for (let index = 0; index < urls.length; index += step) keyframes.add(index)
+      Array.from(keyframes).forEach((index, order) => enqueue(index, order < 4))
+    }
+
+    const backgroundFill = () => {
+      const run = () => {
+        if (stopped || document.hidden || slowConnection) return
+        const next = records.findIndex((record) => record.state === 'idle')
+        if (next < 0) return
+        enqueue(next)
+        idleHandle = window.setTimeout(run, mobile ? 120 : 70)
       }
-      backgroundTimer = window.setTimeout(tick, 320)
+      idleHandle = window.setTimeout(run, 900)
     }
 
-    const setWantedFrame = (index: number) => {
-      const next = clamp(index, 0, Math.max(0, urls.length - 1))
-      if (next === wantedFrame && renderedFrame >= 0) return
-      wantedFrame = next
-      warmFrames(next)
-      scheduleDraw()
-      updateLabels(next)
+    const setWanted = (next: number) => {
+      const index = clamp(next, 0, Math.max(0, urls.length - 1))
+      if (index === wanted && rendered >= 0) return
+      wanted = index
+      warmWindow(index)
+      scheduleRender()
+      updateLabels()
     }
 
-    const syncProgress = (nextProgress: number) => {
-      progress = clamp(nextProgress, 0, 1)
-      setMood(progress)
-      setWantedFrame(Math.round(progress * Math.max(0, urls.length - 1)))
+    const syncScroll = () => {
+      scrollRAF = 0
+      if (!section || !urls.length) return
+      const rect = section.getBoundingClientRect()
+      const progress = clamp(-rect.top / Math.max(1, rect.height - innerHeight), 0, 1)
+      section.style.setProperty('--cinematic-progress', progress.toFixed(4))
+      section.style.setProperty('--cinematic-light', String(0.8 + progress * 0.14))
+      section.style.setProperty('--cinematic-veil', String(clamp((sequence.overlayOpacity / 100) * (0.84 - progress * 0.16), 0.03, 0.55)))
+      section.style.setProperty('--cinematic-glow-x', `${Math.round(18 + progress * 64)}%`)
+      setWanted(Math.round(progress * (urls.length - 1)))
     }
+    const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(syncScroll) }
 
-    const resetFrames = () => {
+    const reset = () => {
       urls = chooseFrames()
-      records = urls.map(() => ({ image: null, state: 'idle', attempts: 0 }))
+      records = urls.map((url) => {
+        const cached = imageCache.get(url)
+        return cached?.complete && cached.naturalWidth ? { image: cached, state: 'loaded' as const } : { image: null, state: 'idle' as const }
+      })
       queue.length = 0
       queued.clear()
-      loadedCount = 0
       activeLoads = 0
-      backgroundCursor = 0
-      renderedFrame = -1
-      wantedFrame = Math.round(progress * Math.max(0, urls.length - 1))
-      updateLabels(wantedFrame)
+      rendered = -1
       enqueue(0, true)
-      warmFrames(wantedFrame)
-      preloadBackground()
+      preloadKeyframes()
+      warmWindow(wanted)
+      backgroundFill()
+      updateLabels()
+      syncScroll()
     }
 
     const resize = () => {
+      const wasMobile = mobile
       mobile = mobileQuery.matches
-      const previousURLs = urls
-      const nextURLs = chooseFrames()
-      const sourceChanged = nextURLs.length !== previousURLs.length || nextURLs.some((url, index) => url !== previousURLs[index])
-      if (sourceChanged) resetFrames()
-      renderedFrame = -1
-      scheduleDraw(true)
-      trigger?.refresh()
+      if (mobile !== wasMobile) reset()
+      rendered = -1
+      scheduleRender(true)
+      onScroll()
     }
 
-    const onVisibility = () => {
-      hidden = document.hidden
-      if (!hidden) {
-        warmFrames(wantedFrame)
-        pumpQueue()
-        scheduleDraw(true)
-      }
-    }
-
-    resetFrames()
-    setMood(0)
-
-    const scrollDriven = forceScroll || sequence.trigger === 'scroll'
-    if (scrollDriven && section) {
-      gsap.registerPlugin(ScrollTrigger)
-      trigger = ScrollTrigger.create({
-        trigger: section,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: forceScroll ? 0.12 : clamp(sequence.scrub, 0.08, 0.24),
-        invalidateOnRefresh: true,
-        onUpdate: (self) => syncProgress(self.progress),
-      })
-      syncProgress(trigger.progress)
+    reset()
+    if (forceScroll || sequence.trigger === 'scroll') {
+      addEventListener('scroll', onScroll, { passive: true })
+      addEventListener('resize', resize, { passive: true })
     } else {
-      let current = 0
-      autoplayTimer = window.setInterval(() => {
-        if (!urls.length || hidden) return
-        current = sequence.trigger === 'loop' ? (current + 1) % urls.length : Math.min(current + 1, urls.length - 1)
-        setWantedFrame(current)
-        if (sequence.trigger === 'autoplay' && current === urls.length - 1) window.clearInterval(autoplayTimer)
-      }, 1000 / 24)
+      autoplayTimer = window.setInterval(() => setWanted(sequence.trigger === 'loop' ? (wanted + 1) % Math.max(1, urls.length) : Math.min(wanted + 1, urls.length - 1)), 50)
     }
-
-    resizeObserver = new ResizeObserver(resize)
+    resizeObserver = new ResizeObserver(() => { rendered = -1; scheduleRender(true) })
     resizeObserver.observe(container)
     mobileQuery.addEventListener('change', resize)
-    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
       stopped = true
-      window.clearTimeout(backgroundTimer)
-      window.clearInterval(autoplayTimer)
-      if (drawRAF) window.cancelAnimationFrame(drawRAF)
-      trigger?.kill()
-      resizeObserver?.disconnect()
+      removeEventListener('scroll', onScroll)
+      removeEventListener('resize', resize)
       mobileQuery.removeEventListener('change', resize)
-      document.removeEventListener('visibilitychange', onVisibility)
-      records.forEach((record) => { record.image = null })
+      resizeObserver?.disconnect()
+      clearInterval(autoplayTimer)
+      clearTimeout(idleHandle)
+      if (scrollRAF) cancelAnimationFrame(scrollRAF)
+      if (drawRAF) cancelAnimationFrame(drawRAF)
     }
   }, [forceScroll, sequence])
 
-  const initialLabel = initialFrameCount
-    ? `01 / ${String(initialFrameCount).padStart(2, '0')}`
-    : '00 / 00'
-
   return (
-    <div
-      ref={containerRef}
-      className={`hero-background hero-frame-sequence ${forceScroll || sequence.pin ? 'hero-frame-sequence--pinned' : ''}`}
-      aria-hidden="true"
-      data-sequence-ready="false"
-      style={sequence.poster ? { backgroundImage: `url("${sequence.poster}")` } : undefined}
-    >
+    <div ref={containerRef} className={`hero-background hero-frame-sequence ${forceScroll || sequence.pin ? 'hero-frame-sequence--pinned' : ''}`} aria-hidden="true" data-sequence-ready="false" style={sequence.poster ? { backgroundImage: `url("${sequence.poster}")` } : undefined}>
       <canvas ref={canvasRef} />
       <div className="hero-frame-sequence__light" />
-      <div className="hero-frame-sequence__loading"><i /><span ref={loadLabelRef}>Preparando 0/{initialFrameCount}</span></div>
-      <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>{initialLabel}</span><i>SCROLL / MOTION</i></div>
+      <div className="hero-frame-sequence__loading"><i /><span ref={loadLabelRef}>Preparando 0/{Math.min(8, initialFrameCount)}</span></div>
+      <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>01 / {String(initialFrameCount).padStart(2, '0')}</span><i>SCROLL / MOTION</i></div>
     </div>
   )
 }

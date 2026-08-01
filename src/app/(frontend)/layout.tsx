@@ -6,9 +6,12 @@ import { ConsentBanner } from '@/components/ConsentBanner'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
 import { SiteLoader } from '@/components/SiteLoader'
+import { SmoothScroll } from '@/components/SmoothScroll'
 import { getGlobals } from '@/lib/queries'
 import './globals.css'
 import './generated.css'
+import './audio-controls.css'
+import './experience-enhancements.css'
 
 export const revalidate = 300
 
@@ -17,9 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const seo = (settings?.defaultSEO || {}) as { title?: string; description?: string }
   return {
     title: seo.title || 'FabrickBuild | Construcción inteligente',
-    description:
-      seo.description ||
-      'Construcción, remodelación y reparación con planificación y transparencia.',
+    description: seo.description || 'Construcción, remodelación y reparación con planificación y transparencia.',
   }
 }
 
@@ -32,6 +33,7 @@ export default async function FrontendLayout({ children }: { children: React.Rea
   return (
     <html lang="es" suppressHydrationWarning>
       <body>
+        <SmoothScroll />
         <SiteLoader settings={loader} fallbackLogo={settings?.logo} />
         <SiteHeader header={header} settings={settings} />
         <main>{children}</main>
@@ -39,15 +41,7 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         <AmbientAudioPlayer />
         <ConsentBanner settings={consent} />
         {typeof contact.whatsapp === 'string' && contact.whatsapp && (
-          <a
-            className="whatsapp-float"
-            href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Contactar por WhatsApp"
-          >
-            WhatsApp
-          </a>
+          <a className="whatsapp-float" href={`https://wa.me/${contact.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" aria-label="Contactar por WhatsApp">WhatsApp</a>
         )}
       </body>
     </html>
