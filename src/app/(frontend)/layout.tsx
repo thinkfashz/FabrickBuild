@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import React from 'react'
 
+import { AmbientAudioPlayer } from '@/components/AmbientAudioPlayer'
 import { ConsentBanner } from '@/components/ConsentBanner'
 import { SiteFooter } from '@/components/SiteFooter'
 import { SiteHeader } from '@/components/SiteHeader'
@@ -35,6 +36,7 @@ export default async function FrontendLayout({ children }: { children: React.Rea
         <SiteHeader header={header} settings={settings} />
         <main>{children}</main>
         <SiteFooter footer={footer} settings={settings} />
+        <AmbientAudioPlayer />
         <ConsentBanner settings={consent} />
         {typeof contact.whatsapp === 'string' && contact.whatsapp && (
           <a
