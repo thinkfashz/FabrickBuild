@@ -5,76 +5,45 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 type UploadTarget = 'desktopFrames' | 'mobileFrames'
 type UploadStage = 'idle' | 'preparing' | 'extracting' | 'uploading' | 'syncing' | 'ready' | 'error'
-
-type Props = {
-  path?: string
+type PreviewFile = { file: File; url: string; order: number }
+type Diagnostic = {
+  title: string
+  cause: string
+  solution: string
+  endpoint?: string
+  status?: number
+  file?: string
+  stage: UploadStage
+  requestId?: string
+  raw?: string
 }
 
-type PreviewFile = {
-  file: File
-  url: string
-  order: number
-}
+type Props = { path?: string }
 
-const naturalSort = (files: File[]) =>
-  [...files].sort((a, b) => {
-    const pathA = a.webkitRelativePath || a.name
-    const pathB = b.webkitRelativePath || b.name
-    return pathA.localeCompare(pathB, undefined, { numeric: true, sensitivity: 'base' })
-  })
-
-const slugify = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 70) || 'secuencia'
-
+const naturalSort = (files: File[]) => [...files].sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, undefined, { numeric: true, sensitivity: 'base' }))
+const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70) || 'secuencia'
 const cleanName = (name: string) => name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim()
-
-const detectedGroupName = (files: File[]) => {
-  const first = files[0]
-  const folder = first?.webkitRelativePath?.split('/').filter(Boolean)[0]
-  if (folder) return slugify(folder)
-  return slugify(cleanName(first?.name || 'secuencia').replace(/\s*\d+\s*$/, '').trim())
-}
-
-const stageOrder: UploadStage[] = ['preparing', 'extracting', 'uploading', 'syncing', 'ready']
 const stageLabel: Record<UploadStage, string> = {
-  idle: 'Esperando archivos',
-  preparing: 'Preparando',
-  extracting: 'Generando frames',
-  uploading: 'Enviando a Multimedia / Blob',
-  syncing: 'Relacionando la secuencia',
-  ready: 'Aplicación correcta',
-  error: 'Revisión requerida',
+  idle: 'Esperando archivos', preparing: 'Preparando', extracting: 'Generando frames', uploading: 'Enviando a Multimedia / Blob', syncing: 'Relacionando la secuencia', ready: 'Aplicación correcta', error: 'Revisión requerida',
 }
 
-const waitForEvent = (target: EventTarget, event: string) =>
-  new Promise<void>((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      cleanup()
-      reject(new Error(`Tiempo agotado esperando ${event}.`))
-    }, 15_000)
-    const done = () => {
-      cleanup()
-      resolve()
-    }
-    const fail = () => {
-      cleanup()
-      reject(new Error('No fue posible leer el video seleccionado.'))
-    }
-    const cleanup = () => {
-      window.clearTimeout(timeout)
-      target.removeEventListener(event, done)
-      target.removeEventListener('error', fail)
-    }
-    target.addEventListener(event, done, { once: true })
-    target.addEventListener('error', fail, { once: true })
-  })
+function classifyFailure(status: number, message: string, file: string, requestId?: string): Diagnostic {
+  const lower = message.toLowerCase()
+  if (status === 401 || status === 403) return { title: 'Sesión o permisos insuficientes', cause: `El servidor rechazó ${file} con HTTP ${status}. La sesión del admin pudo expirar o el usuario no tiene permiso para crear Multimedia.`, solution: 'Vuelve a iniciar sesión en el admin, confirma que el usuario tenga acceso de creación y repite el envío.', endpoint: '/api/media', status, file, stage: 'uploading', requestId, raw: message }
+  if (status === 413 || lower.includes('too large') || lower.includes('body exceeded')) return { title: 'Archivo demasiado grande', cause: `El frame ${file} superó el límite permitido por la función o por el endpoint de subida.`, solution: 'Reduce resolución o calidad WebP, usa menos concurrencia y vuelve a generar los frames.', endpoint: '/api/media', status, file, stage: 'uploading', requestId, raw: message }
+  if (lower.includes('blob') || lower.includes('private') || lower.includes('access')) return { title: 'Configuración incompatible con Blob privado', cause: `Payload no pudo almacenar ${file} usando la configuración actual de Vercel Blob.`, solution: 'Confirma BLOB_READ_WRITE_TOKEN, usa una ruta autenticada compatible con Blob privado y vuelve a desplegar. Revisa el módulo Vercel Blob en Sistema y rendimiento.', endpoint: '/api/media', status, file, stage: 'uploading', requestId, raw: message }
+  if (lower.includes('postgres') || lower.includes('database') || lower.includes('timeout') || lower.includes('connection')) return { title: 'La base de datos no respondió', cause: `La subida llegó al servidor, pero Payload no pudo registrar ${file} en PostgreSQL.`, solution: 'Revisa PAYLOAD_DATABASE_URL/POSTGRES_URL, límite de conexiones, región y tiempo de espera. Luego prueba el diagnóstico del sistema.', endpoint: '/api/media', status, file, stage: 'uploading', requestId, raw: message }
+  if (status >= 500) return { title: 'Error interno del servidor', cause: `La función que procesa ${file} respondió HTTP ${status}.`, solution: 'Abre Registros Runtime en Vercel usando el request ID y revisa Payload, PostgreSQL y Blob.', endpoint: '/api/media', status, file, stage: 'uploading', requestId, raw: message }
+  return { title: 'La carga fue rechazada', cause: message || `No se pudo registrar ${file}.`, solution: 'Copia el informe, revisa /studio/sistema y los registros Runtime de Vercel. Después repite solo el archivo indicado.', endpoint: '/api/media', status, file, stage: 'uploading', requestId, raw: message }
+}
+
+const waitForEvent = (target: EventTarget, event: string) => new Promise<void>((resolve, reject) => {
+  const timeout = window.setTimeout(() => { cleanup(); reject(new Error(`Tiempo agotado esperando ${event}.`)) }, 15_000)
+  const done = () => { cleanup(); resolve() }
+  const fail = () => { cleanup(); reject(new Error('No fue posible leer el video seleccionado.')) }
+  const cleanup = () => { window.clearTimeout(timeout); target.removeEventListener(event, done); target.removeEventListener('error', fail) }
+  target.addEventListener(event, done, { once: true }); target.addEventListener('error', fail, { once: true })
+})
 
 export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
   const folderInput = useRef<HTMLInputElement | null>(null)
@@ -91,293 +60,103 @@ export default function FrameFolderUploader({ path = 'frameUploader' }: Props) {
   const [preview, setPreview] = useState<PreviewFile[]>([])
   const [folderName, setFolderName] = useState('secuencia-portafolio')
   const [frameAmount, setFrameAmount] = useState(60)
+  const [diagnostic, setDiagnostic] = useState<Diagnostic | null>(null)
   const desktop = useField<unknown[]>({ path: 'desktopFrames' })
   const mobile = useField<unknown[]>({ path: 'mobileFrames' })
   const backgroundStatus = useField<string>({ path: 'status' })
-
   const activeField = target === 'desktopFrames' ? desktop : mobile
-  const targetLabel = target === 'desktopFrames' ? 'Web / escritorio' : 'Móvil vertical'
   const device = target === 'desktopFrames' ? 'desktop' : 'mobile'
   const storageFolder = `frames/${slugify(folderName)}/${device}`
-  const existingIDs = useMemo(() => {
-    const value = Array.isArray(activeField.value) ? activeField.value : []
-    return value.map((item: any) => (typeof item === 'object' && item ? item.id : item)).filter(Boolean)
-  }, [activeField.value])
+  const existingIDs = useMemo(() => (Array.isArray(activeField.value) ? activeField.value : []).map((item: any) => typeof item === 'object' && item ? item.id : item).filter(Boolean), [activeField.value])
 
-  useEffect(() => {
-    previewRef.current = preview
-  }, [preview])
+  useEffect(() => { previewRef.current = preview }, [preview])
+  useEffect(() => () => previewRef.current.forEach((item) => URL.revokeObjectURL(item.url)), [])
 
-  useEffect(() => () => {
-    previewRef.current.forEach((item) => URL.revokeObjectURL(item.url))
-  }, [])
-
-  function clearPreview(resetMessage = true) {
-    previewRef.current.forEach((item) => URL.revokeObjectURL(item.url))
-    previewRef.current = []
-    setPreview([])
-    setProcessed(0)
-    setTotal(0)
-    setProgress(0)
-    if (resetMessage) {
-      setStage('idle')
-      setMessage('Selecciona una carpeta, imágenes o un video para comenzar.')
-    }
+  function clearPreview(reset = true) {
+    previewRef.current.forEach((item) => URL.revokeObjectURL(item.url)); previewRef.current = []; setPreview([]); setProcessed(0); setTotal(0); setProgress(0)
+    if (reset) { setStage('idle'); setDiagnostic(null); setMessage('Selecciona una carpeta, imágenes o un video para comenzar.') }
   }
 
-  function setPreparedFiles(files: File[], sourceLabel: string) {
+  function setPreparedFiles(files: File[], source: string) {
     const sorted = naturalSort(files.filter((file) => file.type.startsWith('image/')))
     if (!sorted.length) throw new Error('La selección no contiene imágenes compatibles.')
     clearPreview(false)
-    const group = detectedGroupName(sorted)
-    setFolderName(group)
+    const first = sorted[0]
+    const detected = first.webkitRelativePath?.split('/').filter(Boolean)[0] || cleanName(first.name).replace(/\s*\d+\s*$/, '')
+    setFolderName(slugify(detected)); setDiagnostic(null)
     const next = sorted.map((file, index) => ({ file, url: URL.createObjectURL(file), order: index + 1 }))
-    previewRef.current = next
-    setPreview(next)
-    setTotal(next.length)
-    setProcessed(0)
-    setProgress(5)
-    setStage('preparing')
-    setMessage(`${next.length} frames detectados desde ${sourceLabel}. Revisa el orden y la carpeta virtual antes de enviar.`)
+    previewRef.current = next; setPreview(next); setTotal(next.length); setProgress(5); setStage('preparing'); setMessage(`${next.length} frames detectados desde ${source}. Revisa el orden antes de enviar.`)
   }
 
-  function prepare(filesList: FileList | null) {
-    if (!filesList?.length || busy) return
-    try {
-      setPreparedFiles(Array.from(filesList), 'la selección')
-    } catch (error) {
-      setStage('error')
-      setMessage(error instanceof Error ? error.message : 'No fue posible preparar las imágenes.')
-    }
+  function prepare(list: FileList | null) {
+    if (!list?.length || busy) return
+    try { setPreparedFiles(Array.from(list), 'la selección') } catch (error) { setStage('error'); setMessage(error instanceof Error ? error.message : 'No fue posible preparar las imágenes.') }
   }
 
   async function extractFramesFromVideo(file: File) {
     if (busy) return
-    setBusy(true)
-    setStage('extracting')
-    setProgress(1)
-    setProcessed(0)
-    setTotal(frameAmount)
-    setFolderName(slugify(cleanName(file.name)))
-    backgroundStatus.setValue('processing')
-    setMessage(`Analizando ${file.name} y preparando ${frameAmount} frames…`)
-
-    const video = document.createElement('video')
-    const source = URL.createObjectURL(file)
-    video.preload = 'auto'
-    video.muted = true
-    video.playsInline = true
-    video.src = source
-
+    setBusy(true); setDiagnostic(null); setStage('extracting'); setProgress(1); setTotal(frameAmount); backgroundStatus.setValue('processing'); setMessage(`Analizando ${file.name}…`)
+    const video = document.createElement('video'); const source = URL.createObjectURL(file); video.preload = 'auto'; video.muted = true; video.playsInline = true; video.src = source
     try {
-      await waitForEvent(video, 'loadedmetadata')
-      if (video.readyState < 2) await waitForEvent(video, 'loadeddata')
-      if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('El video no tiene una duración válida.')
-
-      const maxWidth = target === 'mobileFrames' ? 1080 : 1600
-      const scale = Math.min(1, maxWidth / Math.max(1, video.videoWidth))
-      const width = Math.max(2, Math.round(video.videoWidth * scale))
-      const height = Math.max(2, Math.round(video.videoHeight * scale))
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const context = canvas.getContext('2d', { alpha: false })
-      if (!context) throw new Error('El navegador no permitió crear el generador de frames.')
-      context.imageSmoothingEnabled = true
-      context.imageSmoothingQuality = 'high'
-
+      await waitForEvent(video, 'loadedmetadata'); if (video.readyState < 2) await waitForEvent(video, 'loadeddata')
+      const maxWidth = target === 'mobileFrames' ? 1080 : 1600; const scale = Math.min(1, maxWidth / Math.max(1, video.videoWidth)); const width = Math.max(2, Math.round(video.videoWidth * scale)); const height = Math.max(2, Math.round(video.videoHeight * scale))
+      const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const context = canvas.getContext('2d', { alpha: false }); if (!context) throw new Error('El navegador no permitió crear el generador de frames.')
       const files: File[] = []
       for (let index = 0; index < frameAmount; index += 1) {
-        const ratio = frameAmount <= 1 ? 0 : index / (frameAmount - 1)
-        const nextTime = Math.min(Math.max(0, video.duration - 0.01), video.duration * ratio)
-        if (Math.abs(video.currentTime - nextTime) > 0.002) {
-          video.currentTime = nextTime
-          await waitForEvent(video, 'seeked')
-        }
-        context.drawImage(video, 0, 0, width, height)
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob((result) => result ? resolve(result) : reject(new Error('No fue posible convertir un frame.')), 'image/webp', 0.78)
-        })
-        const number = String(index + 1).padStart(3, '0')
-        files.push(new File([blob], `frame_${number}.webp`, { type: 'image/webp', lastModified: Date.now() }))
-        setProcessed(index + 1)
-        setProgress(Math.round(((index + 1) / frameAmount) * 30))
-        setMessage(`Generando frames: ${index + 1} de ${frameAmount}`)
+        const ratio = frameAmount <= 1 ? 0 : index / (frameAmount - 1); video.currentTime = Math.min(Math.max(0, video.duration - 0.01), video.duration * ratio); await waitForEvent(video, 'seeked'); context.drawImage(video, 0, 0, width, height)
+        const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('No fue posible convertir un frame.')), 'image/webp', 0.76))
+        files.push(new File([blob], `frame_${String(index + 1).padStart(3, '0')}.webp`, { type: 'image/webp' })); setProcessed(index + 1); setProgress(Math.round(((index + 1) / frameAmount) * 30))
       }
-
-      setPreparedFiles(files, `el video ${file.name}`)
-      setProgress(32)
-      setStage('preparing')
-      setMessage(`${files.length} frames WebP generados. Pulsa “Enviar y aplicar” para guardarlos en Multimedia / Blob.`)
+      setPreparedFiles(files, `el video ${file.name}`); setProgress(32); setMessage(`${files.length} frames WebP generados. Pulsa “Enviar y aplicar”.`)
     } catch (error) {
-      backgroundStatus.setValue('draft')
-      setStage('error')
-      setMessage(error instanceof Error ? error.message : 'No fue posible generar los frames del video.')
-    } finally {
-      URL.revokeObjectURL(source)
-      video.removeAttribute('src')
-      video.load()
-      setBusy(false)
-      if (videoInput.current) videoInput.current.value = ''
-    }
+      const text = error instanceof Error ? error.message : 'No fue posible generar los frames.'; setDiagnostic({ title: 'Error al generar frames', cause: text, solution: 'Prueba con MP4/WebM, reduce la cantidad de frames o usa Chrome actualizado.', stage: 'extracting', file: file.name }); setStage('error'); setMessage(text); backgroundStatus.setValue('draft')
+    } finally { URL.revokeObjectURL(source); video.removeAttribute('src'); video.load(); setBusy(false) }
   }
 
   async function uploadOne(file: File, index: number) {
-    const payload = {
-      alt: `${cleanName(file.name)} — ${folderName}`,
-      category: 'frame',
-      device,
-      frameOrder: index + 1,
-      collectionKey: slugify(folderName),
-      caption: `Carpeta virtual: ${storageFolder}`,
-    }
-    const form = new FormData()
-    form.append('file', file)
-    form.append('_payload', JSON.stringify(payload))
-
-    const response = await fetch('/api/media', {
-      method: 'POST',
-      body: form,
-      credentials: 'include',
-    })
-    const result = await response.json().catch(() => null)
+    const form = new FormData(); form.append('file', file); form.append('_payload', JSON.stringify({ alt: `${cleanName(file.name)} — ${folderName}`, category: 'frame', device, frameOrder: index + 1, collectionKey: slugify(folderName), caption: `Carpeta virtual: ${storageFolder}` }))
+    let response: Response
+    try { response = await fetch('/api/media', { method: 'POST', body: form, credentials: 'include' }) } catch (error) { throw { diagnostic: { title: 'No hay conexión con el servidor', cause: error instanceof Error ? error.message : 'Falló la red.', solution: 'Comprueba internet, el deployment y vuelve a enviar.', endpoint: '/api/media', file: file.name, stage: 'uploading' } as Diagnostic } }
+    const requestId = response.headers.get('x-vercel-id') || response.headers.get('x-request-id') || undefined
+    const text = await response.text(); let result: any = null
+    try { result = text ? JSON.parse(text) : null } catch { result = null }
     if (!response.ok || !result?.doc?.id) {
-      throw new Error(result?.errors?.[0]?.message || `No se pudo subir ${file.name}`)
+      const detail = result?.errors?.[0]?.message || result?.message || text || `Respuesta HTTP ${response.status}`
+      throw { diagnostic: classifyFailure(response.status, detail, file.name, requestId) }
     }
     return result.doc.id as string | number
   }
 
   async function upload() {
     if (!preview.length || busy) return
-    const files = preview.map((item) => item.file)
-    const uploadedIDs: Array<string | number> = new Array(files.length)
-    let cursor = 0
-    let completed = 0
-    let firstError: Error | null = null
-
-    setBusy(true)
-    setStage('uploading')
-    setProgress(34)
-    setProcessed(0)
-    setTotal(files.length)
-    backgroundStatus.setValue('processing')
-    setMessage(`Enviando ${files.length} frames a ${storageFolder}…`)
-
-    const worker = async () => {
-      while (!firstError) {
-        const index = cursor
-        cursor += 1
-        if (index >= files.length) return
-        try {
-          uploadedIDs[index] = await uploadOne(files[index], index)
-          completed += 1
-          setProcessed(completed)
-          setProgress(34 + Math.round((completed / files.length) * 58))
-          setMessage(`Envío confirmado: ${completed} de ${files.length} · ${storageFolder}`)
-        } catch (error) {
-          firstError = error instanceof Error ? error : new Error('Ocurrió un error durante la carga.')
-        }
-      }
-    }
-
+    const files = preview.map((item) => item.file); const uploadedIDs: Array<string | number> = new Array(files.length); let cursor = 0; let completed = 0; let failure: Diagnostic | null = null
+    setBusy(true); setDiagnostic(null); setStage('uploading'); setProgress(34); setProcessed(0); setTotal(files.length); backgroundStatus.setValue('processing'); setMessage(`Enviando ${files.length} frames a ${storageFolder}…`)
+    const worker = async () => { while (!failure) { const index = cursor++; if (index >= files.length) return; try { uploadedIDs[index] = await uploadOne(files[index], index); completed += 1; setProcessed(completed); setProgress(34 + Math.round((completed / files.length) * 58)); setMessage(`Envío confirmado: ${completed} de ${files.length}`) } catch (error: any) { failure = error?.diagnostic || { title: 'Error inesperado', cause: error?.message || 'Ocurrió un error durante la carga.', solution: 'Copia el informe y revisa los registros Runtime.', stage: 'uploading', file: files[index].name } } } }
     try {
-      const workerCount = Math.min(files.length, window.matchMedia('(max-width: 720px)').matches ? 2 : 4)
-      await Promise.all(Array.from({ length: workerCount }, () => worker()))
-      if (firstError) throw firstError
-
-      setStage('syncing')
-      setProgress(96)
-      setMessage('Relacionando los documentos de Multimedia con el background…')
-      activeField.setValue([...existingIDs, ...uploadedIDs.filter(Boolean)])
-      backgroundStatus.setValue('ready')
-      setProgress(100)
-      setStage('ready')
-      setMessage(`${uploadedIDs.length} frames guardados y aplicados correctamente. Carpeta virtual: ${storageFolder}. Guarda el background para confirmar la relación.`)
-      clearPreview(false)
-      setProgress(100)
-      setProcessed(uploadedIDs.length)
-      setTotal(uploadedIDs.length)
+      await Promise.all(Array.from({ length: Math.min(files.length, window.matchMedia('(max-width: 720px)').matches ? 2 : 4) }, () => worker()))
+      if (failure) throw failure
+      setStage('syncing'); setProgress(96); activeField.setValue([...existingIDs, ...uploadedIDs.filter(Boolean)]); backgroundStatus.setValue('ready'); setProgress(100); setStage('ready'); setMessage(`${uploadedIDs.length} frames guardados. Guarda el background para confirmar.`); clearPreview(false); setProcessed(uploadedIDs.length); setTotal(uploadedIDs.length)
     } catch (error) {
-      backgroundStatus.setValue('processing')
-      setStage('error')
-      setMessage(error instanceof Error ? error.message : 'Ocurrió un error durante la carga.')
-    } finally {
-      setBusy(false)
-      if (folderInput.current) folderInput.current.value = ''
-      if (imageInput.current) imageInput.current.value = ''
-    }
+      const report = error as Diagnostic; setDiagnostic(report); setStage('error'); backgroundStatus.setValue('processing'); setMessage(report.cause || 'Ocurrió un error durante la carga.')
+    } finally { setBusy(false) }
   }
 
-  const currentStageIndex = stageOrder.indexOf(stage)
+  async function copyDiagnostic() {
+    if (!diagnostic) return
+    await navigator.clipboard.writeText(JSON.stringify({ ...diagnostic, folder: storageFolder, browser: navigator.userAgent, time: new Date().toISOString() }, null, 2))
+    setMessage('Informe técnico copiado al portapapeles.')
+  }
 
-  return (
-    <section className="frame-folder-uploader" data-path={path} data-stage={stage}>
-      <div className="frame-folder-uploader__head">
-        <div>
-          <span className="kicker">CREADOR DE BACKGROUNDS</span>
-          <strong>Video, carpeta o secuencia de imágenes</strong>
-          <p>Genera frames WebP desde el navegador o selecciona una secuencia existente. El envío se realiza con concurrencia limitada y cada archivo queda agrupado en Multimedia mediante una carpeta virtual.</p>
-        </div>
-        <select value={target} onChange={(event) => setTarget(event.target.value as UploadTarget)} disabled={busy}>
-          <option value="mobileFrames">Móvil vertical</option>
-          <option value="desktopFrames">Web / escritorio</option>
-        </select>
-      </div>
-
-      <div className="frame-folder-uploader__settings">
-        <label><span>Carpeta / grupo</span><input value={folderName} onChange={(event) => setFolderName(slugify(event.target.value))} disabled={busy} /></label>
-        <label><span>Frames desde video</span><input type="number" min={12} max={180} step={1} value={frameAmount} onChange={(event) => setFrameAmount(Math.min(180, Math.max(12, Number(event.target.value) || 60)))} disabled={busy} /></label>
-        <div><span>Destino organizado</span><code>{storageFolder}</code></div>
-      </div>
-
-      <div className="frame-folder-uploader__actions">
-        <button type="button" disabled={busy} onClick={() => videoInput.current?.click()}>Subir video y generar</button>
-        <button type="button" disabled={busy} onClick={() => folderInput.current?.click()}>Subir carpeta</button>
-        <button type="button" disabled={busy} onClick={() => imageInput.current?.click()}>Seleccionar imágenes</button>
-        {preview.length > 0 && <button type="button" className="primary" disabled={busy} onClick={() => void upload()}>Enviar y aplicar</button>}
-        {preview.length > 0 && <button type="button" className="ghost" disabled={busy} onClick={() => clearPreview()}>Cancelar</button>}
-      </div>
-
-      <input ref={(element) => { folderInput.current = element; element?.setAttribute('webkitdirectory', ''); element?.setAttribute('directory', '') }} hidden type="file" multiple accept="image/*" onChange={(event) => prepare(event.target.files)} />
-      <input ref={imageInput} hidden type="file" multiple accept="image/*" onChange={(event) => prepare(event.target.files)} />
-      <input ref={videoInput} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(event) => { const file = event.target.files?.[0]; if (file) void extractFramesFromVideo(file) }} />
-
-      <div className="frame-folder-uploader__pipeline" aria-label="Estado del proceso">
-        {stageOrder.map((item, index) => (
-          <span key={item} data-active={stage === item} data-complete={currentStageIndex > index || stage === 'ready'}>
-            <i>{currentStageIndex > index || stage === 'ready' ? '✓' : index + 1}</i>{stageLabel[item]}
-          </span>
-        ))}
-      </div>
-
-      {preview.length > 0 && (
-        <div className="frame-folder-uploader__preview" aria-label="Vista previa del orden de frames">
-          {preview.slice(0, 48).map((item) => (
-            <figure key={`${item.file.name}-${item.order}`}>
-              <img src={item.url} alt="" />
-              <figcaption><b>{String(item.order).padStart(3, '0')}</b><span>{item.file.name}</span></figcaption>
-            </figure>
-          ))}
-          {preview.length > 48 && <div className="more">+{preview.length - 48} frames</div>}
-        </div>
-      )}
-
-      <div className={`frame-folder-uploader__status status--${stage}`} role="status" aria-live="polite">
-        <div><strong>{stageLabel[stage]}</strong><span>{processed}/{total || preview.length || 0}</span></div>
-        <progress max={100} value={progress} />
-        <p>{message}</p>
-      </div>
-
-      <style jsx>{`
-        .frame-folder-uploader{border:1px solid var(--theme-elevation-150);border-radius:18px;padding:clamp(16px,3vw,24px);margin:8px 0 22px;background:linear-gradient(145deg,var(--theme-elevation-50),color-mix(in srgb,var(--theme-elevation-100) 84%,#8d1730 16%));box-shadow:0 18px 55px rgba(0,0,0,.08)}
-        .frame-folder-uploader__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.kicker{display:block;margin-bottom:7px;color:#d33b58;font-size:10px;font-weight:900;letter-spacing:.14em}strong{display:block;font-size:18px;margin-bottom:6px}p{margin:0;max-width:820px;color:var(--theme-elevation-600);line-height:1.55}
-        select,input{min-height:42px;padding:9px 11px;border:1px solid var(--theme-elevation-250);border-radius:9px;background:var(--theme-input-bg);color:var(--theme-text)}select{min-width:190px}.frame-folder-uploader__settings{display:grid;grid-template-columns:1fr 160px minmax(220px,1fr);gap:10px;margin-top:18px}.frame-folder-uploader__settings label,.frame-folder-uploader__settings>div{display:grid;gap:6px}.frame-folder-uploader__settings span{color:var(--theme-elevation-600);font-size:11px;font-weight:750}.frame-folder-uploader__settings code{display:flex;align-items:center;min-height:42px;padding:9px 11px;overflow:hidden;border:1px solid var(--theme-elevation-150);border-radius:9px;background:var(--theme-elevation-100);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
-        .frame-folder-uploader__actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px}button{border:1px solid var(--theme-elevation-250);border-radius:9px;padding:11px 14px;cursor:pointer;background:var(--theme-elevation-800);color:#fff;font-weight:750}button.primary{border-color:#e8b928;background:#e8b928;color:#111}button.ghost{background:transparent;color:var(--theme-text)}button:disabled{opacity:.55;cursor:wait}
-        .frame-folder-uploader__pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-top:18px}.frame-folder-uploader__pipeline span{display:flex;align-items:center;gap:7px;min-height:44px;padding:7px 9px;border:1px solid var(--theme-elevation-150);border-radius:9px;color:var(--theme-elevation-500);background:var(--theme-elevation-50);font-size:10px;font-weight:700}.frame-folder-uploader__pipeline i{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;background:var(--theme-elevation-150);font-style:normal}.frame-folder-uploader__pipeline span[data-active=true]{border-color:#d33b58;color:var(--theme-text);box-shadow:0 0 0 2px color-mix(in srgb,#d33b58 18%,transparent)}.frame-folder-uploader__pipeline span[data-active=true] i{background:#d33b58;color:#fff}.frame-folder-uploader__pipeline span[data-complete=true] i{background:var(--theme-success-500);color:#fff}
-        .frame-folder-uploader__preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:16px;max-height:380px;overflow:auto;padding:9px;border-radius:11px;background:var(--theme-elevation-100)}figure{margin:0;min-width:0;border-radius:8px;overflow:hidden;background:var(--theme-elevation-50)}img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}figcaption{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;padding:7px;font-size:9px}figcaption span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.more{display:grid;place-items:center;min-height:96px;font-weight:800}
-        .frame-folder-uploader__status{display:grid;gap:8px;margin-top:15px;padding:13px;border:1px solid var(--theme-elevation-150);border-radius:11px;background:var(--theme-elevation-50)}.frame-folder-uploader__status>div{display:flex;justify-content:space-between;gap:12px}.frame-folder-uploader__status>div strong{margin:0;font-size:13px}.frame-folder-uploader__status>div span{font-size:11px}.frame-folder-uploader__status p{font-size:12px}.status--ready{border-color:color-mix(in srgb,var(--theme-success-500) 58%,var(--theme-elevation-150));background:color-mix(in srgb,var(--theme-success-100) 45%,var(--theme-elevation-50))}.status--error{border-color:var(--theme-error-500)}progress{width:100%;height:9px;accent-color:#d33b58}
-        @media(max-width:760px){.frame-folder-uploader__head{flex-direction:column}select,button,input{width:100%}.frame-folder-uploader__settings{grid-template-columns:1fr}.frame-folder-uploader__actions{display:grid;grid-template-columns:1fr}.frame-folder-uploader__pipeline{grid-template-columns:1fr 1fr}.frame-folder-uploader__pipeline span:last-child{grid-column:1/-1}.frame-folder-uploader__preview{grid-template-columns:repeat(3,minmax(0,1fr));padding:6px;gap:5px}figcaption span{display:none}}
-      `}</style>
-    </section>
-  )
+  return <section className="uploader" data-path={path} data-stage={stage}>
+    <header><div><span>CREADOR DE BACKGROUNDS</span><h3>Video, carpeta o secuencia</h3><p>Ahora cada fallo muestra causa, archivo, endpoint, estado HTTP, request ID y solución.</p></div><select value={target} onChange={(event) => setTarget(event.target.value as UploadTarget)} disabled={busy}><option value="mobileFrames">Móvil vertical</option><option value="desktopFrames">Web / escritorio</option></select></header>
+    <div className="settings"><label>Carpeta / grupo<input value={folderName} onChange={(event) => setFolderName(slugify(event.target.value))}/></label><label>Frames desde video<input type="number" min="12" max="180" value={frameAmount} onChange={(event) => setFrameAmount(Math.min(180, Math.max(12, Number(event.target.value) || 60)))}/></label><code>{storageFolder}</code></div>
+    <div className="actions"><button type="button" onClick={() => videoInput.current?.click()} disabled={busy}>Subir video</button><button type="button" onClick={() => folderInput.current?.click()} disabled={busy}>Subir carpeta</button><button type="button" onClick={() => imageInput.current?.click()} disabled={busy}>Imágenes</button>{preview.length > 0 && <button className="primary" type="button" onClick={() => void upload()} disabled={busy}>Enviar y aplicar</button>}</div>
+    <input ref={(element) => { folderInput.current = element; element?.setAttribute('webkitdirectory', '') }} hidden type="file" multiple accept="image/*" onChange={(event) => prepare(event.target.files)}/><input ref={imageInput} hidden type="file" multiple accept="image/*" onChange={(event) => prepare(event.target.files)}/><input ref={videoInput} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(event) => { const file = event.target.files?.[0]; if (file) void extractFramesFromVideo(file) }}/>
+    {preview.length > 0 && <div className="preview">{preview.slice(0, 48).map((item) => <figure key={`${item.file.name}-${item.order}`}><img src={item.url} alt=""/><b>{String(item.order).padStart(3, '0')}</b></figure>)}</div>}
+    <div className={`status ${stage}`}><div><strong>{stageLabel[stage]}</strong><span>{processed}/{total || preview.length || 0}</span></div><progress max="100" value={progress}/><p>{message}</p></div>
+    {diagnostic && <aside className="diagnostic"><div><span>DIAGNÓSTICO EXACTO</span><h4>{diagnostic.title}</h4></div><dl><dt>Causa</dt><dd>{diagnostic.cause}</dd><dt>Cómo solucionarlo</dt><dd>{diagnostic.solution}</dd>{diagnostic.file && <><dt>Archivo</dt><dd><code>{diagnostic.file}</code></dd></>}{diagnostic.endpoint && <><dt>Endpoint</dt><dd><code>{diagnostic.endpoint}</code></dd></>}{diagnostic.status && <><dt>HTTP</dt><dd>{diagnostic.status}</dd></>}{diagnostic.requestId && <><dt>Request ID</dt><dd><code>{diagnostic.requestId}</code></dd></>}</dl><div className="diagnostic-actions"><button type="button" onClick={() => void copyDiagnostic()}>Copiar informe</button><a href="/studio/sistema">Abrir Sistema y rendimiento</a></div></aside>}
+    <style jsx>{`
+      .uploader{padding:clamp(16px,3vw,24px);border:1px solid var(--theme-elevation-150);border-radius:18px;background:linear-gradient(145deg,var(--theme-elevation-50),color-mix(in srgb,var(--theme-elevation-100) 84%,#8d1730 16%))}header{display:flex;justify-content:space-between;gap:18px}header span,.diagnostic span{color:#d33b58;font-size:10px;font-weight:900;letter-spacing:.14em}h3{margin:7px 0;font-size:20px}p{color:var(--theme-elevation-600);line-height:1.5}select,input{min-height:42px;padding:9px;border:1px solid var(--theme-elevation-250);border-radius:9px;background:var(--theme-input-bg);color:var(--theme-text)}.settings{display:grid;grid-template-columns:1fr 160px 1fr;gap:10px;margin-top:16px}.settings label{display:grid;gap:6px;font-size:11px}.settings code{display:flex;align-items:center;padding:10px;border-radius:9px;background:var(--theme-elevation-100);overflow:hidden}.actions,.diagnostic-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}button,.diagnostic-actions a{padding:11px 14px;border:1px solid var(--theme-elevation-250);border-radius:9px;background:var(--theme-elevation-800);color:#fff;font-weight:750;text-decoration:none;cursor:pointer}.primary{background:#e8b928;color:#111}.preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px;max-height:360px;overflow:auto;margin-top:15px;padding:8px;background:var(--theme-elevation-100);border-radius:12px}figure{margin:0;position:relative;border-radius:8px;overflow:hidden}img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}figure b{position:absolute;left:6px;bottom:6px;padding:4px;border-radius:5px;background:#111;color:#fff}.status{margin-top:15px;padding:13px;border:1px solid var(--theme-elevation-150);border-radius:12px}.status>div{display:flex;justify-content:space-between}.status.error{border-color:var(--theme-error-500)}progress{width:100%;accent-color:#d33b58}.diagnostic{margin-top:15px;padding:16px;border:1px solid #ff506d;border-radius:14px;background:color-mix(in srgb,var(--theme-error-100) 20%,var(--theme-elevation-50))}.diagnostic h4{margin:6px 0 0;font-size:18px}.diagnostic dl{display:grid;grid-template-columns:150px 1fr;gap:9px 14px}.diagnostic dt{font-weight:850}.diagnostic dd{margin:0;color:var(--theme-elevation-650)}@media(max-width:760px){header{flex-direction:column}.settings{grid-template-columns:1fr}.actions{display:grid}.actions button,select,input{width:100%}.preview{grid-template-columns:repeat(3,1fr)}.diagnostic dl{grid-template-columns:1fr}.diagnostic dt{margin-top:8px}}
+    `}</style>
+  </section>
 }
