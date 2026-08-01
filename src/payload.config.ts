@@ -98,8 +98,13 @@ export default buildConfig({
   admin: {
     user: Users.slug,
     importMap: { baseDir: path.resolve(dirname) },
-    meta: { titleSuffix: '— FabrickBuild CMS' },
+    meta: { titleSuffix: '— FabrickBuild Control Center' },
     components: {
+      graphics: {
+        Logo: '@/components/admin/AdminBrand#AdminLogo',
+        Icon: '@/components/admin/AdminBrand#AdminIcon',
+      },
+      beforeLogin: ['@/components/admin/AdminLoginWelcome'],
       beforeNavLinks: ['@/components/admin/AdminStudioNav'],
       beforeDashboard: ['@/components/admin/BeforeDashboard'],
     },
