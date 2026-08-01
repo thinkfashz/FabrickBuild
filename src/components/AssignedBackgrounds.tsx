@@ -27,16 +27,7 @@ export function AssignedBackgrounds({ assignments = [] }: { assignments?: Assign
         const axis = item.scrollAxis === 'horizontal' ? 'horizontal' : 'vertical'
         const direction = item.playbackDirection === 'reverse' ? 'reverse' : 'forward'
         const viewportLength = Math.min(8, Math.max(1, Number(item.viewportLength) || 3))
-        const sequence = getPortfolioFrameSequence({
-          runtimeBackground: {
-            ...background,
-            playback: {
-              ...(background.playback || {}),
-              scrollAxis: axis,
-              playbackDirection: direction,
-            },
-          },
-        })
+        const sequence = getPortfolioFrameSequence({ runtimeBackground: background })
         const videoURL = background.kind === 'video'
           ? getMediaURL(background.video) || background.externalURL || null
           : null
@@ -46,12 +37,14 @@ export function AssignedBackgrounds({ assignments = [] }: { assignments?: Assign
             key={item.id || background.id || index}
             className={`background-experience background-experience--${axis}`}
             data-background-axis={axis}
+            data-playback-direction={direction}
             data-background-index={index}
             style={{
               minHeight: axis === 'vertical' ? `${viewportLength * 100}vh` : '100vh',
               overflowX: axis === 'horizontal' ? 'auto' : undefined,
               overflowY: axis === 'horizontal' ? 'hidden' : undefined,
               scrollSnapType: axis === 'horizontal' ? 'x mandatory' : undefined,
+              overscrollBehaviorX: axis === 'horizontal' ? 'contain' : undefined,
             }}
           >
             {axis === 'horizontal' && (
@@ -82,7 +75,12 @@ export function AssignedBackgrounds({ assignments = [] }: { assignments?: Assign
                   loop
                   playsInline
                   preload="metadata"
-                  style={{ width: '100%', height: '100%', objectFit: background.playback?.fit === 'contain' ? 'contain' : 'cover' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: background.playback?.fit === 'contain' ? 'contain' : 'cover',
+                    transform: direction === 'reverse' ? 'scaleX(-1)' : undefined,
+                  }}
                   aria-label={item.label || background.name || `Background ${index + 1}`}
                 />
               )}
