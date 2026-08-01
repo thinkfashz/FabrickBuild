@@ -9,14 +9,14 @@ type NavItem = { id?: string | number; label?: string | null; url?: string | nul
 
 const defaultHeaderAppearance = {
   surfaceMode: 'glass',
-  surfaceColor: '#f7f3ea',
-  surfaceOpacity: 88,
-  backdropBlur: 22,
-  headingColor: '#171713',
-  bodyColor: '#393830',
-  accentColor: '#c99e18',
-  buttonColor: '#f4c84b',
-  buttonTextColor: '#15130f',
+  surfaceColor: '#08090c',
+  surfaceOpacity: 22,
+  backdropBlur: 20,
+  headingColor: '#ffffff',
+  bodyColor: '#d7d7da',
+  accentColor: '#ffffff',
+  buttonColor: '#ffffff',
+  buttonTextColor: '#090a0d',
   paddingTop: 0,
   paddingBottom: 0,
   overlayOpacity: 0,
@@ -38,14 +38,15 @@ export function SiteHeader({
       ]
   const cta = (header?.cta || {}) as { label?: string; url?: string }
   const brandName = String(settings?.brandName || 'FabrickBuild')
+  const portfolioName = String(header?.portfolioName || settings?.portfolioName || 'Portafolio Fabrick')
   const desktopLogoDoc = header?.logo || settings?.logo
   const mobileLogoDoc = header?.mobileLogo || settings?.mobileLogo || desktopLogoDoc
   const desktopLogo = getMediaURL(desktopLogoDoc, 'thumbnail')
   const mobileLogo = getMediaURL(mobileLogoDoc, 'thumbnail')
   const backgroundMedia = getMediaURL(header?.backgroundMedia, 'hero')
-  const { className, style } = appearanceProps(header?.appearance || defaultHeaderAppearance, 'site-header')
-  const logoSizeDesktop = Math.min(160, Math.max(28, Number(header?.logoSizeDesktop || 54)))
-  const logoSizeMobile = Math.min(120, Math.max(28, Number(header?.logoSizeMobile || 48)))
+  const { className, style } = appearanceProps(header?.appearance || defaultHeaderAppearance, 'site-header site-header--portfolio')
+  const logoSizeDesktop = Math.min(160, Math.max(28, Number(header?.logoSizeDesktop || 46)))
+  const logoSizeMobile = Math.min(120, Math.max(28, Number(header?.logoSizeMobile || 40)))
   const logoAnimation = String(header?.logoAnimation || 'glow')
 
   if (backgroundMedia) style.backgroundImage = `url("${backgroundMedia}")`
@@ -56,7 +57,7 @@ export function SiteHeader({
     <Link
       href="/"
       className={`brand brand--${logoAnimation}`}
-      aria-label={`${brandName}, inicio`}
+      aria-label={`${portfolioName}, inicio`}
       data-mobile-centered={header?.centerLogoMobile !== false ? 'true' : 'false'}
     >
       {desktopLogo ? (
@@ -81,16 +82,11 @@ export function SiteHeader({
           </span>
         </>
       ) : (
-        <span className="brand-mark">F</span>
+        <span className="brand-mark" aria-hidden="true"><b>F</b><i /></span>
       )}
       <span className="brand-name">
-        {brandName === 'FabrickBuild' ? (
-          <>
-            Fabrick<strong>Build</strong>
-          </>
-        ) : (
-          brandName
-        )}
+        <small>PORTAFOLIO</small>
+        <strong>Fabrick</strong>
       </span>
     </Link>
   )
@@ -119,9 +115,10 @@ export function SiteHeader({
         </Link>
         <details className="mobile-menu">
           <summary aria-label="Abrir menú">
-            <Menu size={22} />
+            <Menu size={21} />
           </summary>
           <div>
+            <span className="mobile-menu__title">{portfolioName}</span>
             {navItems.map((item, index) => (
               <Link key={item.id || index} href={item.url || '/'}>
                 {item.label}

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import * as THREE from 'three'
 
 import type { FrameSequence } from '@/lib/appearance'
 
@@ -12,19 +11,38 @@ type Props = {
   forceScroll?: boolean
 }
 
-function drawImage(canvas: HTMLCanvasElement, image: HTMLImageElement, fit: FrameSequence['fit']) {
+type FrameRecord = {
+  image: HTMLImageElement | null
+  state: 'idle' | 'queued' | 'loading' | 'loaded' | 'error'
+  attempts: number
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
+
+function drawCover(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  fit: FrameSequence['fit'],
+  mobile: boolean,
+) {
   const bounds = canvas.getBoundingClientRect()
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
+  const maxDpr = mobile ? 1.25 : 1.65
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, maxDpr)
   const width = Math.max(1, Math.round(bounds.width * pixelRatio))
   const height = Math.max(1, Math.round(bounds.height * pixelRatio))
+
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width
     canvas.height = height
   }
 
-  const context = canvas.getContext('2d')
+  const context = canvas.getContext('2d', { alpha: false, desynchronized: true })
   if (!context || !image.naturalWidth || !image.naturalHeight) return
+
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
   context.clearRect(0, 0, width, height)
+
   const sourceRatio = image.naturalWidth / image.naturalHeight
   const targetRatio = width / height
   const scale = fit === 'contain'
@@ -32,30 +50,28 @@ function drawImage(canvas: HTMLCanvasElement, image: HTMLImageElement, fit: Fram
     : (sourceRatio > targetRatio ? height / image.naturalHeight : width / image.naturalWidth)
   const drawWidth = image.naturalWidth * scale
   const drawHeight = image.naturalHeight * scale
-  context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight)
-}
 
-function fitPlane(mesh: THREE.Mesh, canvas: HTMLCanvasElement, image: HTMLImageElement, fit: FrameSequence['fit']) {
-  const canvasRatio = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight)
-  const imageRatio = image.naturalWidth / image.naturalHeight
-  const wider = imageRatio > canvasRatio
-  const cover = fit === 'cover'
-  const scale = cover
-    ? (wider ? [imageRatio / canvasRatio, 1] : [1, canvasRatio / imageRatio])
-    : (wider ? [1, canvasRatio / imageRatio] : [imageRatio / canvasRatio, 1])
-  mesh.scale.set(scale[0], scale[1], 1)
+  context.drawImage(
+    image,
+    Math.round((width - drawWidth) / 2),
+    Math.round((height - drawHeight) / 2),
+    Math.ceil(drawWidth),
+    Math.ceil(drawHeight),
+  )
 }
 
 /**
- * Reproduce todos los frames relacionados al Background de Payload o recuperados
- * desde Blob. Precarga únicamente una ventana cercana al scroll y mantiene un
- * fallback Canvas 2D cuando WebGL no está disponible.
+ * Reproductor cinematográfico ligero.
+ *
+ * Prioriza el primer frame y una ventana cercana al scroll, carga el resto en
+ * segundo plano con concurrencia limitada y dibuja únicamente cuando cambia el
+ * índice real. El canvas 2D evita recrear texturas WebGL en cada movimiento.
  */
 export function FrameSequenceBackground({ sequence, forceScroll = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const fallbackCanvasRef = useRef<HTMLCanvasElement>(null)
   const frameLabelRef = useRef<HTMLSpanElement>(null)
+  const loadLabelRef = useRef<HTMLSpanElement>(null)
   const initialFrameCount = useMemo(
     () => Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length),
     [sequence.desktopFrames.length, sequence.mobileFrames.length],
@@ -63,47 +79,34 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const fallbackCanvas = fallbackCanvasRef.current
     const container = containerRef.current
-    if (!canvas || !fallbackCanvas || !container) return
+    if (!canvas || !container) return
 
     const section = container.closest<HTMLElement>('section')
+    const mobileQuery = window.matchMedia('(max-width: 767px)')
+    let mobile = mobileQuery.matches
     let stopped = false
-    let interval: number | undefined
+    let hidden = document.hidden
+    let progress = 0
     let wantedFrame = 0
     let renderedFrame = -1
-    let progress = 0
-    let images: Array<HTMLImageElement | undefined> = []
-    let urls: string[] = []
-    let loading = new Set<number>()
-    let failed = new Set<number>()
-    let retries = new Map<number, number>()
-    let cursor = 0
-    let texture: THREE.Texture | null = null
-    let renderer: THREE.WebGLRenderer | null = null
-    let mesh: THREE.Mesh | null = null
-    let scene: THREE.Scene | null = null
-    let camera: THREE.OrthographicCamera | null = null
-    let useWebGL = false
+    let loadedCount = 0
+    let activeLoads = 0
+    let backgroundCursor = 0
+    let drawRAF = 0
+    let backgroundTimer = 0
+    let autoplayTimer = 0
     let trigger: ScrollTrigger | null = null
-
-    try {
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' })
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-      scene = new THREE.Scene()
-      camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-      mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ transparent: true }))
-      scene.add(mesh)
-      fallbackCanvas.style.display = 'none'
-      useWebGL = true
-    } catch {
-      canvas.style.display = 'none'
-      fallbackCanvas.style.display = 'block'
-    }
+    let resizeObserver: ResizeObserver | null = null
+    let urls: string[] = []
+    let records: FrameRecord[] = []
+    const queue: number[] = []
+    const queued = new Set<number>()
+    const concurrency = () => (mobile ? 3 : 5)
+    const readyThreshold = () => Math.min(urls.length, mobile ? 6 : 9)
 
     const chooseFrames = () => {
-      const useMobile = window.matchMedia('(max-width: 767px)').matches
-      const candidates = useMobile && sequence.mobileFrames.length
+      const candidates = mobile && sequence.mobileFrames.length
         ? sequence.mobileFrames
         : sequence.desktopFrames.length
           ? sequence.desktopFrames
@@ -111,155 +114,203 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       return Array.from(new Set(candidates.filter(Boolean)))
     }
 
-    const resizeRenderer = () => {
-      if (!renderer) return
-      renderer.setSize(Math.max(1, container.clientWidth), Math.max(1, container.clientHeight), false)
-    }
-
     const setMood = (nextProgress: number) => {
       if (!section) return
-      const pulse = Math.sin(nextProgress * Math.PI * 2.2) * 0.12
-      const brightness = Math.min(1.08, Math.max(0.52, 0.67 + nextProgress * 0.19 + pulse))
-      const veil = Math.min(0.82, Math.max(0.04, (sequence.overlayOpacity / 100) * (0.92 - nextProgress * 0.22)))
+      const pulse = Math.sin(nextProgress * Math.PI * 1.8) * 0.06
+      const brightness = clamp(0.76 + nextProgress * 0.16 + pulse, 0.66, 1.02)
+      const veil = clamp((sequence.overlayOpacity / 100) * (0.86 - nextProgress * 0.18), 0.03, 0.58)
       section.style.setProperty('--cinematic-progress', nextProgress.toFixed(4))
       section.style.setProperty('--cinematic-light', brightness.toFixed(3))
       section.style.setProperty('--cinematic-veil', veil.toFixed(3))
-      section.style.setProperty('--cinematic-glow-x', `${Math.round(12 + nextProgress * 76)}%`)
+      section.style.setProperty('--cinematic-glow-x', `${Math.round(16 + nextProgress * 68)}%`)
     }
 
-    const updateFrameLabel = (index: number) => {
-      if (!frameLabelRef.current) return
-      const current = urls.length ? Math.min(urls.length, Math.max(1, index + 1)) : 0
-      frameLabelRef.current.textContent = `${String(current).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
+    const updateLabels = (index = wantedFrame) => {
+      const current = urls.length ? clamp(index + 1, 1, urls.length) : 0
+      if (frameLabelRef.current) {
+        frameLabelRef.current.textContent = `${String(current).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
+      }
+      if (loadLabelRef.current) {
+        loadLabelRef.current.textContent = loadedCount >= readyThreshold()
+          ? `${loadedCount}/${urls.length} preparados`
+          : `Preparando ${loadedCount}/${urls.length}`
+      }
+      container.dataset.sequenceReady = loadedCount >= readyThreshold() ? 'true' : 'false'
     }
 
     const nearestLoadedFrame = (target: number) => {
       for (let radius = 0; radius < urls.length; radius += 1) {
         const previous = target - radius
         const next = target + radius
-        const previousImage = images[previous]
-        if (previous >= 0 && previousImage?.complete && previousImage.naturalWidth) return previous
-        const nextImage = images[next]
-        if (next < urls.length && nextImage?.complete && nextImage.naturalWidth) return next
+        if (previous >= 0 && records[previous]?.state === 'loaded') return previous
+        if (next < urls.length && records[next]?.state === 'loaded') return next
       }
       return -1
     }
 
-    function requestFrame(index: number) {
-      if (
-        index < 0 ||
-        index >= urls.length ||
-        images[index]?.complete ||
-        loading.has(index) ||
-        failed.has(index)
-      ) return
-
-      loading.add(index)
-      const image = new window.Image()
-      image.decoding = 'async'
-      image.addEventListener('load', () => {
-        loading.delete(index)
-        retries.delete(index)
-        if (!stopped && (index === 0 || index === wantedFrame)) draw(index, true)
-        if (!stopped) warmFrames(index)
-      }, { once: true })
-      image.addEventListener('error', () => {
-        loading.delete(index)
-        images[index] = undefined
-        const attempt = (retries.get(index) || 0) + 1
-        retries.set(index, attempt)
-        if (attempt < 2 && !stopped) {
-          window.setTimeout(() => requestFrame(index), 350 * attempt)
-          return
-        }
-        failed.add(index)
-        if (!stopped && index === wantedFrame) {
-          const fallbackIndex = nearestLoadedFrame(index)
-          if (fallbackIndex >= 0) draw(fallbackIndex, true)
-        }
-        if (!stopped) warmFrames(index + 1)
-      }, { once: true })
-      images[index] = image
-      image.src = urls[index]
+    const renderNow = (force = false) => {
+      drawRAF = 0
+      if (stopped || hidden || !urls.length) return
+      const exact = records[wantedFrame]
+      const index = exact?.state === 'loaded' ? wantedFrame : nearestLoadedFrame(wantedFrame)
+      if (index < 0 || (!force && index === renderedFrame)) return
+      const image = records[index]?.image
+      if (!image) return
+      renderedFrame = index
+      drawCover(canvas, image, sequence.fit, mobile)
+      updateLabels(wantedFrame)
     }
 
-    function warmFrames(center: number) {
-      // Ventana pequeña alrededor del frame solicitado: evita descargar toda la
-      // secuencia de golpe en conexiones móviles.
-      for (let index = center - 2; index <= center + 5; index += 1) requestFrame(index)
-      while (loading.size < 4 && cursor < urls.length) requestFrame(cursor++)
+    const scheduleDraw = (force = false) => {
+      if (drawRAF) return
+      drawRAF = window.requestAnimationFrame(() => renderNow(force))
     }
 
-    const draw = (index: number, force = false) => {
-      if (!urls.length) return
-      const target = Math.min(urls.length - 1, Math.max(0, index))
-      wantedFrame = target
-      if (!force && target === renderedFrame) return
-      requestFrame(target)
-      warmFrames(target)
-      const exactImage = images[target]
-      const fallbackIndex = exactImage?.complete && exactImage.naturalWidth ? target : nearestLoadedFrame(target)
-      const image = fallbackIndex >= 0 ? images[fallbackIndex] : undefined
-      if (!image || !image.complete || !image.naturalWidth) return
+    const pumpQueue = () => {
+      if (stopped || hidden) return
+      while (activeLoads < concurrency() && queue.length) {
+        const index = queue.shift()
+        if (typeof index !== 'number') break
+        queued.delete(index)
+        const record = records[index]
+        if (!record || record.state === 'loaded' || record.state === 'loading' || record.state === 'error') continue
 
-      renderedFrame = fallbackIndex
-      updateFrameLabel(target)
-      if (useWebGL && renderer && scene && camera && mesh) {
-        try {
-          texture?.dispose()
-          texture = new THREE.Texture(image)
-          texture.colorSpace = THREE.SRGBColorSpace
-          texture.minFilter = THREE.LinearFilter
-          texture.magFilter = THREE.LinearFilter
-          texture.needsUpdate = true
-          const material = mesh.material as THREE.MeshBasicMaterial
-          material.map = texture
-          material.needsUpdate = true
-          fitPlane(mesh, canvas, image, sequence.fit)
-          resizeRenderer()
-          renderer.render(scene, camera)
-          return
-        } catch {
-          useWebGL = false
-          canvas.style.display = 'none'
-          fallbackCanvas.style.display = 'block'
+        record.state = 'loading'
+        record.attempts += 1
+        activeLoads += 1
+        const image = new window.Image()
+        image.decoding = 'async'
+        image.loading = 'eager'
+        image.fetchPriority = index <= readyThreshold() || index === wantedFrame ? 'high' : 'low'
+
+        const finish = () => {
+          activeLoads = Math.max(0, activeLoads - 1)
+          pumpQueue()
         }
+
+        image.addEventListener('load', () => {
+          const complete = () => {
+            if (stopped) return
+            record.image = image
+            record.state = 'loaded'
+            loadedCount += 1
+            updateLabels()
+            if (index === wantedFrame || renderedFrame < 0) scheduleDraw(true)
+            finish()
+          }
+          image.decode().then(complete).catch(complete)
+        }, { once: true })
+
+        image.addEventListener('error', () => {
+          activeLoads = Math.max(0, activeLoads - 1)
+          record.image = null
+          if (record.attempts < 2 && !stopped) {
+            record.state = 'idle'
+            window.setTimeout(() => enqueue(index, true), 240 * record.attempts)
+          } else {
+            record.state = 'error'
+          }
+          updateLabels()
+          pumpQueue()
+        }, { once: true })
+
+        record.image = image
+        image.src = urls[index]
       }
-      drawImage(fallbackCanvas, image, sequence.fit)
+    }
+
+    function enqueue(index: number, priority = false) {
+      if (index < 0 || index >= records.length) return
+      const record = records[index]
+      if (!record || record.state === 'loaded' || record.state === 'loading' || record.state === 'error' || queued.has(index)) return
+      record.state = 'queued'
+      queued.add(index)
+      if (priority) queue.unshift(index)
+      else queue.push(index)
+      pumpQueue()
+    }
+
+    const warmFrames = (center: number) => {
+      const ahead = mobile ? 7 : 11
+      const behind = mobile ? 3 : 5
+      enqueue(center, true)
+      for (let radius = 1; radius <= Math.max(ahead, behind); radius += 1) {
+        if (radius <= ahead) enqueue(center + radius, radius <= 3)
+        if (radius <= behind) enqueue(center - radius, radius <= 2)
+      }
+    }
+
+    const preloadBackground = () => {
+      window.clearTimeout(backgroundTimer)
+      const tick = () => {
+        if (stopped) return
+        if (!hidden && backgroundCursor < records.length) {
+          let added = 0
+          while (backgroundCursor < records.length && added < (mobile ? 1 : 2)) {
+            enqueue(backgroundCursor)
+            backgroundCursor += 1
+            added += 1
+          }
+        }
+        if (backgroundCursor < records.length) backgroundTimer = window.setTimeout(tick, mobile ? 170 : 110)
+      }
+      backgroundTimer = window.setTimeout(tick, 320)
+    }
+
+    const setWantedFrame = (index: number) => {
+      const next = clamp(index, 0, Math.max(0, urls.length - 1))
+      if (next === wantedFrame && renderedFrame >= 0) return
+      wantedFrame = next
+      warmFrames(next)
+      scheduleDraw()
+      updateLabels(next)
     }
 
     const syncProgress = (nextProgress: number) => {
-      progress = Math.min(1, Math.max(0, nextProgress))
+      progress = clamp(nextProgress, 0, 1)
       setMood(progress)
-      if (urls.length) draw(Math.round(progress * (urls.length - 1)))
+      setWantedFrame(Math.round(progress * Math.max(0, urls.length - 1)))
     }
 
-    const loadFrames = () => {
-      const nextURLs = chooseFrames()
-      const changed = nextURLs.length !== urls.length || nextURLs.some((url, index) => url !== urls[index])
-      urls = nextURLs
-      if (changed) {
-        images = Array(urls.length)
-        loading = new Set<number>()
-        failed = new Set<number>()
-        retries = new Map<number, number>()
-        cursor = 0
-        renderedFrame = -1
-        wantedFrame = 0
-      }
-      updateFrameLabel(Math.round(progress * Math.max(0, urls.length - 1)))
+    const resetFrames = () => {
+      urls = chooseFrames()
+      records = urls.map(() => ({ image: null, state: 'idle', attempts: 0 }))
+      queue.length = 0
+      queued.clear()
+      loadedCount = 0
+      activeLoads = 0
+      backgroundCursor = 0
+      renderedFrame = -1
+      wantedFrame = Math.round(progress * Math.max(0, urls.length - 1))
+      updateLabels(wantedFrame)
+      enqueue(0, true)
       warmFrames(wantedFrame)
-      draw(wantedFrame, true)
+      preloadBackground()
     }
 
-    const onResize = () => {
-      loadFrames()
-      resizeRenderer()
-      syncProgress(progress)
+    const resize = () => {
+      mobile = mobileQuery.matches
+      const previousURLs = urls
+      const nextURLs = chooseFrames()
+      const sourceChanged = nextURLs.length !== previousURLs.length || nextURLs.some((url, index) => url !== previousURLs[index])
+      if (sourceChanged) resetFrames()
+      renderedFrame = -1
+      scheduleDraw(true)
       trigger?.refresh()
     }
 
-    loadFrames()
+    const onVisibility = () => {
+      hidden = document.hidden
+      if (!hidden) {
+        warmFrames(wantedFrame)
+        pumpQueue()
+        scheduleDraw(true)
+      }
+    }
+
+    resetFrames()
+    setMood(0)
+
     const scrollDriven = forceScroll || sequence.trigger === 'scroll'
     if (scrollDriven && section) {
       gsap.registerPlugin(ScrollTrigger)
@@ -267,34 +318,36 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
         trigger: section,
         start: 'top top',
         end: 'bottom bottom',
-        scrub: forceScroll ? Math.max(0.18, sequence.scrub) : sequence.scrub,
+        scrub: forceScroll ? 0.12 : clamp(sequence.scrub, 0.08, 0.24),
         invalidateOnRefresh: true,
         onUpdate: (self) => syncProgress(self.progress),
       })
       syncProgress(trigger.progress)
-      trigger.refresh()
     } else {
       let current = 0
-      interval = window.setInterval(() => {
-        if (!urls.length) return
+      autoplayTimer = window.setInterval(() => {
+        if (!urls.length || hidden) return
         current = sequence.trigger === 'loop' ? (current + 1) % urls.length : Math.min(current + 1, urls.length - 1)
-        draw(current)
-        if (sequence.trigger === 'autoplay' && current === urls.length - 1 && interval) window.clearInterval(interval)
+        setWantedFrame(current)
+        if (sequence.trigger === 'autoplay' && current === urls.length - 1) window.clearInterval(autoplayTimer)
       }, 1000 / 24)
     }
-    window.addEventListener('resize', onResize)
+
+    resizeObserver = new ResizeObserver(resize)
+    resizeObserver.observe(container)
+    mobileQuery.addEventListener('change', resize)
+    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
       stopped = true
-      if (interval) window.clearInterval(interval)
+      window.clearTimeout(backgroundTimer)
+      window.clearInterval(autoplayTimer)
+      if (drawRAF) window.cancelAnimationFrame(drawRAF)
       trigger?.kill()
-      texture?.dispose()
-      if (mesh) {
-        mesh.geometry.dispose()
-        ;(mesh.material as THREE.Material).dispose()
-      }
-      renderer?.dispose()
-      window.removeEventListener('resize', onResize)
+      resizeObserver?.disconnect()
+      mobileQuery.removeEventListener('change', resize)
+      document.removeEventListener('visibilitychange', onVisibility)
+      records.forEach((record) => { record.image = null })
     }
   }, [forceScroll, sequence])
 
@@ -307,11 +360,12 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       ref={containerRef}
       className={`hero-background hero-frame-sequence ${forceScroll || sequence.pin ? 'hero-frame-sequence--pinned' : ''}`}
       aria-hidden="true"
-      style={sequence.poster ? { backgroundImage: `url(${JSON.stringify(sequence.poster)})` } : undefined}
+      data-sequence-ready="false"
+      style={sequence.poster ? { backgroundImage: `url("${sequence.poster}")` } : undefined}
     >
       <canvas ref={canvasRef} />
-      <canvas ref={fallbackCanvasRef} className="hero-frame-sequence__fallback" />
       <div className="hero-frame-sequence__light" />
+      <div className="hero-frame-sequence__loading"><i /><span ref={loadLabelRef}>Preparando 0/{initialFrameCount}</span></div>
       <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>{initialLabel}</span><i>SCROLL / MOTION</i></div>
     </div>
   )

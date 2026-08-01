@@ -1,7 +1,28 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionBeforeValidateHook, CollectionConfig } from 'payload'
 import { authenticated } from '@/access/authenticated'
 
 const imageProcessingEnabled = process.platform !== 'android'
+
+const slugify = (value: unknown) =>
+  String(value || 'secuencia')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70) || 'secuencia'
+
+const organizeFrameMetadata: CollectionBeforeValidateHook = ({ data }) => {
+  if (!data || data.category !== 'frame') return data
+  const collectionKey = slugify(data.collectionKey || 'secuencia')
+  const device = ['desktop', 'mobile'].includes(String(data.device)) ? String(data.device) : 'universal'
+  return {
+    ...data,
+    collectionKey,
+    storageFolder: `frames/${collectionKey}/${device}`,
+  }
+}
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -12,12 +33,13 @@ export const Media: CollectionConfig = {
     update: authenticated,
     delete: authenticated,
   },
+  hooks: { beforeValidate: [organizeFrameMetadata] },
   admin: {
     group: 'Multimedia',
     useAsTitle: 'alt',
-    defaultColumns: ['filename', 'alt', 'category', 'device', 'frameOrder', 'updatedAt'],
+    defaultColumns: ['filename', 'alt', 'category', 'collectionKey', 'device', 'frameOrder', 'updatedAt'],
     description:
-      'Las imágenes nuevas se convierten a WebP y generan variantes thumbnail, card y hero. Para secuencias usa nombres correlativos como frame_001, frame_002.',
+      'Las imágenes se optimizan y los frames se agrupan como carpetas virtuales mediante Grupo o secuencia. Filtra por collectionKey para revisar una animación completa.',
   },
   upload: {
     staticDir: 'media',
@@ -30,12 +52,12 @@ export const Media: CollectionConfig = {
           focalPoint: true,
           formatOptions: {
             format: 'webp' as const,
-            options: { quality: 82, effort: 5 },
+            options: { quality: 80, effort: 4 },
           },
           imageSizes: [
-            { name: 'thumbnail', width: 480, height: 320, position: 'centre' as const, withoutEnlargement: true },
-            { name: 'card', width: 960, height: 720, position: 'centre' as const, withoutEnlargement: true },
-            { name: 'hero', width: 1920, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'thumbnail', width: 420, height: 280, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'card', width: 900, height: 675, position: 'centre' as const, withoutEnlargement: true },
+            { name: 'hero', width: 1600, position: 'centre' as const, withoutEnlargement: true },
           ],
         }
       : {
@@ -91,7 +113,18 @@ export const Media: CollectionConfig = {
       index: true,
       admin: {
         condition: (_, siblingData) => siblingData?.category === 'frame',
-        description: 'Usa el mismo nombre para todos los frames del grupo, por ejemplo casa-lujo-01.',
+        description: 'Funciona como carpeta virtual para todos los frames del mismo background.',
+      },
+    },
+    {
+      name: 'storageFolder',
+      type: 'text',
+      label: 'Carpeta virtual de frames',
+      index: true,
+      admin: {
+        readOnly: true,
+        condition: (_, siblingData) => siblingData?.category === 'frame',
+        description: 'Ruta lógica usada para organizar la secuencia en Multimedia, por ejemplo frames/casa/mobile.',
       },
     },
     { name: 'caption', type: 'textarea', label: 'Descripción o crédito' },
