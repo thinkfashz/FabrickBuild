@@ -99,7 +99,6 @@ const BackgroundsWithLibrary: CollectionConfig = {
   ...Backgrounds,
   admin: {
     ...Backgrounds.admin,
-    defaultSort: '-updatedAt',
     components: {
       ...(Backgrounds.admin?.components || {}),
       beforeListTable: ['@/components/admin/BackgroundsLibraryOverview'],
@@ -111,7 +110,6 @@ const MediaWithLibrary: CollectionConfig = {
   ...Media,
   admin: {
     ...Media.admin,
-    defaultSort: '-updatedAt',
     components: {
       ...(Media.admin?.components || {}),
       beforeListTable: ['@/components/admin/MediaLibraryOverview'],
