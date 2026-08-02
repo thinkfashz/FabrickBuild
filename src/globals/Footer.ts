@@ -12,7 +12,7 @@ export const Footer: GlobalConfig = {
   admin: {
     group: 'Diseño global',
     description:
-      'Configura contenido, enlaces, fondo sólido o translúcido, imagen, colores y accesos permanentes a privacidad y cookies.',
+      'Configura el footer digital superpuesto, sus enlaces, redes sociales, colores, textura y accesos permanentes a privacidad y cookies.',
   },
   fields: [
     {
@@ -25,12 +25,19 @@ export const Footer: GlobalConfig = {
             {
               name: 'description',
               type: 'textarea',
-              defaultValue: 'Construimos casas, transformamos espacios y resolvemos cada detalle.',
+              defaultValue:
+                'Diseñamos páginas web, e-commerce y sistemas digitales que unen estrategia, movimiento, automatización e inteligencia artificial.',
             },
             {
               name: 'links',
               type: 'array',
               label: 'Enlaces principales',
+              defaultValue: [
+                { label: 'Servicios digitales', url: '/servicios' },
+                { label: 'Proyectos', url: '/proyectos' },
+                { label: 'Nuestro proceso', url: '/nosotros' },
+                { label: 'Iniciar proyecto', url: '/#contacto' },
+              ],
               fields: [
                 { name: 'label', type: 'text', required: true },
                 { name: 'url', type: 'text', required: true },
@@ -53,6 +60,12 @@ export const Footer: GlobalConfig = {
             {
               name: 'social',
               type: 'array',
+              label: 'Redes sociales',
+              defaultValue: [{ platform: 'GitHub', url: 'https://github.com/thinkfashz' }],
+              admin: {
+                description:
+                  'Añade Instagram, GitHub, LinkedIn, YouTube, Facebook u otra red. WhatsApp y correo se agregan automáticamente desde Configuración general.',
+              },
               fields: [
                 { name: 'platform', type: 'text', required: true },
                 { name: 'url', type: 'text', required: true },
@@ -75,7 +88,16 @@ export const Footer: GlobalConfig = {
           label: 'Diseño',
           fields: [
             appearanceField(),
-            { name: 'backgroundMedia', type: 'upload', relationTo: 'media', label: 'Imagen o textura de fondo opcional' },
+            {
+              name: 'backgroundMedia',
+              type: 'upload',
+              relationTo: 'media',
+              label: 'Textura opcional del footer',
+              admin: {
+                description:
+                  'El footer conserva su transparencia para mostrar el último frame del Background. Usa esta imagen solo como textura secundaria.',
+              },
+            },
           ],
         },
       ],

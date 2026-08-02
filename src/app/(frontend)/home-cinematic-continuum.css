@@ -1,0 +1,203 @@
+/*
+ * Continuidad cinematográfica de Home
+ * Un único canvas acompaña todo el documento y las secciones se presentan
+ * como capas legibles, sin interrumpir la secuencia de 80 fotogramas.
+ */
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) {
+  --home-cinematic-surface: rgba(7, 11, 12, 0.64);
+  --home-cinematic-surface-strong: rgba(7, 11, 12, 0.82);
+  --home-cinematic-line: rgba(184, 215, 197, 0.15);
+  background: #070b0c;
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .site-content,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .portfolio-factory-page,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .portfolio-showcase,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .portfolio-showcase--cinematic,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) [class*='PortfolioExperience-module__'][class*='__portfolio'] {
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+.portfolio-showcase .hero-frame-sequence--pinned[data-scroll-scope='document'] {
+  position: fixed !important;
+  z-index: 0 !important;
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100svh !important;
+  min-height: 100svh !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  pointer-events: none;
+  transform: translateZ(0);
+  contain: layout paint size;
+}
+
+.portfolio-showcase .hero-frame-sequence--pinned[data-scroll-scope='document'] canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.portfolio-showcase .hero-frame-sequence--pinned[data-scroll-scope='document']::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(4, 7, 7, 0.14), transparent 24%, transparent 68%, rgba(4, 7, 7, 0.34)),
+    radial-gradient(circle at 50% 48%, transparent 25%, rgba(4, 7, 7, 0.2) 100%);
+  content: '';
+  pointer-events: none;
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .portfolio-showcase > :not(.hero-frame-sequence),
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-site-footer {
+  position: relative;
+  z-index: 2;
+}
+
+/* El bloque de servicios continúa sobre el mismo video, sin crear una pantalla nueva. */
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator {
+  border-top: 1px solid var(--home-cinematic-line) !important;
+  background:
+    linear-gradient(180deg, rgba(7, 11, 12, 0.32), rgba(7, 11, 12, 0.66) 24%, rgba(7, 11, 12, 0.48) 78%, rgba(7, 11, 12, 0.28)),
+    radial-gradient(circle at 10% 18%, rgba(184, 215, 197, 0.1), transparent 34%),
+    radial-gradient(circle at 88% 74%, rgba(229, 187, 107, 0.09), transparent 38%) !important;
+  backdrop-filter: blur(3px) saturate(112%);
+  -webkit-backdrop-filter: blur(3px) saturate(112%);
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7, 11, 12, 0.5), transparent 35%, transparent 65%, rgba(7, 11, 12, 0.4));
+  content: '';
+  pointer-events: none;
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator__intro,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator__cta {
+  padding: clamp(20px, 3vw, 34px);
+  background: linear-gradient(120deg, rgba(7, 11, 12, 0.72), rgba(7, 11, 12, 0.32));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator__grid {
+  border-color: var(--home-cinematic-line) !important;
+  background: var(--home-cinematic-line) !important;
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-card {
+  background:
+    linear-gradient(145deg, rgba(12, 20, 18, 0.8), rgba(7, 11, 12, 0.6)) !important;
+  backdrop-filter: blur(18px) saturate(128%);
+  -webkit-backdrop-filter: blur(18px) saturate(128%);
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-card:hover {
+  background:
+    linear-gradient(145deg, rgba(18, 31, 27, 0.9), rgba(7, 11, 12, 0.68)) !important;
+}
+
+/* Secciones y matrices tecnológicas conservan legibilidad sin ocultar el frame. */
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-section,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-section--contrast,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-contact-band {
+  background: linear-gradient(180deg, rgba(7, 11, 12, 0.38), rgba(7, 11, 12, 0.68)) !important;
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .technology-icon-card,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-service-card,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-project-card,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-architecture-flow article {
+  background-color: rgba(7, 11, 12, 0.72) !important;
+  backdrop-filter: blur(16px) saturate(125%);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+}
+
+/* El footer es el último capítulo del mismo recorrido cinematográfico. */
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .site-footer.footer-reimagined,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-site-footer {
+  border-top: 1px solid var(--home-cinematic-line) !important;
+  background:
+    linear-gradient(180deg, rgba(7, 11, 12, 0.16), rgba(7, 11, 12, 0.58) 20%, rgba(7, 11, 12, 0.84) 64%, rgba(7, 11, 12, 0.94)) !important;
+  box-shadow: 0 -42px 110px rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(10px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(125%) !important;
+}
+
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .footer-stage,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .footer-network,
+body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .footer-legal {
+  background: transparent !important;
+}
+
+/* El contador permanece visible y confirma el avance hasta 80 / 80. */
+.hero-frame-sequence[data-scroll-scope='document'] .hero-frame-sequence__counter,
+.hero-frame-sequence[data-scroll-scope='document'] .hero-frame-sequence__loading {
+  z-index: 4;
+}
+
+.hero-frame-sequence[data-scroll-scope='document'] .hero-frame-sequence__counter {
+  position: fixed;
+}
+
+@media (max-width: 760px) {
+  .portfolio-showcase .hero-frame-sequence--pinned[data-scroll-scope='document'] {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+  }
+
+  body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator {
+    padding-top: 76px;
+    padding-bottom: 86px;
+    background:
+      linear-gradient(180deg, rgba(7, 11, 12, 0.24), rgba(7, 11, 12, 0.7) 28%, rgba(7, 11, 12, 0.46) 78%, rgba(7, 11, 12, 0.2)) !important;
+  }
+
+  body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator__intro,
+  body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-navigator__cta {
+    margin-inline: -20px;
+    padding: 28px 20px;
+    background: linear-gradient(180deg, rgba(7, 11, 12, 0.7), rgba(7, 11, 12, 0.44));
+    backdrop-filter: blur(12px) saturate(118%);
+    -webkit-backdrop-filter: blur(12px) saturate(118%);
+  }
+
+  body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .home-service-card {
+    background: linear-gradient(160deg, rgba(8, 14, 13, 0.82), rgba(7, 11, 12, 0.62)) !important;
+  }
+
+  body:has(.portfolio-showcase--cinematic [data-scroll-scope='document']) .digital-site-footer {
+    background:
+      linear-gradient(180deg, rgba(7, 11, 12, 0.12), rgba(7, 11, 12, 0.68) 18%, rgba(7, 11, 12, 0.92) 72%) !important;
+  }
+
+  .hero-frame-sequence[data-scroll-scope='document'] .hero-frame-sequence__counter {
+    right: 14px !important;
+    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .hero-frame-sequence[data-scroll-scope='document'] .hero-frame-sequence__loading {
+    bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-showcase .hero-frame-sequence--pinned[data-scroll-scope='document'] {
+    transform: none;
+  }
+}

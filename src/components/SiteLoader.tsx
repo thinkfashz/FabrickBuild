@@ -1,14 +1,9 @@
 'use client'
 
-import { animate } from 'animejs'
-import Image from 'next/image'
-import { useEffect, useMemo, useRef, useState } from 'react'
-
-import { getMediaAlt, getMediaURL } from '@/lib/media'
+import { useEffect, useMemo, useState } from 'react'
 
 type LoaderSettings = {
   enabled?: boolean
-  logo?: unknown
   text?: string
   animation?: 'glow' | 'pulse' | 'fade'
   backgroundColor?: string
@@ -17,113 +12,94 @@ type LoaderSettings = {
   maximumDuration?: number
 }
 
-const safeColor = (value: unknown, fallback: string) =>
-  typeof value === 'string' && /^(#[0-9a-f]{3,8}|rgba?\(|hsla?\(|[a-z]+$)/i.test(value.trim()) ? value : fallback
+type LoaderPhase = 'visible' | 'closing' | 'hidden'
 
-export function SiteLoader({ settings, fallbackLogo }: { settings?: LoaderSettings | null; fallbackLogo?: unknown }) {
-  const [visible, setVisible] = useState(settings?.enabled !== false)
-  const [progress, setProgress] = useState(8)
-  const rootRef = useRef<HTMLDivElement | null>(null)
-  const logoDoc = settings?.logo || fallbackLogo
-  const logo = getMediaURL(logoDoc as never, 'thumbnail')
-  const minimum = Math.min(1200, Math.max(0, Number(settings?.minimumDuration ?? 450)))
-  const maximum = Math.min(4000, Math.max(1000, Number(settings?.maximumDuration ?? 4000)))
+const safeColor = (value: unknown, fallback: string) =>
+  typeof value === 'string' && /^(#[0-9a-f]{3,8}|rgba?\(|hsla?\(|[a-z]+$)/i.test(value.trim())
+    ? value
+    : fallback
+
+function waitForPaint() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()))
+  })
+}
+
+export function SiteLoader({ settings }: { settings?: LoaderSettings | null; fallbackLogo?: unknown }) {
+  const [phase, setPhase] = useState<LoaderPhase>(settings?.enabled === false ? 'hidden' : 'visible')
+  const [progress, setProgress] = useState(12)
+  const minimum = Math.min(650, Math.max(160, Number(settings?.minimumDuration ?? 260)))
+  const maximum = Math.min(1800, Math.max(700, Number(settings?.maximumDuration ?? 1400)))
   const colors = useMemo(
     () => ({
-      background: safeColor(settings?.backgroundColor, '#10110f'),
-      foreground: safeColor(settings?.foregroundColor, '#f4c84b'),
+      background: safeColor(settings?.backgroundColor, '#070b0c'),
+      foreground: safeColor(settings?.foregroundColor, '#b8d7c5'),
     }),
     [settings?.backgroundColor, settings?.foregroundColor],
   )
 
   useEffect(() => {
-    if (settings?.enabled === false) return
-    if (window.self !== window.top) {
-      setVisible(false)
+    if (settings?.enabled === false || window.self !== window.top) {
+      setPhase('hidden')
       return
     }
 
-    const root = rootRef.current
     const startedAt = performance.now()
-    let loaded = document.readyState === 'complete'
-    let closed = false
+    let finished = false
 
-    const finish = () => {
-      if (closed) return
+    const close = () => {
+      if (finished) return
+      finished = true
+      setProgress(100)
       const elapsed = performance.now() - startedAt
-      if (!loaded && elapsed < maximum) return
-      const remaining = Math.max(0, minimum - elapsed)
-      closed = true
+      const delay = Math.max(0, minimum - elapsed)
       window.setTimeout(() => {
-        if (!root) return setVisible(false)
-        animate(root, {
-          opacity: { from: 1, to: 0 },
-          duration: 360,
-          ease: 'outQuad',
-          onComplete: () => setVisible(false),
-        })
-      }, remaining)
+        setPhase('closing')
+        window.setTimeout(() => setPhase('hidden'), 280)
+      }, delay)
     }
 
-    const onLoad = () => {
-      loaded = true
-      setProgress(100)
-      finish()
-    }
+    const fontsReady = document.fonts?.ready ?? Promise.resolve()
+    const softReady = Promise.race([
+      Promise.allSettled([fontsReady, waitForPaint()]),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 620)),
+    ])
 
-    window.addEventListener('load', onLoad, { once: true })
-    const maxTimer = window.setTimeout(() => {
-      loaded = true
-      setProgress(100)
-      finish()
-    }, maximum)
+    void softReady.then(close)
+
+    const hardStop = window.setTimeout(close, maximum)
     const progressTimer = window.setInterval(() => {
-      setProgress((current) => Math.min(94, current + Math.max(1, Math.round((94 - current) / 6))))
-    }, 140)
-
-    if (loaded) onLoad()
-
-    const mark = root?.querySelector('.site-loader__mark')
-    if (mark && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const animation = settings?.animation || 'glow'
-      animate(mark, {
-        opacity: animation === 'fade' ? [{ from: 0.45, to: 1 }] : [{ from: 0.7, to: 1 }, { from: 1, to: 0.78 }],
-        scale: animation === 'pulse' ? [{ from: 0.96, to: 1.03 }, { from: 1.03, to: 1 }] : { from: 0.98, to: 1 },
-        filter: animation === 'glow' ? ['drop-shadow(0 0 0px currentColor)', 'drop-shadow(0 0 18px currentColor)'] : undefined,
-        duration: 950,
-        alternate: true,
-        loop: true,
-        ease: 'inOutSine',
+      setProgress((current) => {
+        if (current >= 92) return current
+        const step = Math.max(2, Math.round((92 - current) / 5))
+        return Math.min(92, current + step)
       })
-    }
+    }, 90)
 
     return () => {
-      window.removeEventListener('load', onLoad)
-      window.clearTimeout(maxTimer)
+      window.clearTimeout(hardStop)
       window.clearInterval(progressTimer)
     }
-  }, [maximum, minimum, settings?.animation, settings?.enabled])
+  }, [maximum, minimum, settings?.enabled])
 
-  if (!visible || settings?.enabled === false) return null
+  if (phase === 'hidden' || settings?.enabled === false) return null
 
   return (
     <div
-      ref={rootRef}
-      className="site-loader"
+      className="site-loader site-loader--digital"
+      data-phase={phase}
       role="status"
       aria-live="polite"
       style={{ background: colors.background, color: colors.foreground }}
     >
       <div className="site-loader__content">
-        <div className="site-loader__mark">
-          {logo ? (
-            <Image src={logo} alt={getMediaAlt(logoDoc as never, 'FabrickBuild')} fill priority sizes="96px" />
-          ) : (
-            <strong>F</strong>
-          )}
+        <strong className="site-loader__wordmark">
+          FABRICK <span>BUILD</span>
+        </strong>
+        <p>{settings?.text || 'Cargando experiencia digital'}</p>
+        <div className="site-loader__rail" aria-hidden="true">
+          <span style={{ transform: `scaleX(${progress / 100})` }} />
         </div>
-        <p>{settings?.text || 'Preparando tu experiencia'}</p>
-        <div className="site-loader__rail" aria-hidden="true"><span style={{ transform: `scaleX(${progress / 100})` }} /></div>
         <small>{progress}%</small>
       </div>
     </div>

@@ -52,9 +52,9 @@ export const Header: GlobalConfig = {
               type: 'array',
               maxRows: 8,
               defaultValue: [
-                { label: 'Servicios', url: '/servicios' },
+                { label: 'Servicios digitales', url: '/servicios' },
                 { label: 'Proyectos', url: '/proyectos' },
-                { label: 'Nosotros', url: '/nosotros' },
+                { label: 'Nuestro proceso', url: '/nosotros' },
               ],
               fields: [
                 { name: 'label', type: 'text', required: true },
@@ -65,7 +65,7 @@ export const Header: GlobalConfig = {
               name: 'cta',
               type: 'group',
               fields: [
-                { name: 'label', type: 'text', defaultValue: 'Cotizar proyecto' },
+                { name: 'label', type: 'text', defaultValue: 'Iniciar proyecto' },
                 { name: 'url', type: 'text', defaultValue: '/#contacto' },
               ],
             },

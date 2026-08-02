@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef } from 'react'
 
 import type { FrameSequence } from '@/lib/appearance'
 
-type Props = { sequence: FrameSequence; forceScroll?: boolean }
+type ScrollScope = 'auto' | 'section' | 'document'
+type Props = { sequence: FrameSequence; forceScroll?: boolean; scrollScope?: ScrollScope }
 type FrameRecord = { image: HTMLImageElement | null; state: 'idle' | 'loading' | 'loaded' | 'error' }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -15,14 +16,18 @@ function drawFrame(canvas: HTMLCanvasElement, image: HTMLImageElement, fit: Fram
   const pixelRatio = Math.min(window.devicePixelRatio || 1, mobile ? 1.12 : 1.45)
   const width = Math.max(1, Math.round(bounds.width * pixelRatio))
   const height = Math.max(1, Math.round(bounds.height * pixelRatio))
+
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width
     canvas.height = height
   }
+
   const context = canvas.getContext('2d', { alpha: false, desynchronized: true })
   if (!context || !image.naturalWidth || !image.naturalHeight) return
+
   context.imageSmoothingEnabled = true
   context.imageSmoothingQuality = mobile ? 'medium' : 'high'
+
   const sourceRatio = image.naturalWidth / image.naturalHeight
   const targetRatio = width / height
   const scale = fit === 'contain'
@@ -30,16 +35,24 @@ function drawFrame(canvas: HTMLCanvasElement, image: HTMLImageElement, fit: Fram
     : (sourceRatio > targetRatio ? height / image.naturalHeight : width / image.naturalWidth)
   const drawWidth = image.naturalWidth * scale
   const drawHeight = image.naturalHeight * scale
+
   context.clearRect(0, 0, width, height)
   context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight)
 }
 
-export function FrameSequenceBackground({ sequence, forceScroll = false }: Props) {
+export function FrameSequenceBackground({
+  sequence,
+  forceScroll = false,
+  scrollScope = 'auto',
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameLabelRef = useRef<HTMLSpanElement>(null)
   const loadLabelRef = useRef<HTMLSpanElement>(null)
-  const initialFrameCount = useMemo(() => Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length), [sequence])
+  const initialFrameCount = useMemo(
+    () => Math.max(sequence.desktopFrames.length, sequence.mobileFrames.length),
+    [sequence],
+  )
 
   useEffect(() => {
     const container = containerRef.current
@@ -47,16 +60,30 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     if (!container || !canvas) return
 
     const section = container.closest<HTMLElement>('section')
-    const horizontal = section?.dataset.backgroundAxis === 'horizontal'
+    const isHomeCinematic = Boolean(
+      forceScroll &&
+      window.location.pathname === '/' &&
+      section?.classList.contains('portfolio-showcase--cinematic'),
+    )
+    const documentMode = scrollScope === 'document' || (scrollScope === 'auto' && isHomeCinematic)
+    const horizontal = !documentMode && section?.dataset.backgroundAxis === 'horizontal'
     const reverse = section?.dataset.playbackDirection === 'reverse'
     const mobileQuery = window.matchMedia('(max-width: 767px)')
-    const connection = (navigator as Navigator & { connection?: { effectiveType?: string; saveData?: boolean } }).connection
+    const connection = (navigator as Navigator & {
+      connection?: { effectiveType?: string; saveData?: boolean }
+    }).connection
+
+    container.dataset.scrollScope = documentMode ? 'document' : 'section'
+    container.dataset.frameErrors = '0'
+    if (section) section.dataset.cinematicScope = documentMode ? 'document' : 'section'
+
     let mobile = mobileQuery.matches
     let urls: string[] = []
     let records: FrameRecord[] = []
     let wanted = 0
     let rendered = -1
     let activeLoads = 0
+    let failedLoads = 0
     let stopped = false
     let scrollRAF = 0
     let drawRAF = 0
@@ -70,16 +97,37 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     const chooseFrames = () => {
       const source = mobile && sequence.mobileFrames.length
         ? sequence.mobileFrames
-        : sequence.desktopFrames.length ? sequence.desktopFrames : sequence.mobileFrames
+        : sequence.desktopFrames.length
+          ? sequence.desktopFrames
+          : sequence.mobileFrames
       return Array.from(new Set(source.filter(Boolean)))
     }
 
-    const loadedCount = () => records.reduce((total, record) => total + (record.state === 'loaded' ? 1 : 0), 0)
+    const loadedCount = () => records.reduce(
+      (total, record) => total + (record.state === 'loaded' ? 1 : 0),
+      0,
+    )
+
     const updateLabels = () => {
-      if (frameLabelRef.current) frameLabelRef.current.textContent = `${String(wanted + 1).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
+      if (frameLabelRef.current) {
+        frameLabelRef.current.textContent = `${String(wanted + 1).padStart(2, '0')} / ${String(urls.length).padStart(2, '0')}`
+      }
+
       const loaded = loadedCount()
-      if (loadLabelRef.current) loadLabelRef.current.textContent = loaded >= Math.min(8, urls.length) ? 'Secuencia lista' : `Preparando ${loaded}/${Math.min(8, urls.length)}`
+      const initialTarget = Math.min(8, urls.length)
+      if (loadLabelRef.current) {
+        if (loaded >= initialTarget) {
+          loadLabelRef.current.textContent = failedLoads
+            ? `Secuencia lista · ${failedLoads} omitido${failedLoads === 1 ? '' : 's'}`
+            : 'Secuencia lista'
+        } else {
+          loadLabelRef.current.textContent = `Preparando ${loaded}/${initialTarget}`
+        }
+      }
+
       container.dataset.sequenceReady = loaded > 0 ? 'true' : 'false'
+      container.dataset.loadedFrames = String(loaded)
+      container.dataset.frameErrors = String(failedLoads)
     }
 
     const nearestLoaded = (target: number) => {
@@ -95,39 +143,50 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     const render = (force = false) => {
       drawRAF = 0
       if (stopped || document.hidden) return
+
       const index = records[wanted]?.state === 'loaded' ? wanted : nearestLoaded(wanted)
       if (index < 0 || (!force && index === rendered)) return
+
       const image = records[index]?.image
       if (!image) return
+
       rendered = index
       drawFrame(canvas, image, sequence.fit, mobile)
       updateLabels()
     }
+
     const scheduleRender = (force = false) => {
       if (!drawRAF) drawRAF = requestAnimationFrame(() => render(force))
     }
 
     const pump = () => {
       const limit = slowConnection ? 2 : mobile ? 4 : 6
+
       while (!stopped && !document.hidden && activeLoads < limit && queue.length) {
         const index = queue.shift()
         if (typeof index !== 'number') break
+
         queued.delete(index)
         const record = records[index]
         if (!record || record.state !== 'idle') continue
+
         const cached = imageCache.get(urls[index])
         if (cached?.complete && cached.naturalWidth) {
           record.image = cached
           record.state = 'loaded'
           if (index === wanted || rendered < 0) scheduleRender(true)
+          updateLabels()
           continue
         }
+
         record.state = 'loading'
         activeLoads += 1
+
         const image = new Image()
         image.decoding = 'async'
         image.loading = 'eager'
         image.fetchPriority = Math.abs(index - wanted) <= 3 || index === 0 ? 'high' : 'low'
+
         image.onload = () => {
           const finish = () => {
             if (!stopped) {
@@ -142,17 +201,32 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
           }
           image.decode().then(finish).catch(finish)
         }
+
         image.onerror = () => {
           record.state = 'error'
+          failedLoads += 1
           activeLoads = Math.max(0, activeLoads - 1)
+          updateLabels()
+          console.warn('[cinematic-frames] No fue posible cargar un fotograma.', {
+            index: index + 1,
+            total: urls.length,
+            url: urls[index],
+          })
           pump()
         }
+
         image.src = urls[index]
       }
     }
 
     const enqueue = (index: number, priority = false) => {
-      if (index < 0 || index >= records.length || queued.has(index) || records[index]?.state !== 'idle') return
+      if (
+        index < 0 ||
+        index >= records.length ||
+        queued.has(index) ||
+        records[index]?.state !== 'idle'
+      ) return
+
       queued.add(index)
       priority ? queue.unshift(index) : queue.push(index)
       pump()
@@ -162,6 +236,7 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       enqueue(center, true)
       const ahead = slowConnection ? 3 : mobile ? 8 : 12
       const behind = slowConnection ? 2 : mobile ? 5 : 7
+
       for (let distance = 1; distance <= Math.max(ahead, behind); distance += 1) {
         if (distance <= ahead) enqueue(center + distance, distance <= 4)
         if (distance <= behind) enqueue(center - distance, distance <= 3)
@@ -196,35 +271,62 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       updateLabels()
     }
 
+    const setProgressVariables = (progress: number) => {
+      const hosts = [container, section].filter((item): item is HTMLElement => Boolean(item))
+      const veil = clamp((sequence.overlayOpacity / 100) * (0.84 - progress * 0.16), 0.03, 0.55)
+
+      hosts.forEach((host) => {
+        host.style.setProperty('--cinematic-progress', progress.toFixed(4))
+        host.style.setProperty('--cinematic-light', String(0.8 + progress * 0.14))
+        host.style.setProperty('--cinematic-veil', String(veil))
+        host.style.setProperty('--cinematic-glow-x', `${Math.round(18 + progress * 64)}%`)
+      })
+
+      document.documentElement.style.setProperty('--home-cinematic-progress', progress.toFixed(4))
+    }
+
     const syncScroll = () => {
       scrollRAF = 0
-      if (!section || !urls.length) return
-      const rawProgress = horizontal
-        ? clamp(section.scrollLeft / Math.max(1, section.scrollWidth - section.clientWidth), 0, 1)
-        : (() => {
-            const rect = section.getBoundingClientRect()
-            return clamp(-rect.top / Math.max(1, rect.height - innerHeight), 0, 1)
-          })()
+      if (!urls.length) return
+
+      const rawProgress = documentMode
+        ? clamp(
+            window.scrollY / Math.max(1, document.documentElement.scrollHeight - window.innerHeight),
+            0,
+            1,
+          )
+        : horizontal && section
+          ? clamp(section.scrollLeft / Math.max(1, section.scrollWidth - section.clientWidth), 0, 1)
+          : (() => {
+              if (!section) return 0
+              const rect = section.getBoundingClientRect()
+              return clamp(-rect.top / Math.max(1, rect.height - window.innerHeight), 0, 1)
+            })()
+
       const progress = reverse ? 1 - rawProgress : rawProgress
-      section.style.setProperty('--cinematic-progress', progress.toFixed(4))
-      section.style.setProperty('--cinematic-light', String(0.8 + progress * 0.14))
-      section.style.setProperty('--cinematic-veil', String(clamp((sequence.overlayOpacity / 100) * (0.84 - progress * 0.16), 0.03, 0.55)))
-      section.style.setProperty('--cinematic-glow-x', `${Math.round(18 + progress * 64)}%`)
+      setProgressVariables(progress)
       setWanted(Math.round(progress * (urls.length - 1)))
     }
-    const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(syncScroll) }
+
+    const onScroll = () => {
+      if (!scrollRAF) scrollRAF = requestAnimationFrame(syncScroll)
+    }
 
     const reset = () => {
       urls = chooseFrames()
       records = urls.map((url) => {
         const cached = imageCache.get(url)
-        return cached?.complete && cached.naturalWidth ? { image: cached, state: 'loaded' as const } : { image: null, state: 'idle' as const }
+        return cached?.complete && cached.naturalWidth
+          ? { image: cached, state: 'loaded' as const }
+          : { image: null, state: 'idle' as const }
       })
       queue.length = 0
       queued.clear()
       activeLoads = 0
+      failedLoads = 0
       rendered = -1
       wanted = reverse ? Math.max(0, urls.length - 1) : 0
+      container.dataset.totalFrames = String(urls.length)
       enqueue(wanted, true)
       preloadKeyframes()
       warmWindow(wanted)
@@ -243,7 +345,13 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
     }
 
     reset()
-    const scrollTarget: Window | HTMLElement = horizontal && section ? section : window
+
+    const scrollTarget: Window | HTMLElement = documentMode
+      ? window
+      : horizontal && section
+        ? section
+        : window
+
     if (forceScroll || sequence.trigger === 'scroll') {
       scrollTarget.addEventListener('scroll', onScroll, { passive: true })
       window.addEventListener('resize', resize, { passive: true })
@@ -256,8 +364,13 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
         setWanted(next)
       }, 50)
     }
-    resizeObserver = new ResizeObserver(() => { rendered = -1; scheduleRender(true) })
-    resizeObserver.observe(container)
+
+    resizeObserver = new ResizeObserver(() => {
+      rendered = -1
+      scheduleRender(true)
+      onScroll()
+    })
+    resizeObserver.observe(documentMode ? document.body : container)
     mobileQuery.addEventListener('change', resize)
 
     return () => {
@@ -270,15 +383,30 @@ export function FrameSequenceBackground({ sequence, forceScroll = false }: Props
       clearTimeout(idleHandle)
       if (scrollRAF) cancelAnimationFrame(scrollRAF)
       if (drawRAF) cancelAnimationFrame(drawRAF)
+      document.documentElement.style.removeProperty('--home-cinematic-progress')
+      if (section) delete section.dataset.cinematicScope
     }
-  }, [forceScroll, sequence])
+  }, [forceScroll, scrollScope, sequence])
 
   return (
-    <div ref={containerRef} className={`hero-background hero-frame-sequence ${forceScroll || sequence.pin ? 'hero-frame-sequence--pinned' : ''}`} aria-hidden="true" data-sequence-ready="false" style={sequence.poster ? { backgroundImage: `url("${sequence.poster}")` } : undefined}>
+    <div
+      ref={containerRef}
+      className={`hero-background hero-frame-sequence ${forceScroll || sequence.pin ? 'hero-frame-sequence--pinned' : ''}`}
+      aria-hidden="true"
+      data-sequence-ready="false"
+      data-scroll-scope={scrollScope === 'document' ? 'document' : 'pending'}
+      style={sequence.poster ? { backgroundImage: `url("${sequence.poster}")` } : undefined}
+    >
       <canvas ref={canvasRef} />
       <div className="hero-frame-sequence__light" />
-      <div className="hero-frame-sequence__loading"><i /><span ref={loadLabelRef}>Preparando 0/{Math.min(8, initialFrameCount)}</span></div>
-      <div className="hero-frame-sequence__counter"><span ref={frameLabelRef}>01 / {String(initialFrameCount).padStart(2, '0')}</span><i>SCROLL / MOTION</i></div>
+      <div className="hero-frame-sequence__loading">
+        <i />
+        <span ref={loadLabelRef}>Preparando 0/{Math.min(8, initialFrameCount)}</span>
+      </div>
+      <div className="hero-frame-sequence__counter">
+        <span ref={frameLabelRef}>01 / {String(initialFrameCount).padStart(2, '0')}</span>
+        <i>SCROLL / MOTION</i>
+      </div>
     </div>
   )
 }

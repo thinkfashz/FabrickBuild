@@ -1,97 +1,62 @@
 import Link from 'next/link'
-import { Menu } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 
-import { appearanceProps } from '@/lib/appearance'
-import { getMediaURL } from '@/lib/media'
+import { DIGITAL_CONTACT } from '@/lib/digitalCatalog'
 
-type NavItem = { id?: string | number; label?: string | null; url?: string | null }
-
-const defaultHeaderAppearance = {
-  surfaceMode: 'glass',
-  surfaceColor: '#08090c',
-  surfaceOpacity: 22,
-  backdropBlur: 20,
-  headingColor: '#ffffff',
-  bodyColor: '#d7d7da',
-  accentColor: '#ffffff',
-  buttonColor: '#ffffff',
-  buttonTextColor: '#090a0d',
-  paddingTop: 0,
-  paddingBottom: 0,
-  overlayOpacity: 0,
+type HeaderProps = {
+  header?: Record<string, unknown> | null
+  settings?: Record<string, unknown> | null
 }
 
-export function SiteHeader({
-  header,
-  settings,
-}: {
-  header?: Record<string, any> | null
-  settings?: Record<string, any> | null
-}) {
-  const navItems = Array.isArray(header?.navItems)
-    ? (header.navItems as NavItem[])
-    : [
-        { label: 'Servicios', url: '/servicios' },
-        { label: 'Proyectos', url: '/proyectos' },
-        { label: 'Nosotros', url: '/nosotros' },
-      ]
-  const cta = (header?.cta || {}) as { label?: string; url?: string }
+const navigation = [
+  { label: 'Servicios', href: '/servicios' },
+  { label: 'Proyectos', href: '/proyectos' },
+  { label: 'Método', href: '/nosotros' },
+]
+
+export function SiteHeader({ settings }: HeaderProps) {
   const brandName = String(settings?.brandName || 'FabrickBuild')
-  const portfolioName = String(header?.portfolioName || settings?.portfolioName || 'Portafolio Fabrick')
-  const backgroundMedia = getMediaURL(header?.backgroundMedia, 'hero')
-  const { className, style } = appearanceProps(header?.appearance || defaultHeaderAppearance, 'site-header site-header--portfolio')
-
-  if (backgroundMedia) style.backgroundImage = `url("${backgroundMedia}")`
-
-  const Brand = () => (
-    <Link
-      href="/"
-      className="brand brand--wordmark"
-      aria-label={`${portfolioName}, inicio`}
-      data-mobile-centered={header?.centerLogoMobile !== false ? 'true' : 'false'}
-    >
-      <span className="brand-wordmark" aria-label={brandName}>
-        <strong>FABRICK</strong><em>BUILD</em>
-      </span>
-    </Link>
-  )
 
   return (
-    <header
-      className={`${className} ${header?.sticky !== false ? 'site-header--sticky' : ''}`.trim()}
-      style={style}
-    >
-      <div className="cms-surface__overlay" aria-hidden="true" />
+    <header className="site-header site-header--portfolio site-header--sticky digital-site-header">
       <div className="shell header-inner">
-        <span className="header-mobile-spacer" aria-hidden="true" />
-        <Brand />
-        <nav className="desktop-nav" aria-label="Navegación principal">
-          {navItems.map((item, index) => (
-            <Link key={item.id || index} href={item.url || '/'}>
+        <Link href="/" className="brand brand--wordmark brand--digital" aria-label={`${brandName}, inicio`}>
+          <span className="brand-digital-mark" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <b />
+          </span>
+          <span className="brand-digital-copy">
+            <span className="brand-wordmark" aria-label={brandName}>
+              <strong>FABRICK</strong>
+              <em>BUILD</em>
+            </span>
+            <small>DIGITAL SYSTEMS</small>
+          </span>
+          <span className="brand-digital-scan" aria-hidden="true" />
+        </Link>
+
+        <nav className="desktop-nav desktop-nav--digital" aria-label="Navegación principal">
+          {navigation.map((item, index) => (
+            <Link key={item.href} href={item.href}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
               {item.label}
             </Link>
           ))}
         </nav>
-        <Link
-          href={cta.url || '/#contacto'}
-          className={`header-cta ${header?.showCTAMobile ? 'header-cta--mobile' : ''}`}
+
+        <a
+          className="header-cta header-cta--signal"
+          href={DIGITAL_CONTACT.whatsappURL}
+          target="_blank"
+          rel="noreferrer"
+          data-no-transition
         >
-          {cta.label || 'Cotizar proyecto'}
-        </Link>
-        <details className="mobile-menu">
-          <summary aria-label="Abrir menú">
-            <Menu size={21} />
-          </summary>
-          <div>
-            <span className="mobile-menu__title">{portfolioName}</span>
-            {navItems.map((item, index) => (
-              <Link key={item.id || index} href={item.url || '/'}>
-                {item.label}
-              </Link>
-            ))}
-            <Link href={cta.url || '/#contacto'}>{cta.label || 'Cotizar proyecto'}</Link>
-          </div>
-        </details>
+          <span className="header-cta__pulse" aria-hidden="true" />
+          <MessageCircle size={17} />
+          <span>Hablemos</span>
+        </a>
       </div>
     </header>
   )
