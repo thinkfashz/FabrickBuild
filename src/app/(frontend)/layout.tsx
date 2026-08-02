@@ -25,6 +25,7 @@ import './mobile-refinement.css'
 import './home-cinematic-continuum.css'
 import './experience-polish.css'
 import './final-overrides.css'
+import './editorial-cinematic.css'
 
 const manrope = Manrope({
   subsets: ['latin'],
