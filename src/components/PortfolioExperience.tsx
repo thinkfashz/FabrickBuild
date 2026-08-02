@@ -4,9 +4,6 @@
 import Image from 'next/image'
 import { ArrowRight, Box, Code2, Cpu, Figma, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { animate, stagger } from 'animejs'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import { getMediaURL } from '@/lib/media'
 import { RuntimeBlobFrameBackground } from './RuntimeBlobFrameBackground'
@@ -57,48 +54,10 @@ export function PortfolioExperience({ block, frameCount = 0 }: { block: Doc; fra
 
   useEffect(() => {
     const element = root.current
-    if (!element || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    gsap.registerPlugin(ScrollTrigger)
-    const animeAnimations: Array<{ revert?: () => void }> = []
-    const context = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>('[data-cinematic-scene]').forEach((scene) => {
-        const direction = scene.dataset.side === 'right' ? 30 : -30
-        gsap.fromTo(
-          scene,
-          { x: direction, autoAlpha: 0 },
-          {
-            x: 0,
-            autoAlpha: 1,
-            duration: 0.64,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: scene,
-              start: 'top 86%',
-              once: true,
-              onEnter: () => {
-                const copy = Array.from(scene.querySelectorAll<HTMLElement>('[data-cinematic-copy]'))
-                if (copy.length) {
-                  animeAnimations.push(
-                    animate(copy, {
-                      opacity: [0, 1],
-                      translateY: [12, 0],
-                      delay: stagger(44),
-                      duration: 520,
-                      ease: 'outExpo',
-                    }),
-                  )
-                }
-              },
-            },
-          },
-        )
-      })
-    }, element)
-
+    if (!element) return
+    element.dataset.editorialHost = 'true'
     return () => {
-      animeAnimations.forEach((animation) => animation.revert?.())
-      context.revert()
+      delete element.dataset.editorialHost
     }
   }, [])
 
@@ -227,9 +186,9 @@ export function PortfolioExperience({ block, frameCount = 0 }: { block: Doc; fra
       </section>
 
       <section className={styles.closing} data-cinematic-scene data-side="left">
-        <div>
+        <div data-cinematic-copy>
           <Star size={18} />
-          <span data-cinematic-copy className="eyebrow">TU MARCA, EL SIGUIENTE RECORRIDO</span>
+          <span className="eyebrow">TU MARCA, EL SIGUIENTE RECORRIDO</span>
         </div>
         <h2 data-cinematic-copy>
           Haz que tu página
