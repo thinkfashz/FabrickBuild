@@ -12,7 +12,9 @@ export async function requirePayloadAdmin(returnTo = '/admin/studio') {
     redirect(`/admin/login?redirect=${encodeURIComponent(returnTo)}`)
   }
 
-  if (auth.user.role !== 'admin') {
+  // Usuarios creados antes de añadir el campo role no deben quedar bloqueados.
+  // Cuando role existe, se mantiene la restricción estricta de administrador.
+  if (auth.user.role && auth.user.role !== 'admin') {
     redirect('/admin?studio=forbidden')
   }
 
