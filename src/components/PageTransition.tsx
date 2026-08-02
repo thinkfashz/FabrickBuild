@@ -5,6 +5,10 @@ import { useEffect, useRef, useState } from 'react'
 
 type TransitionPhase = 'idle' | 'leaving' | 'entering'
 
+type RouteScrollDetail = {
+  top: number
+}
+
 const routeNames: Array<[RegExp, string]> = [
   [/^\/servicios\/.+/, 'Abriendo servicio'],
   [/^\/servicios/, 'Explorando servicios'],
@@ -16,6 +20,28 @@ const routeNames: Array<[RegExp, string]> = [
 
 function routeLabel(pathname: string) {
   return routeNames.find(([pattern]) => pattern.test(pathname))?.[1] || 'Cargando experiencia'
+}
+
+function destinationScrollTop() {
+  const hash = window.location.hash
+  if (!hash) return 0
+
+  try {
+    const target = document.getElementById(decodeURIComponent(hash.slice(1)))
+    if (!target) return 0
+    return Math.max(0, target.getBoundingClientRect().top + window.scrollY - 72)
+  } catch {
+    return 0
+  }
+}
+
+function requestRouteScroll(top: number) {
+  window.dispatchEvent(
+    new CustomEvent<RouteScrollDetail>('fabrick:route-scroll', {
+      detail: { top },
+    }),
+  )
+  window.scrollTo(0, top)
 }
 
 export function PageTransition() {
@@ -37,6 +63,14 @@ export function PageTransition() {
     setPhase('entering')
     document.documentElement.dataset.routeTransition = 'entering'
 
+    let firstFrame = 0
+    let secondFrame = 0
+    firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        requestRouteScroll(destinationScrollTop())
+      })
+    })
+
     timerRef.current = window.setTimeout(
       () => {
         setPhase('idle')
@@ -47,6 +81,8 @@ export function PageTransition() {
 
     return () => {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
+      if (firstFrame) window.cancelAnimationFrame(firstFrame)
+      if (secondFrame) window.cancelAnimationFrame(secondFrame)
     }
   }, [pathname])
 
@@ -95,7 +131,8 @@ export function PageTransition() {
       document.documentElement.dataset.routeTransition = 'leaving'
 
       timerRef.current = window.setTimeout(() => {
-        router.push(`${destination.pathname}${destination.search}${destination.hash}`)
+        requestRouteScroll(0)
+        router.push(`${destination.pathname}${destination.search}${destination.hash}`, { scroll: false })
       }, 460)
     }
 

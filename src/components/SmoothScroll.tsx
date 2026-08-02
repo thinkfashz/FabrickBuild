@@ -5,9 +5,18 @@ import { useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
+type RouteScrollEvent = CustomEvent<{ top?: number }>
+
 export function SmoothScroll() {
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const previousScrollRestoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return () => {
+        window.history.scrollRestoration = previousScrollRestoration
+      }
+    }
 
     gsap.registerPlugin(ScrollTrigger)
     const coarsePointer = window.matchMedia('(pointer: coarse)').matches
@@ -27,18 +36,31 @@ export function SmoothScroll() {
       lenis.resize()
       ScrollTrigger.refresh()
     }
+    const handleRouteScroll = (event: Event) => {
+      const requestedTop = Number((event as RouteScrollEvent).detail?.top || 0)
+      const top = Number.isFinite(requestedTop) ? Math.max(0, requestedTop) : 0
+
+      lenis.stop()
+      lenis.scrollTo(top, { immediate: true, force: true })
+      window.scrollTo(0, top)
+      lenis.start()
+      window.requestAnimationFrame(refresh)
+    }
 
     lenis.on('scroll', updateScrollTrigger)
     gsap.ticker.add(tick)
     gsap.ticker.lagSmoothing(0)
     window.addEventListener('pageshow', refresh)
     window.addEventListener('resize', refresh, { passive: true })
+    window.addEventListener('fabrick:route-scroll', handleRouteScroll)
 
     return () => {
       lenis.off('scroll', updateScrollTrigger)
       gsap.ticker.remove(tick)
       window.removeEventListener('pageshow', refresh)
       window.removeEventListener('resize', refresh)
+      window.removeEventListener('fabrick:route-scroll', handleRouteScroll)
+      window.history.scrollRestoration = previousScrollRestoration
       lenis.destroy()
     }
   }, [])
