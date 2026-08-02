@@ -35,6 +35,15 @@ const nextConfig = {
   },
   poweredByHeader: false,
   compress: true,
+  async redirects() {
+    return [
+      {
+        source: '/studio/cloudinary',
+        destination: '/admin/studio/cloudinary',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       { source: '/frames/:path*', headers: publicMediaHeaders },
