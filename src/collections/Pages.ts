@@ -20,26 +20,19 @@ import {
   Testimonials,
 } from '@/blocks'
 
-const getServerURL = () =>
-  process.env.NEXT_PUBLIC_SERVER_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
 const pagePath = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
   return slug === 'home' ? '/' : `/${slug}`
 }
 
-const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) =>
-  `${getServerURL()}${pagePath(data)}`
+const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) => pagePath(data)
 
 const getPreviewURL = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
   const params = new URLSearchParams({
-    collection: 'pages',
-    slug,
     secret: process.env.PREVIEW_SECRET || '',
   })
-  return `${getServerURL()}/preview?${params.toString()}`
+  return `/preview-page/${encodeURIComponent(slug)}?${params.toString()}`
 }
 
 const pageBlocks = [
@@ -75,8 +68,11 @@ export const Pages: CollectionConfig = {
     defaultColumns: ['title', 'slug', '_status', 'updatedAt'],
     livePreview: { url: getLivePreviewURL },
     preview: (data) => getPreviewURL(data),
+    components: {
+      beforeListTable: ['@/components/admin/PagesOverview'],
+    },
     description:
-      'Edita contenido, colores, fondos, imágenes, responsive y animaciones desde el mismo documento. Usa la vista previa Móvil antes de publicar.',
+      'Editor oficial de páginas. Usa las miniaturas reales de la colección o abre Live Preview para comprobar móvil, tablet y escritorio antes de publicar.',
   },
   versions: {
     drafts: {

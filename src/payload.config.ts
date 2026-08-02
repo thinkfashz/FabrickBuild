@@ -82,7 +82,7 @@ const appendGlobalAfterChange = (global: GlobalConfig): GlobalConfig => ({
 const previewPageURL = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
   const secret = encodeURIComponent(process.env.PREVIEW_SECRET || '')
-  return `${serverURL}/preview-page/${encodeURIComponent(slug)}?secret=${secret}`
+  return `/preview-page/${encodeURIComponent(slug)}?secret=${secret}`
 }
 
 const PagesWithIsolatedPreview: CollectionConfig = {
