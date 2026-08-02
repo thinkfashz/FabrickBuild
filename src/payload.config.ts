@@ -89,8 +89,33 @@ const PagesWithIsolatedPreview: CollectionConfig = {
   ...Pages,
   admin: {
     ...Pages.admin,
+    components: {},
     livePreview: { url: ({ data }) => previewPageURL(data as Record<string, unknown>) },
     preview: (data) => previewPageURL(data as Record<string, unknown>),
+  },
+}
+
+const BackgroundsWithLibrary: CollectionConfig = {
+  ...Backgrounds,
+  admin: {
+    ...Backgrounds.admin,
+    defaultSort: '-updatedAt',
+    components: {
+      ...(Backgrounds.admin?.components || {}),
+      beforeListTable: ['@/components/admin/BackgroundsLibraryOverview'],
+    },
+  },
+}
+
+const MediaWithLibrary: CollectionConfig = {
+  ...Media,
+  admin: {
+    ...Media.admin,
+    defaultSort: '-updatedAt',
+    components: {
+      ...(Media.admin?.components || {}),
+      beforeListTable: ['@/components/admin/MediaLibraryOverview'],
+    },
   },
 }
 
@@ -124,8 +149,8 @@ export default buildConfig({
   }),
   collections: [
     Users,
-    appendAfterChange(Media, revalidateMedia),
-    appendAfterChange(Backgrounds, revalidateBackgrounds),
+    appendAfterChange(MediaWithLibrary, revalidateMedia),
+    appendAfterChange(BackgroundsWithLibrary, revalidateBackgrounds),
     PagesWithIsolatedPreview,
     appendAfterChange(Services, revalidateServices),
     appendAfterChange(Projects, revalidateProjects),
