@@ -6,7 +6,6 @@ const tools = [
   { href: '/admin/collections/backgrounds/create', title: 'Creador de backgrounds', detail: 'Editor completo de secuencias, video, GSAP y publicación.' },
   { href: '/admin/collections/backgrounds', title: 'Backgrounds guardados', detail: 'Revisa estado, preview, páginas asignadas y configuración.' },
   { href: '/admin/collections/media', title: 'Multimedia', detail: 'Catálogo unificado de Blob, Cloudinary, imágenes y frames.' },
-  { href: '/admin/collections/pages', title: 'Páginas', detail: 'Asigna backgrounds y experiencias a una o varias páginas.' },
   { href: '/admin/studio/sistema', title: 'Sistema y rendimiento', detail: 'Conexiones, latencia, almacenamiento y diagnósticos.' },
 ]
 
@@ -15,7 +14,7 @@ export default async function AdminStudioPage() {
   return (
     <main className="studio-hub">
       <header>
-        <div><small>PAYLOAD · FABRICKBUILD</small><h1>Studio</h1><p>Herramientas privadas integradas al administrador. Cada nueva herramienta tendrá acceso desde este centro y desde la navegación de Payload.</p></div>
+        <div><small>PAYLOAD · FABRICKBUILD</small><h1>Studio</h1><p>Herramientas multimedia y técnicas integradas al administrador. La edición de páginas vive únicamente en la colección Páginas de Payload, con preview real.</p></div>
         <div><span>{user.email}</span><Link href="/admin">Volver al dashboard</Link></div>
       </header>
       <section className="tool-grid">{tools.map((tool, index) => <Link key={tool.href} href={tool.href}><i>{String(index + 1).padStart(2, '0')}</i><strong>{tool.title}</strong><span>{tool.detail}</span><b>ABRIR →</b></Link>)}</section>
