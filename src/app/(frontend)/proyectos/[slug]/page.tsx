@@ -1,73 +1,109 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, MapPin, Ruler, Timer } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, MessageCircle } from 'lucide-react'
 import { notFound } from 'next/navigation'
-import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
-import { RichText } from '@/components/RichText'
-import { getMediaAlt, getMediaURL } from '@/lib/media'
-import { getProjectBySlug } from '@/lib/queries'
+
+import { DIGITAL_CONTACT, digitalProjects, getDigitalProject } from '@/lib/digitalCatalog'
 
 type Args = { params: Promise<{ slug: string }> }
 
+export function generateStaticParams() {
+  return digitalProjects.map((project) => ({ slug: project.slug }))
+}
+
 export async function generateMetadata({ params }: Args): Promise<Metadata> {
   const { slug } = await params
-  const doc = await getProjectBySlug(slug)
-  if (!doc) return {}
-  const seo = (doc.seo || {}) as { title?: string; description?: string; noIndex?: boolean }
+  const project = getDigitalProject(slug)
+  if (!project) return {}
+
   return {
-    title: seo.title || `${doc.title} | FabrickBuild`,
-    description: seo.description || doc.summary,
-    robots: seo.noIndex ? { index: false, follow: false } : undefined
+    title: `${project.title} | FabrickBuild`,
+    description: project.summary,
+    keywords: [...project.technologies, project.category, 'software personalizado'],
   }
 }
 
-export default async function ProjectPage({ params }: Args) {
+export default async function ProjectDetailPage({ params }: Args) {
   const { slug } = await params
-  const project = await getProjectBySlug(slug)
+  const project = getDigitalProject(slug)
   if (!project) notFound()
-  const cover = getMediaURL(project.cover, 'hero')
-  const before = getMediaURL(project.beforeAfter?.before, 'hero')
-  const after = getMediaURL(project.beforeAfter?.after, 'hero')
+
+  const related = digitalProjects.filter((item) => item.slug !== project.slug).slice(0, 3)
+  const whatsappURL = `${DIGITAL_CONTACT.whatsappURL}%20Quiero%20conversar%20sobre%20una%20solución%20similar%20a%20${encodeURIComponent(project.title)}.`
 
   return (
-    <>
-      <RefreshRouteOnSave />
-      <section className="detail-hero project-detail-hero">
-        {cover && <Image src={cover} alt={getMediaAlt(project.cover, project.title)} fill priority sizes="100vw" />}
-        <div className="detail-overlay" />
-        <div className="shell detail-hero-content">
-          <Link href="/proyectos" className="back-link"><ArrowLeft size={16} /> Proyectos</Link>
-          <span className="eyebrow">Proyecto FabrickBuild</span>
+    <div className="digital-page digital-detail-page">
+      <section className="digital-detail-hero digital-detail-hero--project">
+        <div className="digital-shell">
+          <Link href="/proyectos" className="digital-back-link"><ArrowLeft size={16} /> Proyectos</Link>
+          <span className="digital-kicker">{project.category}</span>
           <h1>{project.title}</h1>
           <p>{project.summary}</p>
-          <div className="detail-meta">
-            {project.details?.location && <span><MapPin size={16} />{project.details.location}</span>}
-            {project.details?.area && <span><Ruler size={16} />{project.details.area} m²</span>}
-            {project.details?.duration && <span><Timer size={16} />{project.details.duration}</span>}
+          <div className="digital-hero__actions">
+            <a href={whatsappURL} target="_blank" rel="noreferrer" className="digital-button digital-button--primary">
+              <MessageCircle size={18} /> Diseñar una solución similar
+            </a>
+            <Link href="/servicios" className="digital-button digital-button--secondary">
+              Ver servicios <ArrowRight size={18} />
+            </Link>
           </div>
         </div>
       </section>
-      <section className="section shell">
-        <div className="project-story">
-          <RichText data={project.content} />
+
+      <section className="digital-section">
+        <div className="digital-shell digital-project-story">
+          <article>
+            <span className="digital-kicker">EL DESAFÍO</span>
+            <h2>{project.challenge}</h2>
+          </article>
+          <article>
+            <span className="digital-kicker">LA ARQUITECTURA</span>
+            <h2>{project.solution}</h2>
+          </article>
         </div>
-        {before && after && (
-          <div className="before-after project-before-after">
-            <figure><Image src={before} alt="Estado anterior" fill sizes="50vw" /><figcaption>Antes</figcaption></figure>
-            <figure><Image src={after} alt="Resultado final" fill sizes="50vw" /><figcaption>Después</figcaption></figure>
-          </div>
-        )}
-        {Array.isArray(project.gallery) && project.gallery.length > 0 && (
-          <div className="gallery-grid">
-            {project.gallery.map((item: any, index: number) => {
-              const url = getMediaURL(item.image, 'card')
-              if (!url) return null
-              return <figure key={item.id || index}><Image src={url} alt={getMediaAlt(item.image, item.caption || project.title)} fill sizes="(max-width: 700px) 100vw, 33vw" />{item.caption && <figcaption>{item.caption}</figcaption>}</figure>
-            })}
-          </div>
-        )}
       </section>
-    </>
+
+      <section className="digital-section digital-section--contrast">
+        <div className="digital-shell digital-detail-layout">
+          <div>
+            <span className="digital-kicker">MÓDULOS PRINCIPALES</span>
+            <div className="digital-feature-grid">
+              {project.modules.map((module, index) => (
+                <div key={module}><span>{String(index + 1).padStart(2, '0')}</span><p>{module}</p></div>
+              ))}
+            </div>
+          </div>
+          <aside className="digital-detail-aside">
+            <span className="digital-kicker">STACK POSIBLE</span>
+            <div className="digital-tech-cloud">
+              {project.technologies.map((technology) => <span key={technology}>{technology}</span>)}
+            </div>
+            <div className="digital-detail-outcomes">
+              <h3>Resultado buscado</h3>
+              <p><Check size={18} /> {project.outcome}</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="digital-section">
+        <div className="digital-shell">
+          <div className="digital-section__heading">
+            <span className="digital-kicker">OTRAS ARQUITECTURAS</span>
+            <h2>La solución puede combinar módulos de distintos tipos de proyecto.</h2>
+          </div>
+          <div className="digital-related-grid">
+            {related.map((item) => (
+              <Link key={item.slug} href={`/proyectos/${item.slug}`}>
+                <span>{item.category}</span>
+                <h3>{item.title}</h3>
+                <p>{item.summary}</p>
+                <strong>Revisar proyecto <ArrowRight size={16} /></strong>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
   )
 }

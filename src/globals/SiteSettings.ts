@@ -10,7 +10,7 @@ export const SiteSettings: GlobalConfig = {
   },
   admin: {
     group: 'Diseño global',
-    description: 'Identidad, experiencia de portada, loader, consentimiento, contacto, SEO y rendimiento general.',
+    description: 'Identidad digital, experiencia de portada, loader, consentimiento, contacto, SEO y rendimiento general.',
   },
   fields: [
     {
@@ -20,7 +20,11 @@ export const SiteSettings: GlobalConfig = {
           label: 'Marca',
           fields: [
             { name: 'brandName', type: 'text', defaultValue: 'FabrickBuild', required: true },
-            { name: 'tagline', type: 'text', defaultValue: 'Construimos casas. Diseñamos soluciones.' },
+            {
+              name: 'tagline',
+              type: 'text',
+              defaultValue: 'Diseñamos experiencias. Creamos sistemas digitales.',
+            },
             {
               type: 'row',
               fields: [
@@ -39,7 +43,8 @@ export const SiteSettings: GlobalConfig = {
                 { label: 'Solo bloques de la página', value: 'blocks' },
               ],
               admin: {
-                description: 'Conserva el diseño del deployment aprobado y reproduce mediante ScrollTrigger todos los frames relacionados al Background seleccionado, sin un máximo fijo.',
+                description:
+                  'Reproduce mediante ScrollTrigger los frames relacionados al Background seleccionado y presenta los servicios digitales con una narrativa inmersiva.',
               },
             },
             {
@@ -59,7 +64,7 @@ export const SiteSettings: GlobalConfig = {
               fields: [
                 { name: 'enabled', type: 'checkbox', defaultValue: true, label: 'Activar loader global' },
                 { name: 'logo', type: 'upload', relationTo: 'media', label: 'Logo del loader' },
-                { name: 'text', type: 'text', defaultValue: 'Preparando tu experiencia' },
+                { name: 'text', type: 'text', defaultValue: 'Preparando tu experiencia digital' },
                 {
                   name: 'animation',
                   type: 'select',
@@ -73,8 +78,8 @@ export const SiteSettings: GlobalConfig = {
                 {
                   type: 'row',
                   fields: [
-                    { name: 'backgroundColor', type: 'text', defaultValue: '#10110f', label: 'Color de fondo' },
-                    { name: 'foregroundColor', type: 'text', defaultValue: '#f4c84b', label: 'Color principal' },
+                    { name: 'backgroundColor', type: 'text', defaultValue: '#070b0c', label: 'Color de fondo' },
+                    { name: 'foregroundColor', type: 'text', defaultValue: '#b8d7c5', label: 'Color principal' },
                   ],
                 },
                 {
@@ -132,11 +137,16 @@ export const SiteSettings: GlobalConfig = {
               name: 'defaultSEO',
               type: 'group',
               fields: [
-                { name: 'title', type: 'text', defaultValue: 'FabrickBuild | Construcción inteligente' },
+                {
+                  name: 'title',
+                  type: 'text',
+                  defaultValue: 'FabrickBuild | Diseño web, e-commerce, automatización e IA',
+                },
                 {
                   name: 'description',
                   type: 'textarea',
-                  defaultValue: 'Construcción, remodelación y reparación con planificación, transparencia y calidad.',
+                  defaultValue:
+                    'Creamos páginas web rápidas, e-commerce, automatizaciones, experiencias inmersivas e integraciones con IA para marcas y negocios en Chile.',
                 },
                 { name: 'image', type: 'upload', relationTo: 'media' },
               ],

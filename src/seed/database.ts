@@ -2,47 +2,47 @@ import type { Payload } from 'payload'
 
 const serviceSeed = [
   {
-    title: 'Construcción de casas',
-    slug: 'construccion-de-casas',
-    summary: 'Diseño y construcción llave en mano, desde el plano hasta la entrega.',
-    duration: '90 a 180 días',
-    featured: true
+    title: 'Diseño y desarrollo web',
+    slug: 'diseno-y-desarrollo-web',
+    summary: 'Sitios rápidos, responsivos y administrables, creados alrededor de tus objetivos comerciales.',
+    duration: '2 a 8 semanas',
+    featured: true,
   },
   {
-    title: 'Remodelaciones',
-    slug: 'remodelaciones',
-    summary: 'Renovamos cocinas, baños, ampliaciones y espacios completos.',
-    duration: 'Según alcance',
-    featured: true
+    title: 'E-commerce y conversión',
+    slug: 'ecommerce-y-conversion',
+    summary: 'Tiendas digitales, catálogos, checkout e integraciones preparadas para vender y crecer.',
+    duration: '3 a 10 semanas',
+    featured: true,
   },
   {
-    title: 'Techumbres y filtraciones',
-    slug: 'techumbres-y-filtraciones',
-    summary: 'Reparación de goteras, cubiertas, aislación y evacuación de aguas.',
-    duration: '1 a 10 días',
-    featured: true
+    title: 'Automatización e integraciones',
+    slug: 'automatizacion-e-integraciones',
+    summary: 'Conectamos formularios, CRM, pagos, mensajería, datos y operaciones repetitivas.',
+    duration: '1 a 6 semanas',
+    featured: true,
   },
   {
-    title: 'Radieres y hormigón',
-    slug: 'radieres-y-hormigon',
-    summary: 'Preparación, estabilizado, moldaje, malla y terminación de radieres.',
-    duration: '2 a 7 días',
-    featured: true
+    title: 'Experiencias 3D y motion',
+    slug: 'experiencias-3d-y-motion',
+    summary: 'Scroll cinematográfico, secuencias de frames, animación y visualización interactiva.',
+    duration: '2 a 8 semanas',
+    featured: true,
   },
   {
-    title: 'Electricidad y gasfitería',
-    slug: 'electricidad-y-gasfiteria',
-    summary: 'Instalaciones, reparaciones y normalización para viviendas y comercios.',
-    duration: '1 a 15 días',
-    featured: true
+    title: 'Inteligencia artificial y RAG',
+    slug: 'inteligencia-artificial-y-rag',
+    summary: 'Asistentes, búsqueda semántica y flujos de IA conectados a información real de tu negocio.',
+    duration: '2 a 10 semanas',
+    featured: true,
   },
   {
-    title: 'Quinchos y mueblería',
-    slug: 'quinchos-y-muebleria',
-    summary: 'Diseño y fabricación de espacios exteriores y mobiliario a medida.',
-    duration: '15 a 45 días',
-    featured: true
-  }
+    title: 'Optimización y mantenimiento',
+    slug: 'optimizacion-y-mantenimiento',
+    summary: 'Rendimiento, accesibilidad, SEO técnico, monitoreo y evolución continua del producto.',
+    duration: 'Continuo',
+    featured: true,
+  },
 ]
 
 export async function seedDatabase(payload: Payload) {
@@ -56,14 +56,15 @@ export async function seedDatabase(payload: Payload) {
         name: 'Administrador FabrickBuild',
         email: process.env.ADMIN_EMAIL,
         password: process.env.ADMIN_PASSWORD,
-        role: 'admin'
-      }
+        role: 'admin',
+      },
     })
     created.users = 1
   }
 
   const services = await payload.count({ collection: 'services' })
   const serviceDocs: Array<{ id: string | number }> = []
+
   if (services.totalDocs === 0) {
     for (const item of serviceSeed) {
       const doc = await payload.create({
@@ -71,8 +72,8 @@ export async function seedDatabase(payload: Payload) {
         draft: false,
         data: {
           ...item,
-          _status: 'published'
-        }
+          _status: 'published',
+        },
       })
       serviceDocs.push(doc)
     }
@@ -81,7 +82,7 @@ export async function seedDatabase(payload: Payload) {
     const existing = await payload.find({
       collection: 'services',
       limit: 12,
-      where: { _status: { equals: 'published' } }
+      where: { _status: { equals: 'published' } },
     })
     serviceDocs.push(...existing.docs)
   }
@@ -99,59 +100,77 @@ export async function seedDatabase(payload: Payload) {
           {
             blockType: 'hero',
             theme: 'dark',
-            eyebrow: 'Construcción inteligente en Chile',
-            heading: 'Construimos casas.',
-            highlight: 'Dios construye hogares.',
+            eyebrow: 'ESTUDIO DIGITAL INDEPENDIENTE',
+            heading: 'Diseñamos experiencias que se sienten vivas.',
+            highlight: 'Diseño · código · movimiento',
             description:
-              'Planificamos, construimos y remodelamos con información clara, seguimiento real y terminaciones responsables.',
-            primaryCTA: { label: 'Solicitar cotización', url: '#contacto' },
-            secondaryCTA: { label: 'Ver proyectos', url: '/proyectos' },
+              'Creamos páginas web, e-commerce y sistemas digitales que combinan claridad, velocidad, automatización e inteligencia artificial.',
+            primaryCTA: { label: 'Ver proyectos', url: '#proyectos' },
+            secondaryCTA: { label: 'Iniciar proyecto', url: '#contacto' },
             stats: [
-              { value: '8+', label: 'años de experiencia' },
-              { value: '360°', label: 'servicio integral' },
-              { value: '100%', label: 'trazabilidad del proyecto' }
-            ]
+              { value: '360°', label: 'experiencia digital' },
+              { value: 'Mobile', label: 'diseño primero' },
+              { value: 'CMS', label: 'control administrable' },
+            ],
           },
           {
             blockType: 'servicesGrid',
-            eyebrow: 'Servicios',
-            heading: 'Una solución para cada etapa de tu obra.',
-            intro: 'Desde una reparación puntual hasta una casa completamente nueva.',
+            eyebrow: 'Servicios digitales',
+            heading: 'Una solución conectada para cada etapa de tu producto.',
+            intro:
+              'Desde una landing rápida hasta un e-commerce, una automatización o una experiencia inmersiva completa.',
             services: serviceDocs.map((item) => item.id),
-            limit: 6
+            limit: 6,
           },
           {
             blockType: 'stats',
-            heading: 'Más claridad antes, durante y después de construir.',
+            heading: 'Estrategia, diseño y tecnología trabajando como un solo sistema.',
             items: [
-              { value: '01', label: 'Diagnóstico', description: 'Revisamos el problema y el alcance real.' },
-              { value: '02', label: 'Presupuesto', description: 'Detallamos etapas, materiales y condiciones.' },
-              { value: '03', label: 'Ejecución', description: 'Registramos avances y decisiones importantes.' },
-              { value: '04', label: 'Entrega', description: 'Validamos terminaciones y pendientes.' }
-            ]
+              {
+                value: '01',
+                label: 'Descubrimiento',
+                description: 'Entendemos el negocio, el público y la acción que debe provocar la experiencia.',
+              },
+              {
+                value: '02',
+                label: 'Diseño',
+                description: 'Ordenamos contenido, identidad, interacción y recorrido antes de desarrollar.',
+              },
+              {
+                value: '03',
+                label: 'Desarrollo',
+                description: 'Creamos una solución rápida, accesible, administrable y preparada para crecer.',
+              },
+              {
+                value: '04',
+                label: 'Evolución',
+                description: 'Medimos, optimizamos y conectamos nuevas capacidades cuando el proyecto lo necesita.',
+              },
+            ],
           },
           {
             blockType: 'cta',
-            eyebrow: 'Tu próximo proyecto',
-            heading: 'Conversemos antes de que una mala decisión se vuelva más costosa.',
+            eyebrow: 'Tu próximo producto digital',
+            heading: 'Convierte una buena idea en una experiencia clara, rápida y memorable.',
             description: 'Cuéntanos qué necesitas y organizaremos el siguiente paso.',
-            button: { label: 'Cotizar ahora', url: '#contacto' }
+            button: { label: 'Iniciar conversación', url: '#contacto' },
           },
           {
             blockType: 'contactForm',
-            eyebrow: 'Cotización',
-            heading: 'Describe tu proyecto.',
-            description: 'Completa los datos principales y te contactaremos para revisar el alcance.',
+            eyebrow: 'Nuevo proyecto',
+            heading: 'Cuéntanos qué quieres crear.',
+            description:
+              'Comparte el objetivo, el estado actual y las funciones principales. Te responderemos con una ruta clara.',
             services: serviceDocs.map((item) => item.id),
-            successMessage: 'Recibimos tu solicitud. Te contactaremos pronto.'
-          }
+            successMessage: 'Recibimos tu mensaje. Te contactaremos pronto.',
+          },
         ],
         seo: {
-          title: 'FabrickBuild | Construcción, remodelación y reparación',
+          title: 'FabrickBuild | Diseño web, e-commerce, automatización e IA',
           description:
-            'Construcción de casas, remodelaciones, radieres, techumbres, electricidad, gasfitería y soluciones integrales.'
-        }
-      }
+            'Páginas web rápidas, e-commerce, automatizaciones, experiencias inmersivas e integraciones con inteligencia artificial.',
+        },
+      },
     })
     created.pages = 1
   }
