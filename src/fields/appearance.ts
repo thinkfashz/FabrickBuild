@@ -8,8 +8,14 @@ export type AppearanceValue = {
   headingColor?: string
   bodyColor?: string
   accentColor?: string
+  fontFamily?: 'sans' | 'serif' | 'display' | 'mono'
+  textGlow?: number
   buttonColor?: string
   buttonTextColor?: string
+  buttonBorderColor?: string
+  buttonBorderWidth?: number
+  buttonRadius?: number
+  buttonSize?: 'small' | 'medium' | 'large'
   borderColor?: string
   borderWidth?: number
   cornerRadius?: number
@@ -22,6 +28,10 @@ export type AppearanceValue = {
   backgroundFit?: 'cover' | 'contain'
   overlayColor?: string
   overlayOpacity?: number
+  imageURL?: string
+  secondaryImageURL?: string
+  imageFit?: 'cover' | 'contain'
+  imageOpacity?: number
   mobileLayout?: 'stack' | 'horizontal' | 'compact'
   mobileTextAlign?: 'left' | 'center' | 'right'
   mobilePadding?: number
@@ -40,8 +50,14 @@ export const defaultAppearance: AppearanceValue = {
   headingColor: '#151515',
   bodyColor: '#4b4b4b',
   accentColor: '#f4c84b',
+  fontFamily: 'sans',
+  textGlow: 0,
   buttonColor: '#f4c84b',
   buttonTextColor: '#15130f',
+  buttonBorderColor: '#f4c84b',
+  buttonBorderWidth: 0,
+  buttonRadius: 999,
+  buttonSize: 'medium',
   borderColor: '#ffffff',
   borderWidth: 0,
   cornerRadius: 24,
@@ -53,6 +69,8 @@ export const defaultAppearance: AppearanceValue = {
   backgroundFit: 'cover',
   overlayColor: '#10110f',
   overlayOpacity: 0,
+  imageFit: 'cover',
+  imageOpacity: 100,
   mobileLayout: 'stack',
   mobileTextAlign: 'left',
   mobilePadding: 22,
@@ -69,11 +87,9 @@ export const appearanceField = (name = 'appearance', label = 'Apariencia y respo
   label,
   defaultValue: defaultAppearance,
   admin: {
-    components: {
-      Field: '@/components/admin/AppearanceEditor',
-    },
+    hidden: true,
     description:
-      'Controla fondo, transparencia, blur, colores, tamaños, espaciado, comportamiento móvil y animación sin escribir CSS.',
+      'Este valor se controla desde el Editor visual global de la colección Páginas.',
   },
 })
 
