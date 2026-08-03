@@ -30,6 +30,7 @@ const safeColor = (value: unknown, fallback: string) =>
 const safeBackgroundURL = (value: unknown) => {
   if (typeof value !== 'string') return ''
   const normalized = value.trim()
+  if (/^data:image\/(?:png|jpe?g|webp|gif|avif);base64,/i.test(normalized)) return normalized
   if (/^(https?:\/\/|\/)/i.test(normalized)) return normalized.replace(/["'()]/g, '')
   return ''
 }
@@ -61,10 +62,6 @@ function backgroundPoster(background: Doc | null): string | null {
   )
 }
 
-/**
- * Resuelve la secuencia desde el Background relacionado en Payload.
- * No limita la cantidad: reproduce todos los frames generados y relacionados.
- */
 export function getPortfolioFrameSequence(block: Doc): FrameSequence | null {
   const appearance = asDoc(block.appearance) || {}
   const candidates = [
@@ -108,24 +105,34 @@ export function normalizeAppearance(value: unknown): Required<AppearanceValue> {
     headingColor: safeColor(merged.headingColor, '#151515'),
     bodyColor: safeColor(merged.bodyColor, '#4b4b4b'),
     accentColor: safeColor(merged.accentColor, '#f4c84b'),
+    fontFamily: merged.fontFamily || 'sans',
+    textGlow: clamp(merged.textGlow, 0, 100, 0),
     buttonColor: safeColor(merged.buttonColor, '#f4c84b'),
     buttonTextColor: safeColor(merged.buttonTextColor, '#15130f'),
+    buttonBorderColor: safeColor(merged.buttonBorderColor, merged.buttonColor || '#f4c84b'),
+    buttonBorderWidth: clamp(merged.buttonBorderWidth, 0, 6, 0),
+    buttonRadius: clamp(merged.buttonRadius, 0, 999, 999),
+    buttonSize: merged.buttonSize || 'medium',
     borderColor: safeColor(merged.borderColor, '#ffffff'),
-    borderWidth: clamp(merged.borderWidth, 0, 6, 0),
-    cornerRadius: clamp(merged.cornerRadius, 0, 64, 24),
+    borderWidth: clamp(merged.borderWidth, 0, 8, 0),
+    cornerRadius: clamp(merged.cornerRadius, 0, 72, 24),
     contentWidth: merged.contentWidth || 'normal',
     textAlign: merged.textAlign || 'left',
-    paddingTop: clamp(merged.paddingTop, 0, 240, 96),
-    paddingBottom: clamp(merged.paddingBottom, 0, 240, 96),
-    fontScale: clamp(merged.fontScale, 75, 145, 100),
+    paddingTop: clamp(merged.paddingTop, 0, 260, 96),
+    paddingBottom: clamp(merged.paddingBottom, 0, 260, 96),
+    fontScale: clamp(merged.fontScale, 70, 160, 100),
     backgroundURL: safeBackgroundURL(merged.backgroundURL),
     backgroundFit: merged.backgroundFit || 'cover',
     overlayColor: safeColor(merged.overlayColor, '#10110f'),
     overlayOpacity: clamp(merged.overlayOpacity, 0, 90, 0),
+    imageURL: safeBackgroundURL(merged.imageURL),
+    secondaryImageURL: safeBackgroundURL(merged.secondaryImageURL),
+    imageFit: merged.imageFit || 'cover',
+    imageOpacity: clamp(merged.imageOpacity, 0, 100, 100),
     mobileLayout: merged.mobileLayout || 'stack',
     mobileTextAlign: merged.mobileTextAlign || 'left',
     mobilePadding: clamp(merged.mobilePadding, 12, 48, 22),
-    mobileHeadingScale: clamp(merged.mobileHeadingScale, 60, 120, 86),
+    mobileHeadingScale: clamp(merged.mobileHeadingScale, 55, 130, 86),
     hideOnMobile: Boolean(merged.hideOnMobile),
     animationPreset: merged.animationPreset || 'fade-up',
     animationDuration: clamp(merged.animationDuration, 150, 1800, 700),
@@ -141,6 +148,8 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     `cms-width--${appearance.contentWidth}`,
     `cms-align--${appearance.textAlign}`,
     `cms-mobile--${appearance.mobileLayout}`,
+    `cms-font--${appearance.fontFamily}`,
+    `cms-button--${appearance.buttonSize}`,
     appearance.hideOnMobile ? 'cms-hide-mobile' : '',
     extraClassName,
   ].filter(Boolean).join(' ')
@@ -153,8 +162,12 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     '--cms-heading': appearance.headingColor,
     '--cms-body': appearance.bodyColor,
     '--cms-accent': appearance.accentColor,
+    '--cms-text-glow': `${appearance.textGlow / 8}px`,
     '--cms-button': appearance.buttonColor,
     '--cms-button-text': appearance.buttonTextColor,
+    '--cms-button-border': appearance.buttonBorderColor,
+    '--cms-button-border-width': `${appearance.buttonBorderWidth}px`,
+    '--cms-button-radius': `${appearance.buttonRadius}px`,
     '--cms-border': appearance.borderColor,
     '--cms-border-width': `${appearance.borderWidth}px`,
     '--cms-radius': `${appearance.cornerRadius}px`,
@@ -171,6 +184,8 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     '--cms-mobile-h3-max': `${(2.1 * mobileScale).toFixed(2)}rem`,
     '--cms-mobile-align': appearance.mobileTextAlign,
     '--cms-background-fit': appearance.backgroundFit,
+    '--cms-image-fit': appearance.imageFit,
+    '--cms-image-opacity': `${appearance.imageOpacity / 100}`,
   }
 
   if (appearance.backgroundURL) {
@@ -180,7 +195,6 @@ export function appearanceProps(value: unknown, extraClassName = '') {
   return { appearance, className, style }
 }
 
-/** Variables de compatibilidad visual usadas por el preset aprobado. */
 export function portfolioAppearanceProps(block: Doc) {
   const appearance = normalizeAppearance(block.appearance)
   const style: CSSVars = {
@@ -189,11 +203,14 @@ export function portfolioAppearanceProps(block: Doc) {
     '--fabrick-copy': appearance.bodyColor,
     '--fabrick-button-bg': appearance.buttonColor,
     '--fabrick-button-text': appearance.buttonTextColor,
+    '--fabrick-button-border': appearance.buttonBorderColor,
+    '--fabrick-button-border-width': `${appearance.buttonBorderWidth}px`,
+    '--fabrick-button-radius': `${appearance.buttonRadius}px`,
     '--fabrick-font-scale': appearance.fontScale / 100,
     '--fabrick-radius': `${appearance.cornerRadius}px`,
   }
   return {
-    className: `portfolio-showcase fabrick-block fabrick-width-${appearance.contentWidth}`,
+    className: `portfolio-showcase fabrick-block fabrick-width-${appearance.contentWidth} cms-button--${appearance.buttonSize}`,
     style,
   }
 }
