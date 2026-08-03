@@ -43,15 +43,26 @@ if (!isAndroid) {
   }
 }
 
-const deploymentURL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined
+const vercelURL = (value?: string) => value ? `https://${value}` : undefined
+const deploymentURL = vercelURL(process.env.VERCEL_URL)
+const branchURL = vercelURL(process.env.VERCEL_BRANCH_URL)
+const productionURL = vercelURL(process.env.VERCEL_PROJECT_PRODUCTION_URL)
+const configuredServerURL = process.env.NEXT_PUBLIC_SERVER_URL
+const vercelCanonicalURL = process.env.VERCEL_ENV === 'production'
+  ? configuredServerURL || productionURL || deploymentURL || branchURL
+  : branchURL || deploymentURL || configuredServerURL || productionURL
 const serverURL =
-  process.env.NEXT_PUBLIC_SERVER_URL ||
-  deploymentURL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'http://localhost:3000')
+  (isVercel ? vercelCanonicalURL : configuredServerURL) ||
+  'http://localhost:3000'
 const allowedOrigins = Array.from(
-  new Set([serverURL, deploymentURL, 'http://localhost:3000'].filter(Boolean) as string[]),
+  new Set([
+    serverURL,
+    configuredServerURL,
+    deploymentURL,
+    branchURL,
+    productionURL,
+    'http://localhost:3000',
+  ].filter(Boolean) as string[]),
 )
 
 function normalizePostgresSSLMode(connectionString: string): string {
