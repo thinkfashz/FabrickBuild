@@ -20,12 +20,7 @@ import {
   Testimonials,
 } from '@/blocks'
 
-const pagePath = (data: Record<string, unknown>) => {
-  const slug = typeof data.slug === 'string' ? data.slug : 'home'
-  return slug === 'home' ? '/' : `/${slug}`
-}
-
-const getLivePreviewURL = ({ data }: { data: Record<string, unknown> }) => pagePath(data)
+const getLivePreviewURL = () => '/visual-editor-preview'
 
 const getPreviewURL = (data: Record<string, unknown>) => {
   const slug = typeof data.slug === 'string' ? data.slug : 'home'
@@ -66,13 +61,20 @@ export const Pages: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', '_status', 'updatedAt'],
-    livePreview: { url: getLivePreviewURL },
+    livePreview: {
+      url: getLivePreviewURL,
+      breakpoints: [
+        { label: 'Móvil', name: 'mobile', width: 390, height: 844 },
+        { label: 'Tablet', name: 'tablet', width: 768, height: 1024 },
+        { label: 'Escritorio', name: 'desktop', width: 1440, height: 900 },
+      ],
+    },
     preview: (data) => getPreviewURL(data),
     components: {
       beforeListTable: ['@/components/admin/PagesOverview'],
     },
     description:
-      'Editor oficial de páginas. Usa las miniaturas reales de la colección o abre Live Preview para comprobar móvil, tablet y escritorio antes de publicar.',
+      'Editor visual oficial. Pulsa el contenido dentro del canvas para modificar texto, botones, imágenes, colores, tamaño, bordes, opacidad, responsive y JSON sin cargar la portada cinematográfica completa dentro del admin.',
   },
   versions: {
     drafts: {
@@ -86,24 +88,26 @@ export const Pages: CollectionConfig = {
       type: 'tabs',
       tabs: [
         {
-          label: 'Contenido',
+          label: 'Editor visual',
           fields: [
-            { name: 'title', type: 'text', required: true },
+            { name: 'title', type: 'text', required: true, label: 'Nombre de la página' },
             {
               name: 'layout',
               type: 'blocks',
               required: true,
               blocks: pageBlocks,
               admin: {
-                initCollapsed: true,
+                components: {
+                  Field: '@/components/admin/PayloadVisualEditor',
+                },
                 description:
-                  'Portfolio cinematográfico es el preset de fábrica. Cada bloque conserva su propio panel de apariencia y responsive.',
+                  'Un solo editor global conectado al borrador de Payload. Incluye copia local y exportación JSON para continuar diseñando aunque la base de datos no esté disponible.',
               },
             },
           ],
         },
         {
-          label: 'Diseño de página',
+          label: 'Diseño avanzado',
           fields: [
             appearanceField('pageAppearance', 'Apariencia general de la página'),
             {
