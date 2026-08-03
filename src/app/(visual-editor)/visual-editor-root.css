@@ -1,0 +1,183 @@
+.visual-editor-root {
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  color: #f4f5f2;
+  background: #080b0c;
+}
+
+.visual-editor-root .visual-editor-page {
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #080b0c;
+}
+
+.visual-editor-page__content {
+  min-height: 100dvh;
+}
+
+.visual-editor-block {
+  position: relative;
+  isolation: isolate;
+  cursor: pointer;
+  outline: 0 solid transparent;
+  outline-offset: -4px;
+  transition: outline-color .18s ease, filter .18s ease;
+}
+
+.visual-editor-block:hover {
+  outline: 2px solid rgba(244, 200, 75, .62);
+}
+
+.visual-editor-block--selected {
+  z-index: 4;
+  outline: 3px solid #f4c84b;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6);
+}
+
+.visual-editor-block__badge {
+  position: absolute;
+  z-index: 30;
+  top: 10px;
+  left: 10px;
+  max-width: calc(100% - 20px);
+  padding: 6px 9px;
+  overflow: hidden;
+  color: #111;
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 999px;
+  background: #f4c84b;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+  font: 800 10px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  translate: 0 -4px;
+  transition: opacity .18s ease, translate .18s ease;
+  pointer-events: none;
+}
+
+.visual-editor-block:hover .visual-editor-block__badge,
+.visual-editor-block--selected .visual-editor-block__badge {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.visual-editor-root a,
+.visual-editor-root button {
+  pointer-events: none;
+}
+
+.visual-editor-root .hero {
+  min-height: min(860px, 100svh);
+}
+
+.visual-editor-root .hero-background {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background-position: center;
+  background-size: cover;
+}
+
+.visual-editor-root .hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: linear-gradient(90deg, rgba(4, 7, 8, .9), rgba(4, 7, 8, .38) 58%, rgba(4, 7, 8, .62));
+}
+
+.visual-editor-root .portfolio-experience-shell,
+.visual-editor-root .portfolio-hero,
+.visual-editor-root .portfolio-project-list {
+  position: relative;
+}
+
+.visual-editor-root .portfolio-hero {
+  min-height: min(900px, 100svh);
+  display: grid;
+  align-content: center;
+  padding: clamp(82px, 12vw, 180px) clamp(24px, 8vw, 120px);
+  background:
+    radial-gradient(circle at 75% 25%, rgba(244, 200, 75, .16), transparent 38%),
+    linear-gradient(145deg, #080b0c, #13191b);
+}
+
+.visual-editor-root .portfolio-hero h1 {
+  max-width: 980px;
+  margin: 16px 0;
+  font-size: clamp(48px, 8vw, 124px);
+  line-height: .94;
+}
+
+.visual-editor-root .portfolio-hero h1 em {
+  display: block;
+  color: #f4c84b;
+  font-size: .48em;
+  font-style: normal;
+  line-height: 1.2;
+}
+
+.visual-editor-root .portfolio-hero > p {
+  max-width: 650px;
+  font-size: clamp(16px, 2vw, 24px);
+  line-height: 1.6;
+}
+
+.visual-editor-root .portfolio-project-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  padding: clamp(36px, 6vw, 90px);
+  background: #0d1112;
+}
+
+.visual-editor-root .live-component-card {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 28px;
+  border: 1px dashed rgba(244, 200, 75, .5);
+  border-radius: 20px;
+  background: rgba(244, 200, 75, .06);
+}
+
+.visual-editor-root .content-media img,
+.visual-editor-root .before-after img,
+.visual-editor-root .card-media img,
+.visual-editor-root .project-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--cms-image-fit, cover);
+  opacity: var(--cms-image-opacity, 1);
+}
+
+@media (max-width: 760px) {
+  .visual-editor-block__badge {
+    top: 7px;
+    left: 7px;
+    font-size: 8px;
+  }
+
+  .visual-editor-root .hero {
+    min-height: 780px;
+  }
+
+  .visual-editor-root .portfolio-hero {
+    min-height: 820px;
+    padding-inline: 22px;
+  }
+
+  .visual-editor-root .portfolio-project-list {
+    grid-template-columns: 1fr;
+    padding-inline: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visual-editor-block,
+  .visual-editor-block__badge {
+    transition: none;
+  }
+}
