@@ -1,7 +1,7 @@
 'use client'
 
 import { useField } from '@payloadcms/ui'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 
 import type { AppearanceValue } from '@/fields/appearance'
 import { normalizeEditorPage, type EditorBlock, type EditorPage } from '@/lib/visual-editor'
@@ -26,6 +26,16 @@ export default function PayloadVisualEditor({ path = 'layout', readOnly }: Props
       ? pageAppearanceField.value
       : {},
   }), [layoutField.value, pageAppearanceField.value, slugField.value, titleField.value])
+
+  useEffect(() => {
+    if (readOnly) return
+    if (!Array.isArray(layoutField.value) || layoutField.value.length === 0) {
+      layoutField.setValue(page.layout)
+    }
+    if (!pageAppearanceField.value || typeof pageAppearanceField.value !== 'object') {
+      pageAppearanceField.setValue(page.pageAppearance)
+    }
+  }, [layoutField, page, pageAppearanceField, readOnly])
 
   const handleChange = useCallback((next: EditorPage) => {
     if (readOnly) return
