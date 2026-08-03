@@ -2,7 +2,7 @@
 
 import { useLivePreview } from '@payloadcms/live-preview-react'
 import { ArrowRight, Check, Code2, Layers3 } from 'lucide-react'
-import type { CSSProperties, MouseEvent, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { appearanceProps, normalizeAppearance } from '@/lib/appearance'
@@ -52,19 +52,38 @@ function Editable({
   children: ReactNode
   className?: string
 }) {
-  const select = (event: MouseEvent<HTMLElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
+  const sendSelection = () => {
     window.parent.postMessage(
       { type: 'fabrick-editor:select', blockId: block.id, blockIndex: index, fieldPath: path },
       '*',
     )
   }
 
+  const select = (event: MouseEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    sendSelection()
+  }
+
+  const selectWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    event.stopPropagation()
+    sendSelection()
+  }
+
   return (
-    <span className={className} data-editor-field={path} onClick={select} role="button" tabIndex={0}>
+    <div
+      className={className}
+      data-editor-field={path}
+      onClick={select}
+      onKeyDown={selectWithKeyboard}
+      role="button"
+      tabIndex={0}
+      style={{ display: 'contents' }}
+    >
       {children}
-    </span>
+    </div>
   )
 }
 
@@ -119,7 +138,10 @@ function LiveBlock({ block, index, selected }: { block: EditorBlock; index: numb
   const secondaryImageOverride = appearance.secondaryImageURL || undefined
 
   switch (block.blockType) {
-    case 'portfolioShowcase':
+    case 'portfolioShowcase': {
+      const projects: Doc[] = docs(block.projects).length
+        ? docs(block.projects)
+        : [{ title: 'Proyecto', description: 'Añade proyectos desde el inspector.' }]
       return (
         <BlockFrame block={block} index={index} selected={selected}>
           <section className="portfolio-experience-shell" style={presentation.style as CSSProperties}>
@@ -134,7 +156,7 @@ function LiveBlock({ block, index, selected }: { block: EditorBlock; index: numb
               </div>
             </div>
             <div className="portfolio-project-list">
-              {(docs(block.projects).length ? docs(block.projects) : [{ title: 'Proyecto', description: 'Añade proyectos desde el inspector.' }]).map((project, projectIndex) => (
+              {projects.map((project, projectIndex) => (
                 <article className="project-card" key={project.id || projectIndex}>
                   <div className="project-media">
                     <PreviewImage value={project.imageURL || project.image} alt={project.title || 'Proyecto'} />
@@ -147,6 +169,7 @@ function LiveBlock({ block, index, selected }: { block: EditorBlock; index: numb
           </section>
         </BlockFrame>
       )
+    }
 
     case 'hero': {
       const background = appearance.backgroundURL || block.backgroundURL || mediaURL(block.media)
@@ -184,17 +207,18 @@ function LiveBlock({ block, index, selected }: { block: EditorBlock; index: numb
 
     case 'servicesGrid': {
       const items = docs(block.services)
-      const placeholders = Array.from({ length: Math.min(Number(block.limit) || 3, 6) }, (_, itemIndex) => ({
+      const placeholders: Doc[] = Array.from({ length: Math.min(Number(block.limit) || 3, 6) }, (_, itemIndex) => ({
         id: itemIndex,
         title: `Servicio ${itemIndex + 1}`,
         summary: 'El contenido publicado aparecerá aquí.',
       }))
+      const cards: Doc[] = items.length ? items : placeholders
       return (
         <BlockFrame block={block} index={index} selected={selected}>
           <section className={`${presentation.className} section`} style={presentation.style as CSSProperties}>
             <div className="shell"><SectionHeading block={block} index={index} />
               <div className="service-grid">
-                {(items.length ? items : placeholders).map((item, itemIndex) => (
+                {cards.map((item, itemIndex) => (
                   <article className="service-card" key={item.id || itemIndex}>
                     <div className="card-media"><PreviewImage value={item.cover} alt={item.title || 'Servicio'} /></div>
                     <div className="card-body"><span className="card-index">{String(itemIndex + 1).padStart(2, '0')}</span><h3>{item.title}</h3><p>{item.summary}</p></div>
@@ -209,17 +233,18 @@ function LiveBlock({ block, index, selected }: { block: EditorBlock; index: numb
 
     case 'projectsGrid': {
       const items = docs(block.projects)
-      const placeholders = Array.from({ length: Math.min(Number(block.limit) || 2, 4) }, (_, itemIndex) => ({
+      const placeholders: Doc[] = Array.from({ length: Math.min(Number(block.limit) || 2, 4) }, (_, itemIndex) => ({
         id: itemIndex,
         title: `Proyecto ${itemIndex + 1}`,
         summary: 'Proyecto relacionado desde Payload.',
       }))
+      const cards: Doc[] = items.length ? items : placeholders
       return (
         <BlockFrame block={block} index={index} selected={selected}>
           <section className={`${presentation.className} section section-dark`} style={presentation.style as CSSProperties}>
             <div className="shell"><SectionHeading block={block} index={index} />
               <div className="project-grid">
-                {(items.length ? items : placeholders).map((item, itemIndex) => (
+                {cards.map((item, itemIndex) => (
                   <article className="project-card" key={item.id || itemIndex}>
                     <div className="project-media"><PreviewImage value={item.cover} alt={item.title || 'Proyecto'} /><span>Proyecto</span></div>
                     <div className="project-info"><div><h3>{item.title}</h3><p>{item.summary}</p></div><ArrowRight /></div>
@@ -271,13 +296,15 @@ function LiveBlock({ block, index, selected }: { block: EditorBlock; index: numb
       )
 
     case 'testimonials': {
-      const items = docs(block.items)
+      const items: Doc[] = docs(block.items).length
+        ? docs(block.items)
+        : [{ name: 'Cliente', quote: 'El testimonio se verá aquí.', rating: 5 }]
       return (
         <BlockFrame block={block} index={index} selected={selected}>
           <section className={`${presentation.className} section testimonials-section`} style={presentation.style as CSSProperties}>
             <div className="shell"><SectionHeading block={block} index={index} />
               <div className="testimonial-grid">
-                {(items.length ? items : [{ name: 'Cliente', quote: 'El testimonio se verá aquí.', rating: 5 }]).map((item, itemIndex) => (
+                {items.map((item, itemIndex) => (
                   <article key={item.id || itemIndex}><div className="stars">{'★★★★★'.slice(0, Number(item.rating) || 5)}</div><blockquote>“{item.quote}”</blockquote><strong>{item.name}</strong><span>{item.role}</span></article>
                 ))}
               </div>
