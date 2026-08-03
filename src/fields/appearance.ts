@@ -63,6 +63,20 @@ export const defaultAppearance: AppearanceValue = {
   animationDelay: 0,
 }
 
+const blockGroups: Record<string, string> = {
+  portfolioShowcase: 'Experiencias',
+  hero: 'Portadas',
+  servicesGrid: 'Contenido dinámico',
+  projectsGrid: 'Contenido dinámico',
+  content: 'Contenido editorial',
+  stats: 'Prueba y confianza',
+  testimonials: 'Prueba y confianza',
+  beforeAfter: 'Prueba y confianza',
+  cta: 'Conversión',
+  contactForm: 'Conversión',
+  reusableComponent: 'Componentes',
+}
+
 export const appearanceField = (name = 'appearance', label = 'Apariencia y responsive'): Field => ({
   name,
   type: 'json',
@@ -79,5 +93,33 @@ export const appearanceField = (name = 'appearance', label = 'Apariencia y respo
 
 export const withAppearance = (block: Block): Block => ({
   ...block,
-  fields: [...block.fields, appearanceField()],
+  admin: {
+    ...(block.admin || {}),
+    group: blockGroups[block.slug] || 'Secciones',
+    disableBlockName: false,
+  },
+  fields: [
+    {
+      name: 'editorGuide',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/components/admin/BlockEditorGuide',
+        },
+      },
+    },
+    {
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'Contenido',
+          fields: block.fields,
+        },
+        {
+          label: 'Diseño, móvil y movimiento',
+          fields: [appearanceField()],
+        },
+      ],
+    },
+  ],
 })

@@ -1,4 +1,4 @@
-import { Blocks, PanelsTopLeft, Settings2, ShieldCheck } from 'lucide-react'
+import { Blocks, FilePenLine, Settings2, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AIWorkspaceBar() {
@@ -6,11 +6,11 @@ export default function AIWorkspaceBar() {
     <nav className="ai-workspace-bar" aria-label="Herramientas del estudio de IA">
       <div>
         <span className="studio-pill studio-pill-ok"><ShieldCheck size={13} /> Sesión protegida</span>
-        <p>Genera en el chat y termina el diseño en el editor visual antes de guardar.</p>
+        <p>Genera propuestas aquí y termina la página en el editor oficial de Payload, con borradores y Live Preview.</p>
       </div>
       <div className="ai-workspace-actions">
-        <Link className="studio-button studio-button-primary" href="/studio/editor">
-          <PanelsTopLeft size={16} /> Editor visual
+        <Link className="studio-button studio-button-primary" href="/admin/collections/pages">
+          <FilePenLine size={16} /> Editor de páginas
         </Link>
         <Link className="studio-button" href="/studio/integraciones">
           <Settings2 size={16} /> Proveedores

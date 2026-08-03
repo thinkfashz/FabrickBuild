@@ -35,6 +35,20 @@ const nextConfig = {
   },
   poweredByHeader: false,
   compress: true,
+  async redirects() {
+    return [
+      {
+        source: '/studio/editor',
+        destination: '/admin/collections/pages',
+        permanent: true,
+      },
+      {
+        source: '/studio/editor/:path*',
+        destination: '/admin/collections/pages',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       { source: '/frames/:path*', headers: publicMediaHeaders },

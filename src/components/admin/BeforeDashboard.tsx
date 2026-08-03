@@ -66,11 +66,11 @@ export default function BeforeDashboard() {
         FABRICKBUILD / CONTROL
       </p>
       <h2 style={{ margin: '8px 0 10px', fontSize: 'clamp(24px, 5vw, 32px)' }}>
-        Administra la obra digital.
+        Administra el producto digital.
       </h2>
       <p style={{ margin: 0, maxWidth: 820, lineHeight: 1.6 }}>
-        Edita páginas, construye componentes reutilizables, conecta proveedores de IA, publica
-        proyectos y controla el contenido desde una interfaz preparada para móvil y escritorio.
+        Edita páginas desde un solo constructor nativo, administra multimedia, conecta proveedores
+        y publica cambios con borradores, historial y Live Preview.
       </p>
 
       <div
@@ -81,16 +81,16 @@ export default function BeforeDashboard() {
           marginTop: 18,
         }}
       >
+        <a href="/admin/collections/pages" style={linkStyle}>
+          <strong>Editor oficial de páginas →</strong>
+          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
+            Ordena bloques, edita contenido, diseño, responsive y SEO desde Payload.
+          </small>
+        </a>
         <a href="/studio/ia" style={linkStyle}>
           <strong>Chat y propuestas de IA →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Chat multi-modelo, razonamiento compatible y dos propuestas antes de modificar.
-          </small>
-        </a>
-        <a href="/studio/editor" style={linkStyle}>
-          <strong>Editor visual en vivo →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Selecciona, mueve, duplica, modifica o elimina bloques antes de guardar.
+            Genera ideas y propuestas que después puedes aplicar en el editor de Payload.
           </small>
         </a>
         <a href="/studio/integraciones" style={linkStyle}>

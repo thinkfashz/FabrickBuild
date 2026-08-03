@@ -1,5 +1,5 @@
 import config from '@payload-config'
-import { Bot, Boxes, ExternalLink, Gauge, PanelsTopLeft, Settings2 } from 'lucide-react'
+import { Bot, Boxes, ExternalLink, FilePenLine, Gauge, Settings2 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
@@ -11,7 +11,6 @@ import './studio.css'
 import './studio-motion.css'
 import './chat-enhancements.css'
 import './vault.css'
-import './builder.css'
 
 export const metadata: Metadata = {
   title: 'FabrickBuild AI Studio',
@@ -34,7 +33,7 @@ export default async function StudioLayout({ children }: { children: ReactNode }
         </Link>
         <nav className="studio-nav" aria-label="Navegación del estudio">
           <Link href="/studio/ia"><Bot size={18} /><span>Chat y propuestas</span></Link>
-          <Link href="/studio/editor"><PanelsTopLeft size={18} /><span>Editor visual</span></Link>
+          <Link href="/admin/collections/pages"><FilePenLine size={18} /><span>Páginas en Payload</span></Link>
           <Link href="/studio/integraciones"><Settings2 size={18} /><span>Integraciones</span></Link>
           <Link href="/admin"><Gauge size={18} /><span>CMS principal</span></Link>
           <Link href="/" target="_blank"><ExternalLink size={18} /><span>Ver sitio</span></Link>
@@ -52,7 +51,7 @@ export default async function StudioLayout({ children }: { children: ReactNode }
           </Link>
           <div className="studio-mobile-links">
             <Link href="/studio/ia" aria-label="Chat"><Bot size={19} /></Link>
-            <Link href="/studio/editor" aria-label="Editor visual"><PanelsTopLeft size={19} /></Link>
+            <Link href="/admin/collections/pages" aria-label="Editar páginas en Payload"><FilePenLine size={19} /></Link>
             <Link href="/studio/integraciones" aria-label="Integraciones"><Settings2 size={19} /></Link>
             <Link href="/admin" aria-label="CMS"><Gauge size={19} /></Link>
           </div>
