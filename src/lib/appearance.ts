@@ -35,6 +35,7 @@ const safeBackgroundURL = (value: unknown) => {
   return ''
 }
 
+const cssURL = (value: string) => `url("${value.replace(/["'()]/g, '')}")`
 const asDoc = (value: unknown): Doc | null => value && typeof value === 'object' ? value as Doc : null
 
 function frameURLs(value: unknown): string[] {
@@ -186,10 +187,21 @@ export function appearanceProps(value: unknown, extraClassName = '') {
     '--cms-background-fit': appearance.backgroundFit,
     '--cms-image-fit': appearance.imageFit,
     '--cms-image-opacity': `${appearance.imageOpacity / 100}`,
+    '--cms-original-image-opacity': appearance.imageURL || appearance.secondaryImageURL ? '0' : '1',
   }
 
   if (appearance.backgroundURL) {
-    style.backgroundImage = `linear-gradient(color-mix(in srgb, ${appearance.overlayColor} ${appearance.overlayOpacity}%, transparent), color-mix(in srgb, ${appearance.overlayColor} ${appearance.overlayOpacity}%, transparent)), url("${appearance.backgroundURL}")`
+    style.backgroundImage = `linear-gradient(color-mix(in srgb, ${appearance.overlayColor} ${appearance.overlayOpacity}%, transparent), color-mix(in srgb, ${appearance.overlayColor} ${appearance.overlayOpacity}%, transparent)), ${cssURL(appearance.backgroundURL)}`
+  }
+
+  if (appearance.imageURL) {
+    style['--cms-image-url'] = cssURL(appearance.imageURL)
+    style['--cms-image-content'] = '""'
+  }
+
+  if (appearance.secondaryImageURL) {
+    style['--cms-secondary-image-url'] = cssURL(appearance.secondaryImageURL)
+    style['--cms-secondary-image-content'] = '""'
   }
 
   return { appearance, className, style }
