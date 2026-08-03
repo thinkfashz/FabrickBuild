@@ -54,23 +54,24 @@ export default function BeforeDashboard() {
     <section
       style={{
         border: '1px solid var(--theme-elevation-150)',
-        borderRadius: 14,
+        borderRadius: 16,
         marginBottom: 24,
-        padding: 'clamp(16px, 4vw, 26px)',
+        padding: 'clamp(16px, 4vw, 28px)',
         background:
-          'linear-gradient(135deg, var(--theme-elevation-50), var(--theme-elevation-100))',
+          'linear-gradient(135deg, color-mix(in srgb, var(--theme-elevation-50) 90%, #e4a400 10%), var(--theme-elevation-100))',
         overflow: 'hidden',
       }}
     >
       <p style={{ margin: 0, opacity: 0.65, fontSize: 12, letterSpacing: '.14em' }}>
         FABRICKBUILD / CONTROL
       </p>
-      <h2 style={{ margin: '8px 0 10px', fontSize: 'clamp(24px, 5vw, 32px)' }}>
-        Administra la obra digital.
+      <h2 style={{ margin: '8px 0 10px', fontSize: 'clamp(24px, 5vw, 34px)' }}>
+        Un solo editor para todo el sitio.
       </h2>
-      <p style={{ margin: 0, maxWidth: 820, lineHeight: 1.6 }}>
-        Edita páginas, construye componentes reutilizables, conecta proveedores de IA, publica
-        proyectos y controla el contenido desde una interfaz preparada para móvil y escritorio.
+      <p style={{ margin: 0, maxWidth: 860, lineHeight: 1.6 }}>
+        Payload es el editor oficial y global de FabrickBuild. Desde la colección Páginas puedes
+        ordenar bloques, cambiar textos, imágenes, fondos, responsive, SEO, borradores y publicación
+        sin salir del mismo documento.
       </p>
 
       <div
@@ -81,28 +82,28 @@ export default function BeforeDashboard() {
           marginTop: 18,
         }}
       >
+        <a href="/admin/collections/pages" style={{ ...linkStyle, borderColor: 'color-mix(in srgb, var(--theme-elevation-150) 55%, #e4a400 45%)', background: 'color-mix(in srgb, var(--theme-elevation-50) 88%, #e4a400 12%)' }}>
+          <strong>Editor global de Páginas →</strong>
+          <small style={{ opacity: 0.72, lineHeight: 1.45 }}>
+            Único lugar para editar, previsualizar, guardar borradores y publicar.
+          </small>
+        </a>
         <a href="/studio/ia" style={linkStyle}>
           <strong>Chat y propuestas de IA →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Chat multi-modelo, razonamiento compatible y dos propuestas antes de modificar.
-          </small>
-        </a>
-        <a href="/studio/editor" style={linkStyle}>
-          <strong>Editor visual en vivo →</strong>
-          <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Selecciona, mueve, duplica, modifica o elimina bloques antes de guardar.
+            Genera ideas y cambios; la edición final se realiza siempre en Payload.
           </small>
         </a>
         <a href="/studio/integraciones" style={linkStyle}>
           <strong>Bóveda de integraciones →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Selecciona proveedor, pega la clave y conecta automáticamente con cifrado por registro.
+            Configura proveedores y credenciales cifradas sin mezclar la edición de páginas.
           </small>
         </a>
         <a href="/admin/collections/reusable-components" style={linkStyle}>
           <strong>Componentes reutilizables →</strong>
           <small style={{ opacity: 0.68, lineHeight: 1.45 }}>
-            Biblioteca versionada de secciones creadas manualmente o con IA.
+            Biblioteca versionada de secciones disponibles dentro del editor oficial.
           </small>
         </a>
       </div>
@@ -118,9 +119,9 @@ export default function BeforeDashboard() {
             minHeight: 42,
             padding: '11px 15px',
             background: 'var(--theme-success-500)',
-            color: '#fff',
+            color: '#17140e',
             cursor: loading ? 'wait' : 'pointer',
-            fontWeight: 700,
+            fontWeight: 800,
           }}
         >
           {loading ? 'Verificando…' : 'Verificar sistema'}

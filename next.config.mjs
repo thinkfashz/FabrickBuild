@@ -35,12 +35,23 @@ const nextConfig = {
   },
   poweredByHeader: false,
   compress: true,
+  async redirects() {
+    return [
+      {
+        source: '/studio/editor',
+        destination: '/admin/collections/pages',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       { source: '/frames/:path*', headers: publicMediaHeaders },
       { source: '/api/blob-frame/:path*', headers: publicMediaHeaders },
       { source: '/api/media/file/:path*', headers: publicMediaHeaders },
       { source: '/preview-page/:path*', headers: previewHeaders },
+      { source: '/visual-editor-preview', headers: previewHeaders },
+      { source: '/editor-local', headers: privateHeaders },
       { source: '/studio/:path*', headers: privateHeaders },
       { source: '/api/public/leads', headers: privateHeaders },
       { source: '/api/integrations/:path*', headers: privateHeaders },
