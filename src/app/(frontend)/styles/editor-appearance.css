@@ -1,0 +1,102 @@
+.cms-surface {
+  font-size: var(--cms-font-size, 1rem);
+}
+
+.cms-surface h1,
+.cms-surface h2,
+.cms-surface h3 {
+  color: var(--cms-heading, inherit);
+  text-shadow: 0 0 var(--cms-text-glow, 0) color-mix(in srgb, var(--cms-heading, currentColor) 52%, transparent);
+}
+
+.cms-surface p,
+.cms-surface li,
+.cms-surface blockquote {
+  color: var(--cms-body, inherit);
+}
+
+.cms-surface .eyebrow,
+.cms-surface .card-index,
+.cms-surface .text-link,
+.cms-surface .stars {
+  color: var(--cms-accent, inherit);
+}
+
+.cms-surface .button,
+.cms-surface .round-link,
+.cms-surface .lead-form button {
+  color: var(--cms-button-text, #15130f) !important;
+  border-color: var(--cms-button-border, var(--cms-button, #f4c84b)) !important;
+  border-width: var(--cms-button-border-width, 0) !important;
+  border-style: solid !important;
+  border-radius: var(--cms-button-radius, 999px) !important;
+  background: var(--cms-button, #f4c84b) !important;
+}
+
+.cms-button--small .button,
+.cms-button--small .round-link,
+.cms-button--small .lead-form button {
+  min-height: 38px;
+  padding: 9px 15px;
+  font-size: .82rem;
+}
+
+.cms-button--medium .button,
+.cms-button--medium .round-link,
+.cms-button--medium .lead-form button {
+  min-height: 46px;
+}
+
+.cms-button--large .button,
+.cms-button--large .round-link,
+.cms-button--large .lead-form button {
+  min-height: 56px;
+  padding: 14px 24px;
+  font-size: 1rem;
+}
+
+.cms-font--sans {
+  font-family: var(--font-manrope), Inter, system-ui, sans-serif;
+}
+
+.cms-font--serif {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.cms-font--display {
+  font-family: var(--font-space-grotesk), Impact, sans-serif;
+}
+
+.cms-font--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.cms-surface .content-media img,
+.cms-surface .before-after img,
+.cms-surface .cms-surface__background {
+  object-fit: var(--cms-image-fit, cover);
+  opacity: var(--cms-image-opacity, 1);
+}
+
+.cms-surface .card-media img,
+.cms-surface .project-media img {
+  opacity: var(--cms-image-opacity, 1);
+}
+
+@media (max-width: 760px) {
+  .cms-button--large .button,
+  .cms-button--large .round-link,
+  .cms-button--large .lead-form button {
+    min-height: 52px;
+    padding-inline: 18px;
+  }
+}
+
+.cms-surface .cms-external-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--cms-image-fit, cover);
+  opacity: var(--cms-image-opacity, 1);
+}
